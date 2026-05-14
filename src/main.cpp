@@ -8,24 +8,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "gj_image/gj_image.h"
-#include "shader.h"
 #include "model.h"
 #include "window.h"
+#include "camera.h"
 
 void processInput(SDL_Window *window, SDL_Event *event, bool *running);
 void getDeltaTime(float *deltaTime, float *lastFrame);
 
 GJ_App app;
-
-struct camera {
-    glm::vec3 pos;
-    glm::vec3 front;
-    glm::vec3 up;
-    glm::vec3 direction;
-    float yaw = -90.f;
-    float pitch;
-} camera;
+GJ_Camera camera;
 
 int main(int argc, char* argv[]) {
     app = GJ_App();
