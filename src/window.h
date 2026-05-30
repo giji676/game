@@ -54,6 +54,7 @@ public:
     float lastFrameTime = 0.0f;
 
     int initialize();
+    void initDeltaTime();
     void toggleWindow();
 
     int width() const;

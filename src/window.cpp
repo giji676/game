@@ -124,3 +124,9 @@ float GJ_App::getDeltaTime() {
     lastFrameTime = currentTime;
     return deltaTime;
 }
+
+void GJ_App::initDeltaTime() {
+    Uint64 now = SDL_GetPerformanceCounter();
+    Uint64 freq = SDL_GetPerformanceFrequency();
+    lastFrameTime = (float)now / (float)freq;
+}
