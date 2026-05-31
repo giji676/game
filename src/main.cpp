@@ -13,12 +13,17 @@
 #include "window.h"
 #include "camera.h"
 #include "perlin.h"
+#include "input.h"
 
-void processInput(SDL_Window *window, SDL_Event *event, bool *running);
-void update(float dt);
+#define CAMERA_SPEED 1.0
+
+void setupKeyBindings(GJ_Input &input);
+void getInput(SDL_Event &event, bool &running, GJ_Input &input);
+void update(GJ_Input &input, GJ_App &app);
 
 GJ_App app;
 GJ_Camera camera;
+GJ_Input input;
 
 typedef struct {
     std::vector<float> vertices;   // x y z nx ny nz
@@ -40,7 +45,6 @@ World world;
 Light light;
 
 const float G = -9.81;
-bool w=false, a=false, s=false, d=false;
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale) {
     Terrain t;
@@ -129,6 +133,8 @@ int main(int argc, char* argv[]) {
     app = GJ_App();
     app.initialize();
 
+    setupKeyBindings(input);
+
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -179,13 +185,12 @@ int main(int argc, char* argv[]) {
     shader.setVec3("lightColor", glm::vec3(1.0f));
 
     SDL_Event event;
-    bool running = true;
     float fpsTimer = 0.0f;
     int fpsFrames = 0;
     float fps = 0.0f;
 
     app.initDeltaTime();
-    while (running) {
+    while (app.running) {
         app.getDeltaTime();
         fpsTimer += app.deltaTime;
         fpsFrames++;
@@ -199,8 +204,8 @@ int main(int argc, char* argv[]) {
         snprintf(title, sizeof(title), "Game | FPS: %.1f", fps);
         SDL_SetWindowTitle(app.window, title);
 
-        processInput(app.window, &event, &running);
-        update(app.deltaTime);
+        getInput(event, app.running, input);
+        update(input, app);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -234,9 +239,60 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void update(float dt) {
-    camera.velocity.y += G * dt;
-    camera.pos.y += camera.velocity.y * dt;
+void getInput(SDL_Event &event, bool &running, GJ_Input &input) {
+    input.beginFrame();
+
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+            case SDL_QUIT:
+                running = false;
+                break;
+
+            case SDL_KEYDOWN:
+                input.setKey(event.key.keysym.scancode, true);
+                break;
+
+            case SDL_KEYUP:
+                input.setKey(event.key.keysym.scancode, false);
+                break;
+
+            case SDL_MOUSEMOTION:
+                input.addMouseDelta(
+                    event.motion.xrel,
+                    event.motion.yrel
+                );
+                break;
+        }
+    }
+}
+
+void update(GJ_Input &input, GJ_App &app) {
+    float cameraSpeed = CAMERA_SPEED * app.deltaTime;
+
+    // Input processing
+    if (input.down(Action::MoveForward))
+        camera.pos += cameraSpeed * camera.front;
+
+    if (input.down(Action::MoveBackward))
+        camera.pos -= cameraSpeed * camera.front;
+
+    if (input.down(Action::MoveLeft))
+        camera.pos -=
+            glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
+
+    if (input.down(Action::MoveRight))
+        camera.pos +=
+            glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
+
+    if (input.pressed(Action::ToggleScreen))
+        app.toggleWindow();
+
+    if (input.pressed(Action::Quit))
+        app.running = false;
+
+    // Physics and collision
+    camera.velocity.y += G * app.deltaTime;
+    camera.pos.y += camera.velocity.y * app.deltaTime;
 
     float halfW = (world.width - 1) * world.scale * 0.5f;
     float halfH = (world.height - 1) * world.scale * 0.5f;
@@ -250,63 +306,30 @@ void update(float dt) {
         camera.velocity.y = 0.f;
         camera.pos.y = groundY;
     }
+
+    float xoffset = input.mouseDeltaX;
+    float yoffset = input.mouseDeltaY;
+
+    const float sensitivity = 0.1f;
+
+    camera.yaw += xoffset * sensitivity;
+    camera.pitch -= yoffset * sensitivity;
+
+    camera.pitch = glm::clamp(camera.pitch, -89.0f, 89.0f);
+
+    glm::vec3 direction;
+    direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+    direction.y = sin(glm::radians(camera.pitch));
+    direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+
+    camera.front = glm::normalize(direction);
 }
 
-void processInput(SDL_Window *window, SDL_Event *event, bool *running) {
-    float cameraSpeed = 10.0f * app.deltaTime;
-    while (SDL_PollEvent(event)) {
-        if (event->type == SDL_QUIT) {
-            *running = false;
-        } else if (event->type == SDL_KEYDOWN) {
-            switch (event->key.keysym.sym) {
-                case SDLK_ESCAPE:
-                    *running = false;
-                    break;
-                case SDLK_F11:
-                    app.toggleWindow();
-                    break;
-                case SDLK_w:
-                case SDLK_UP:
-                    camera.pos += cameraSpeed * camera.front;
-                    break;
-                case SDLK_s:
-                case SDLK_DOWN:
-                    camera.pos -= cameraSpeed * camera.front;
-                    break;
-                case SDLK_d:
-                case SDLK_RIGHT:
-                    camera.pos +=
-                        glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
-                    break;
-                case SDLK_a:
-                case SDLK_LEFT:
-                    camera.pos -=
-                        glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
-                    break;
-            }
-        } else if (event->type == SDL_MOUSEMOTION) {
-            float xoffset = event->motion.xrel;
-            float yoffset = event->motion.yrel;
-
-            const float sensitivity = 0.1f;
-            xoffset *= sensitivity;
-            yoffset *= sensitivity;
-
-            camera.yaw += xoffset;
-            camera.pitch -= yoffset; // note: invert Y if needed
-
-            // clamp pitch to avoid flipping
-            if (camera.pitch > 89.0f)
-                camera.pitch = 89.0f;
-            if (camera.pitch < -89.0f)
-                camera.pitch = -89.0f;
-
-            glm::vec3 direction;
-            direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-            direction.y = sin(glm::radians(camera.pitch));
-            direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-
-            camera.front = glm::normalize(direction);
-        }
-    }
+void setupKeyBindings(GJ_Input &input) {
+    input.bind(Action::MoveForward, SDL_SCANCODE_W);
+    input.bind(Action::MoveBackward, SDL_SCANCODE_S);
+    input.bind(Action::MoveLeft, SDL_SCANCODE_A);
+    input.bind(Action::MoveRight, SDL_SCANCODE_D);
+    input.bind(Action::ToggleScreen, SDL_SCANCODE_F11);
+    input.bind(Action::Quit, SDL_SCANCODE_ESCAPE);
 }

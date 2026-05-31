@@ -1,5 +1,4 @@
-#ifndef SHADER_H
-#define SHADER_H
+#pragma once
 
 #include <string>
 #include <glm/gtc/matrix_transform.hpp>
@@ -19,5 +18,3 @@ public:
     void setVec4(const std::string &name, const glm::vec4 &value) const;
     void setMat4(const std::string &name, const glm::mat4 &mat) const;
 };
-
-#endif

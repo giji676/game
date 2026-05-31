@@ -1,5 +1,4 @@
-#ifndef GJ_CAMERA_H
-#define GJ_CAMERA_H
+#pragma once
 
 #include "glm/ext/vector_float3.hpp"
 
@@ -14,5 +13,3 @@ public:
     float pitch;
 private:
 };
-
-#endif

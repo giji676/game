@@ -1,8 +1,7 @@
+#pragma once
+
 #include <cstring>
 #include <glad/glad.h>
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
 #include <iostream>
 
 #include "shader.h"
@@ -10,13 +9,9 @@
 #include "gj_model/gj_model.h"
 #include "gj_image/gj_image.h"
 
-using namespace std;
+unsigned int TextureFromFile(const char *path, const std::string &directory);
 
-
-unsigned int TextureFromFile(const char *path, const string &directory);
-
-class Model
-{
+class Model {
 public:
     Model(char *path) {
         loadModel(path);
@@ -28,13 +23,13 @@ public:
 
 private:
     // model data
-    vector<Texture> textures_loaded;
-    vector<Mesh> meshes;
-    string directory;
-    void loadModel(string path) {
+    std::vector<Texture> textures_loaded;
+    std::vector<Mesh> meshes;
+    std::string directory;
+    void loadModel(std::string path) {
         struct gjModel *gjModel = gj_model_load(path.c_str());
         if (!gjModel) {
-            cout << "ERROR::gj-model::" << endl;
+            std::cout << "ERROR::gj-model::" << std::endl;
             return;
         }
         directory = path.substr(0, path.find_last_of('/'));
@@ -52,9 +47,9 @@ private:
     }
 
     Mesh processMesh(struct gjMesh *mesh, struct gjModel *model) {
-        vector<Vertex> vertices;
-        vector<unsigned int> indices;
-        vector<Texture> textures;
+        std::vector<Vertex> vertices;
+        std::vector<unsigned int> indices;
+        std::vector<Texture> textures;
 
         glm::vec3 diffuseFallback(1.0f);
         glm::vec3 specularFallback(0.0f);
@@ -123,8 +118,8 @@ private:
 
     void loadMaterialTextures(
         const char *filename,
-        string typeName,
-        vector<Texture> *textures) {
+        std::string typeName,
+        std::vector<Texture> *textures) {
 
         if (!filename || filename[0] == '\0') return;
 
@@ -143,8 +138,8 @@ private:
     }
 };
 
-unsigned int TextureFromFile(const char *path, const string &directory) {
-    string filename = string(path);
+inline unsigned int TextureFromFile(const char *path, const std::string &directory) {
+    std::string filename = std::string(path);
     filename = directory + '/' + filename;
 
     unsigned int textureID;

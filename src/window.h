@@ -1,5 +1,4 @@
-#ifndef GJ_APP_H
-#define GJ_APP_H
+#pragma once
 
 #include <SDL2/SDL_video.h>
 
@@ -52,6 +51,7 @@ public:
 
     float deltaTime = 0.0f;
     float lastFrameTime = 0.0f;
+    bool running = true;
 
     int initialize();
     void initDeltaTime();
@@ -68,5 +68,3 @@ private:
     VideoSettings prevVideoSettings;
     void updateViewport();
 };
-
-#endif
