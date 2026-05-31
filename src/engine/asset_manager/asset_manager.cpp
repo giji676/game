@@ -1,5 +1,5 @@
-#include "engine/asset_manager.h"
-#include "engine/shader.h"
+#include "asset_manager.h"
+#include "shader.h"
 
 Shader& AssetManager::loadShader(const std::string& name,
                                  const std::string& vsPath,

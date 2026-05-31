@@ -2,9 +2,9 @@
 
 #include <SDL2/SDL_events.h>
 
-#include "engine/input.h"
-#include "engine/window.h"
-#include "engine/asset_manager.h"
+#include "input.h"
+#include "window.h"
+#include "asset_manager/asset_manager.h"
 
 class Game;
 

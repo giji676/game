@@ -4,9 +4,9 @@
 #include <unordered_map>
 #include <memory>
 
-#include "engine/shader.h"
-// #include "engine/texture.h"
-// #include "engine/model.h"
+#include "shader.h"
+// #include "texture.h"
+// #include "model.h"
 
 class AssetManager {
 public:

@@ -5,6 +5,7 @@
 #include "game/player.h"
 
 #include "engine/camera.h"
+#include "engine/asset_manager/object.h"
 
 class Engine;
 
@@ -36,6 +37,8 @@ private:
     Camera camera;
     World world;
     Light light;
+
+    std::vector<Object> scene;
 
     unsigned int planeVBO, planeVAO, planeEBO;
 
