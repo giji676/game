@@ -10,12 +10,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
-#include "model.h"
-#include "window.h"
-#include "camera.h"
-#include "perlin.h"
-#include "input.h"
-#include "player.h"
+
+#include "engine/model.h"
+#include "engine/window.h"
+#include "engine/camera.h"
+#include "engine/input.h"
+
+#include "game/perlin.h"
+#include "game/player.h"
 
 void setupKeyBindings(Input &input);
 void getInput(SDL_Event &event, bool &running, Input &input);
@@ -285,7 +287,7 @@ void update(Input &input, Player &player, App &app) {
         player.pos +=
             glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
 
-    if (input.pressed(Action::Jump) && player.isGrounded)
+    if (input.pressed(Action::Jump) && player.grounded)
         player.velocity.y = player.jumpForce;
 
     if (input.pressed(Action::ToggleScreen))
@@ -309,9 +311,9 @@ void update(Input &input, Player &player, App &app) {
     if (player.pos.y <= groundY) {
         player.velocity.y = 0.f;
         player.pos.y = groundY;
-        player.isGrounded = true;
+        player.grounded = true;
     } else {
-        player.isGrounded = false;
+        player.grounded = false;
     }
 
     float xoffset = input.mouseDeltaX;
