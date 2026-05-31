@@ -2,7 +2,7 @@
 
 #include "glm/ext/vector_float3.hpp"
 
-class GJ_Camera {
+class Camera {
 public:
     glm::vec3 pos = glm::vec3(0.0f, 1.0f, 3.0f);
     glm::vec3 front = glm::vec3(0.0f, 0.0f, -1.0f);

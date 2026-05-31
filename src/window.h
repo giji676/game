@@ -43,7 +43,7 @@ struct VideoSettings {
     bool vsync = true;
 };
 
-class GJ_App {
+class App {
 public:
     SDL_Window *window;
     SDL_GLContext glContext;

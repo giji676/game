@@ -1,3 +1,4 @@
+#include <SDL2/SDL_scancode.h>
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_timer.h>
@@ -14,16 +15,16 @@
 #include "camera.h"
 #include "perlin.h"
 #include "input.h"
+#include "player.h"
 
-#define CAMERA_SPEED 1.0
+void setupKeyBindings(Input &input);
+void getInput(SDL_Event &event, bool &running, Input &input);
+void update(Input &input, Player &player, App &app);
 
-void setupKeyBindings(GJ_Input &input);
-void getInput(SDL_Event &event, bool &running, GJ_Input &input);
-void update(GJ_Input &input, GJ_App &app);
-
-GJ_App app;
-GJ_Camera camera;
-GJ_Input input;
+App app;
+Camera camera;
+Input input;
+Player player;
 
 typedef struct {
     std::vector<float> vertices;   // x y z nx ny nz
@@ -130,7 +131,7 @@ Terrain generateTerrain(int width, int height, float scale, float heightScale) {
 }
 
 int main(int argc, char* argv[]) {
-    app = GJ_App();
+    app = App();
     app.initialize();
 
     setupKeyBindings(input);
@@ -205,7 +206,7 @@ int main(int argc, char* argv[]) {
         SDL_SetWindowTitle(app.window, title);
 
         getInput(event, app.running, input);
-        update(input, app);
+        update(input, player, app);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -239,7 +240,7 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void getInput(SDL_Event &event, bool &running, GJ_Input &input) {
+void getInput(SDL_Event &event, bool &running, Input &input) {
     input.beginFrame();
 
     while (SDL_PollEvent(&event)) {
@@ -266,23 +267,26 @@ void getInput(SDL_Event &event, bool &running, GJ_Input &input) {
     }
 }
 
-void update(GJ_Input &input, GJ_App &app) {
-    float cameraSpeed = CAMERA_SPEED * app.deltaTime;
+void update(Input &input, Player &player, App &app) {
+    float cameraSpeed = player.speed * app.deltaTime;
 
     // Input processing
     if (input.down(Action::MoveForward))
-        camera.pos += cameraSpeed * camera.front;
+        player.pos += cameraSpeed * camera.front;
 
     if (input.down(Action::MoveBackward))
-        camera.pos -= cameraSpeed * camera.front;
+        player.pos -= cameraSpeed * camera.front;
 
     if (input.down(Action::MoveLeft))
-        camera.pos -=
+        player.pos -=
             glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
 
     if (input.down(Action::MoveRight))
-        camera.pos +=
+        player.pos +=
             glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
+
+    if (input.pressed(Action::Jump) && player.isGrounded)
+        player.velocity.y = player.jumpForce;
 
     if (input.pressed(Action::ToggleScreen))
         app.toggleWindow();
@@ -291,8 +295,8 @@ void update(GJ_Input &input, GJ_App &app) {
         app.running = false;
 
     // Physics and collision
-    camera.velocity.y += G * app.deltaTime;
-    camera.pos.y += camera.velocity.y * app.deltaTime;
+    player.velocity.y += G * app.deltaTime;
+    player.pos.y += player.velocity.y * app.deltaTime;
 
     float halfW = (world.width - 1) * world.scale * 0.5f;
     float halfH = (world.height - 1) * world.scale * 0.5f;
@@ -302,9 +306,12 @@ void update(GJ_Input &input, GJ_App &app) {
 
     int idx = z * world.width + x;
     float groundY = world.terrain.vertices[idx * 6 + 1];
-    if (camera.pos.y <= groundY) {
-        camera.velocity.y = 0.f;
-        camera.pos.y = groundY;
+    if (player.pos.y <= groundY) {
+        player.velocity.y = 0.f;
+        player.pos.y = groundY;
+        player.isGrounded = true;
+    } else {
+        player.isGrounded = false;
     }
 
     float xoffset = input.mouseDeltaX;
@@ -323,13 +330,15 @@ void update(GJ_Input &input, GJ_App &app) {
     direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
 
     camera.front = glm::normalize(direction);
+    camera.pos = player.pos;
 }
 
-void setupKeyBindings(GJ_Input &input) {
+void setupKeyBindings(Input &input) {
     input.bind(Action::MoveForward, SDL_SCANCODE_W);
     input.bind(Action::MoveBackward, SDL_SCANCODE_S);
     input.bind(Action::MoveLeft, SDL_SCANCODE_A);
     input.bind(Action::MoveRight, SDL_SCANCODE_D);
+    input.bind(Action::Jump, SDL_SCANCODE_SPACE);
     input.bind(Action::ToggleScreen, SDL_SCANCODE_F11);
     input.bind(Action::Quit, SDL_SCANCODE_ESCAPE);
 }

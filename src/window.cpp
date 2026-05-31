@@ -8,7 +8,7 @@
 
 #include "window.h"
 
-int GJ_App::initialize() {
+int App::initialize() {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         return -1;
     }
@@ -44,7 +44,7 @@ int GJ_App::initialize() {
     return 0;
 }
 
-int GJ_App::width() const {
+int App::width() const {
     if (!window) {
         return videoSettings.resolution.width;
     }
@@ -53,7 +53,7 @@ int GJ_App::width() const {
     return w;
 }
 
-int GJ_App::height() const {
+int App::height() const {
     if (!window) {
         return videoSettings.resolution.height;
     }
@@ -63,7 +63,7 @@ int GJ_App::height() const {
     return h;
 }
 
-void GJ_App::toggleWindow() {
+void App::toggleWindow() {
     switch (videoSettings.mode) {
 
         case WindowMode::Windowed:
@@ -96,14 +96,14 @@ void GJ_App::toggleWindow() {
     updateViewport();
 }
 
-void GJ_App::updateViewport() {
+void App::updateViewport() {
     int w = 0, h = 0;
     SDL_GL_GetDrawableSize(window, &w, &h);
 
     glViewport(0, 0, w, h);
 }
 
-Uint32 GJ_App::getWindowFlags() const {
+Uint32 App::getWindowFlags() const {
     Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
 
     if (videoSettings.mode == WindowMode::BorderlessFullscreen) {
@@ -116,7 +116,7 @@ Uint32 GJ_App::getWindowFlags() const {
     return flags;
 }
 
-float GJ_App::getDeltaTime() {
+float App::getDeltaTime() {
     Uint64 now = SDL_GetPerformanceCounter();
     Uint64 freq = SDL_GetPerformanceFrequency();
     float currentTime = (float)now / (float)freq;
@@ -125,7 +125,7 @@ float GJ_App::getDeltaTime() {
     return deltaTime;
 }
 
-void GJ_App::initDeltaTime() {
+void App::initDeltaTime() {
     Uint64 now = SDL_GetPerformanceCounter();
     Uint64 freq = SDL_GetPerformanceFrequency();
     lastFrameTime = (float)now / (float)freq;

@@ -14,12 +14,13 @@ enum class Action : uint16_t {
     MoveForward,
     MoveBackward,
     ToggleScreen,
+    Jump,
     Quit,
 
     Count
 };
 
-class GJ_Input {
+class Input {
 public:
     float mouseDeltaX = 0.0f;
     float mouseDeltaY = 0.0f;
