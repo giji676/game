@@ -25,6 +25,10 @@ void Game::init(Engine *engine) {
     shader.use();
     shader.setVec3("lightPos", light.pos);
     shader.setVec3("lightColor", glm::vec3(1.0f));
+
+    Object obj;
+    obj.model = &engine->assets.getModel("backpack");
+    scene.push_back(obj);
 }
 
 void Game::setupTerrain() {
@@ -237,4 +241,8 @@ void Game::render() {
                    GL_UNSIGNED_INT,
                    0);
     glBindVertexArray(0);
+
+    for (auto& obj : scene) {
+        engine->renderer.draw(obj);
+    }
 }

@@ -11,7 +11,7 @@ void Material::bind() const {
     for (unsigned int i = 0; i < textures.size(); i++) {
         glActiveTexture(GL_TEXTURE0 + i);
 
-        std::string name = textures[i].type;
+        std::string name = textures[i]->type;
         std::string number;
 
         if (name == "texture_diffuse")
@@ -22,7 +22,7 @@ void Material::bind() const {
 
         shader->setInt(name + number, i);
 
-        glBindTexture(GL_TEXTURE_2D, textures[i].id);
+        glBindTexture(GL_TEXTURE_2D, textures[i]->id);
     }
 
     shader->setVec3("diffuseFallback", diffuseFallback);

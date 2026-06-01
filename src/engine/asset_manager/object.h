@@ -12,6 +12,6 @@ typedef struct Transform {
 
 class Object {
 public:
-    Model *model;
+    Model* model = nullptr;
     Transform transform;
 };

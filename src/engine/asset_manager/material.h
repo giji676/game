@@ -9,7 +9,7 @@ class Material {
 public:
     Shader* shader;
 
-    std::vector<Texture> textures;
+    std::vector<Texture*> textures;
 
     glm::vec3 diffuseFallback{1.f};
     glm::vec3 specularFallback{0.f};

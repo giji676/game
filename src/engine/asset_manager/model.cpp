@@ -57,10 +57,22 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     for (int i = 0; i < mesh->indexCount; i++) {
         indices.push_back(mesh->indices[i]);
     }
+    Texture* diffuseMap = nullptr;
+    Texture* specularMap = nullptr;
     if (mesh->materialIndex >= 0) {
         struct gjMaterial material = model->materials[mesh->materialIndex];
-        loadMaterialTextures(material.diffuseMap, "texture_diffuse", &textures);
-        loadMaterialTextures(material.specularMap, "texture_specular", &textures);
+        Texture& dtex = assetManager->loadTexture(
+            material.diffuseMap,   // name (can be full path)
+            directory + "/" + material.diffuseMap,
+            "texture_diffuse"
+        );
+        diffuseMap = &dtex;
+        Texture& stex = assetManager->loadTexture(
+            material.specularMap,
+            directory + "/" + material.specularMap,
+            "texture_specular"
+        );
+        specularMap = &stex;
         diffuseFallback = glm::vec3(
             material.diffuse[0],
             material.diffuse[1],
@@ -74,8 +86,18 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
         );
     } else {
         struct gjMaterial material = model->materials[0];
-        loadMaterialTextures(material.diffuseMap, "texture_diffuse", &textures);
-        loadMaterialTextures(material.specularMap, "texture_specular", &textures);
+        Texture& dtex = assetManager->loadTexture(
+            material.diffuseMap,
+            directory + "/" + material.diffuseMap,
+            "texture_diffuse"
+        );
+        diffuseMap = &dtex;
+        Texture& stex = assetManager->loadTexture(
+            material.specularMap,
+            directory + "/" + material.specularMap,
+            "texture_specular"
+        );
+        specularMap = &stex;
         diffuseFallback = glm::vec3(
             material.diffuse[0],
             material.diffuse[1],
@@ -94,31 +116,16 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     material.diffuseFallback = diffuseFallback;
     material.specularFallback = specularFallback;
 
+    if (diffuseMap)
+        material.textures.push_back(diffuseMap);
+
+    if (specularMap)
+        material.textures.push_back(specularMap);
+
     SubMesh subMesh = {
         .mesh = myMesh,
         .material = material,
     };
 
     return subMesh;
-}
-
-void Model::loadMaterialTextures(
-    const char *filename,
-    std::string typeName,
-    std::vector<Texture> *textures) {
-
-    if (!filename || filename[0] == '\0') return;
-
-    for (unsigned int j = 0; j < textures_loaded.size(); j++) {
-        if (std::strcmp(textures_loaded[j].path.c_str(), filename) == 0) {
-            textures->push_back(textures_loaded[j]);
-            return;
-        }
-    }
-    Texture texture;
-    texture.id = TextureFromFile(filename, directory);
-    texture.type = typeName;
-    texture.path = filename;
-    textures->push_back(texture);
-    textures_loaded.push_back(texture);
 }

@@ -17,6 +17,8 @@ void Engine::init(Game *g) {
         "shaders/scene.f.glsl"
     );
 
+    assets.loadModel("backpack", "assets/backpack/backpack.obj");
+
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

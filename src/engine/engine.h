@@ -5,6 +5,7 @@
 #include "input.h"
 #include "window.h"
 #include "asset_manager/asset_manager.h"
+#include "renderer/renderer.h"
 
 class Game;
 
@@ -13,6 +14,7 @@ public:
     App app;
     Input input;
     AssetManager assets;
+    Renderer renderer;
 
     float G = 9.81;
     float fps = 0.0f;

@@ -5,8 +5,9 @@
 #include <memory>
 
 #include "shader.h"
-// #include "texture.h"
-// #include "model.h"
+#include "texture.h"
+
+class Model;
 
 class AssetManager {
 public:
@@ -18,18 +19,19 @@ public:
 
     Shader& getShader(const std::string& name);
 
-    // Texture& loadTexture(const std::string& name,
-    //                      const std::string& path);
-    //
-    // Texture& getTexture(const std::string& name);
-    //
-    // Model& loadModel(const std::string& name,
-    //                  const std::string& path);
-    //
-    // Model& getModel(const std::string& name);
+    Texture& loadTexture(const std::string& name,
+                         const std::string& fullPath,
+                         const std::string& type);
+
+    Texture& getTexture(const std::string& name);
+
+    Model& loadModel(const std::string& name,
+                     const std::string& path);
+
+    Model& getModel(const std::string& name);
 
 private:
     std::unordered_map<std::string, std::unique_ptr<Shader>> shaders;
-    // std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
-    // std::unordered_map<std::string, std::unique_ptr<Model>> models;
+    std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
+    std::unordered_map<std::string, std::unique_ptr<Model>> models;
 };
