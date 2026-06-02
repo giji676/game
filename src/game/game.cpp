@@ -19,16 +19,25 @@ void Game::init(Engine *engine) {
     camera.up = glm::vec3(0.0f, 1.0f, 0.0f);
 
     light.pos = glm::vec3(0.f, 3.f, 0.f);
+    light.color = glm::vec3(1.f);
 
-    Shader& shader = engine->assets.getShader("scene");
+    Shader& sceneShader = engine->assets.getShader("scene");
 
-    shader.use();
-    shader.setVec3("lightPos", light.pos);
-    shader.setVec3("lightColor", glm::vec3(1.0f));
+    sceneShader.use();
+    sceneShader.setVec3("lightPos", light.pos);
+    sceneShader.setVec3("lightColor", light.color);
+
 
     Object obj;
     obj.model = &engine->assets.getModel("backpack");
+    obj.transform.position = glm::vec3(1.0f, 1.0f, -5.0f);
+    obj.transform.scale = glm::vec3(0.5f);
     scene.push_back(obj);
+
+    Shader& texturedMatShader = engine->assets.getShader("textured_mat");
+    texturedMatShader.use();
+    texturedMatShader.setVec3("lightPos", light.pos);
+    texturedMatShader.setVec3("lightColor", light.color);
 }
 
 void Game::setupTerrain() {
@@ -226,14 +235,14 @@ void Game::render() {
     glm::mat4 view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
     glm::mat4 projection = glm::perspective(
         glm::radians(45.f),
-        (float)engine->app.width() / (float)engine->app.height(), 0.1f, 100.0f);
+        (float)engine->app.width() / (float)engine->app.height(),
+        0.1f, 100.0f);
 
-    Shader& shader = engine->assets.getShader("scene");
-
-    shader.use();
-    shader.setMat4("model", model);
-    shader.setMat4("view", view);
-    shader.setMat4("projection", projection);
+    Shader& sceneShader = engine->assets.getShader("scene");
+    sceneShader.use();
+    sceneShader.setMat4("model", model);
+    sceneShader.setMat4("view", view);
+    sceneShader.setMat4("projection", projection);
 
     glBindVertexArray(planeVAO);
     glDrawElements(GL_TRIANGLES,
@@ -242,7 +251,8 @@ void Game::render() {
                    0);
     glBindVertexArray(0);
 
-    for (auto& obj : scene) {
-        engine->renderer.draw(obj);
+    for (auto &obj : scene) {
+        engine->renderer.submit(obj);
     }
+    engine->renderer.render(view, projection);
 }

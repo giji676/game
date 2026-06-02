@@ -22,6 +22,7 @@ public:
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;
     void draw();
+    const std::vector<SubMesh>& getParts() const;
 
 private:
     std::vector<SubMesh> parts;

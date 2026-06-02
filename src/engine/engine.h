@@ -31,6 +31,7 @@ private:
 
     void getInput(SDL_Event &event);
     void setupKeyBindings();
+    void loadAssets();
     void beginFrame();
     void endFrame();
 };

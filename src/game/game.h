@@ -23,6 +23,7 @@ typedef struct {
 
 typedef struct {
     glm::vec3 pos;
+    glm::vec3 color;
 } Light;
 
 class Game {

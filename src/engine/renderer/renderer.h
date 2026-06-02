@@ -7,12 +7,16 @@
 #include "engine/asset_manager/object.h"
 
 typedef struct {
-    Mesh* mesh;
-    Material* material;
+    const Mesh* mesh;
+    const Material* material;
     glm::mat4 model;
 } RenderCommand;
 
 class Renderer {
 public:
-    void draw(const Object &object);
+    void submit(const Object& object);
+    void render(const glm::mat4& view, const glm::mat4& projection);
+
+private:
+    std::vector<RenderCommand> queue;
 };

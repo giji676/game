@@ -3,7 +3,7 @@
 #include "material.h"
 
 void Material::bind() const {
-    shader->use();
+    // shader->use();
 
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
@@ -11,16 +11,16 @@ void Material::bind() const {
     for (unsigned int i = 0; i < textures.size(); i++) {
         glActiveTexture(GL_TEXTURE0 + i);
 
-        std::string name = textures[i]->type;
+        std::string type = textures[i]->type;
         std::string number;
 
-        if (name == "texture_diffuse")
+        if (type == "diffuseMap")
             number = std::to_string(diffuseNr++);
 
-        else if (name == "texture_specular")
+        else if (type == "specularMap")
             number = std::to_string(specularNr++);
 
-        shader->setInt(name + number, i);
+        shader->setInt(type + number, i);
 
         glBindTexture(GL_TEXTURE_2D, textures[i]->id);
     }

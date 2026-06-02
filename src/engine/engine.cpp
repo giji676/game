@@ -10,14 +10,7 @@ void Engine::init(Game *g) {
     app.initialize();
 
     setupKeyBindings();
-
-    assets.loadShader(
-        "scene",
-        "shaders/scene.v.glsl",
-        "shaders/scene.f.glsl"
-    );
-
-    assets.loadModel("backpack", "assets/backpack/backpack.obj");
+    loadAssets();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
@@ -103,3 +96,18 @@ void Engine::setupKeyBindings() {
     input.bind(Action::Quit, SDL_SCANCODE_ESCAPE);
 }
 
+void Engine::loadAssets() {
+    assets.loadShader(
+        "scene",
+        "shaders/scene.v.glsl",
+        "shaders/scene.f.glsl"
+    );
+
+    assets.loadShader(
+        "textured_mat",
+        "shaders/textured_mat.v.glsl",
+        "shaders/textured_mat.f.glsl"
+    );
+
+    assets.loadModel("backpack", "assets/backpack/backpack.obj");
+}

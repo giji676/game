@@ -6,6 +6,7 @@ void Model::draw() {
         part.mesh.draw();
     }
 }
+
 void Model::loadModel(std::string path) {
     struct gjModel *gjModel = gj_model_load(path.c_str());
     if (!gjModel) {
@@ -64,13 +65,13 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
         Texture& dtex = assetManager->loadTexture(
             material.diffuseMap,   // name (can be full path)
             directory + "/" + material.diffuseMap,
-            "texture_diffuse"
+            "diffuseMap"
         );
         diffuseMap = &dtex;
         Texture& stex = assetManager->loadTexture(
             material.specularMap,
             directory + "/" + material.specularMap,
-            "texture_specular"
+            "specularMap"
         );
         specularMap = &stex;
         diffuseFallback = glm::vec3(
@@ -89,13 +90,13 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
         Texture& dtex = assetManager->loadTexture(
             material.diffuseMap,
             directory + "/" + material.diffuseMap,
-            "texture_diffuse"
+            "diffuseMap"
         );
         diffuseMap = &dtex;
         Texture& stex = assetManager->loadTexture(
             material.specularMap,
             directory + "/" + material.specularMap,
-            "texture_specular"
+            "specularMap"
         );
         specularMap = &stex;
         diffuseFallback = glm::vec3(
@@ -115,6 +116,7 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     Material material;
     material.diffuseFallback = diffuseFallback;
     material.specularFallback = specularFallback;
+    material.shader = &assetManager->getShader("textured_mat");
 
     if (diffuseMap)
         material.textures.push_back(diffuseMap);
@@ -128,4 +130,8 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     };
 
     return subMesh;
+}
+
+const std::vector<SubMesh>& Model::getParts() const {
+    return parts;
 }
