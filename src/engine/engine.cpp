@@ -4,6 +4,7 @@
 
 #include "engine/engine.h"
 #include "game/game.h"
+#include "gj_image/gj_image.h"
 
 void Engine::init(Game *g) {
     app = App();
@@ -109,5 +110,6 @@ void Engine::loadAssets() {
         "shaders/textured_mat.f.glsl"
     );
 
+    gj_vflip_image(1);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
 }
