@@ -14,4 +14,9 @@ class Object {
 public:
     Model* model = nullptr;
     Transform transform;
+    std::vector<Object> children;
+
+    void setChild(Object child) {
+        children.push_back(child);
+    }
 };

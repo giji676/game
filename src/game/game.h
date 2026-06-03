@@ -31,6 +31,9 @@ public:
     void init(Engine *engine);
     void update();
     void render();
+    void recurseRender(
+        const Object& obj,
+        const glm::mat4& parentMatrix);
 
 private:
     Engine *engine;

@@ -14,7 +14,7 @@ typedef struct {
 
 class Renderer {
 public:
-    void submit(const Object& object);
+    void submit(const Object& object, const glm::mat4& worldMatrix);
     void render(const glm::mat4& view, const glm::mat4& projection);
 
 private:

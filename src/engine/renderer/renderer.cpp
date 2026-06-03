@@ -1,19 +1,12 @@
 #include "renderer.h"
 
-void Renderer::submit(const Object& object) {
-    glm::mat4 model = glm::mat4(1.0f);
-
-    model = glm::translate(model, object.transform.position);
-    model = glm::rotate(model, glm::radians(object.transform.rotation.x), glm::vec3(1,0,0));
-    model = glm::rotate(model, glm::radians(object.transform.rotation.y), glm::vec3(0,1,0));
-    model = glm::rotate(model, glm::radians(object.transform.rotation.z), glm::vec3(0,0,1));
-    model = glm::scale(model, object.transform.scale);
-
+void Renderer::submit(const Object& object,
+                      const glm::mat4& modelMatrix) {
     for (const SubMesh& part : object.model->getParts()) {
         RenderCommand cmd;
         cmd.mesh = &part.mesh;
         cmd.material = &part.material;
-        cmd.model = model;
+        cmd.model = modelMatrix;
         queue.push_back(cmd);
     }
 }

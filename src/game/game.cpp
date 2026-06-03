@@ -7,6 +7,8 @@
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale);
 
+glm::mat4 transformToMatrix(const Transform& t);
+
 void Game::init(Engine *engine) {
     this->engine = engine;
     setupTerrain();
@@ -30,8 +32,14 @@ void Game::init(Engine *engine) {
 
     Object obj;
     obj.model = &engine->assets.getModel("backpack");
-    obj.transform.position = glm::vec3(1.0f, 1.0f, -5.0f);
-    obj.transform.scale = glm::vec3(0.5f);
+    obj.transform.position = glm::vec3(0.0f, 0.5f, -1.5f);
+    obj.transform.scale = glm::vec3(0.1f);
+
+    Object obj2;
+    obj2.model = &engine->assets.getModel("backpack");
+    obj2.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
+    obj2.transform.scale = glm::vec3(0.2f);
+    obj.setChild(obj2);
     scene.push_back(obj);
 
     Shader& texturedMatShader = engine->assets.getShader("textured_mat");
@@ -251,8 +259,43 @@ void Game::render() {
                    0);
     glBindVertexArray(0);
 
+    glm::mat4 identity(1.0f);
+
     for (auto &obj : scene) {
-        engine->renderer.submit(obj);
+        recurseRender(obj, identity);
     }
     engine->renderer.render(view, projection);
+}
+
+void Game::recurseRender(
+    const Object& obj,
+    const glm::mat4& parentMatrix) {
+    glm::mat4 localMatrix =
+        transformToMatrix(obj.transform);
+
+    glm::mat4 worldMatrix =
+        parentMatrix * localMatrix;
+
+    engine->renderer.submit(obj, worldMatrix);
+
+    for (const auto& child : obj.children) {
+        recurseRender(child, worldMatrix);
+    }
+}
+
+glm::mat4 transformToMatrix(const Transform& t) {
+    glm::mat4 m(1.0f);
+
+    m = glm::translate(m, t.position);
+
+    m = glm::rotate(m, glm::radians(t.rotation.x),
+                    glm::vec3(1,0,0));
+    m = glm::rotate(m, glm::radians(t.rotation.y),
+                    glm::vec3(0,1,0));
+    m = glm::rotate(m, glm::radians(t.rotation.z),
+                    glm::vec3(0,0,1));
+
+    m = glm::scale(m, t.scale);
+
+    return m;
 }
