@@ -132,6 +132,6 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     return subMesh;
 }
 
-const std::vector<SubMesh>& Model::getParts() const {
+std::vector<SubMesh>& Model::getParts() {
     return parts;
 }

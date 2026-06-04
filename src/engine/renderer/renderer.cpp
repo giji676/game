@@ -11,24 +11,48 @@ void Renderer::render(std::vector<RenderCommand>& queue,
               return a.sortKey < b.sortKey;
               });
 
+    Shader* currentShader = nullptr;
+    Material* currentMaterial = nullptr;
+
     for (const RenderCommand& cmd : queue) {
-        Shader* shader = cmd.material->shader;
 
-        shader->use();
+        if (cmd.material->shader != currentShader) {
+            currentShader = cmd.material->shader;
 
-        shader->setMat4("model", cmd.model);
-        shader->setMat4("view", view);
-        shader->setMat4("projection", projection);
+            currentShader->use();
+            currentShader->setMat4("view", view);
+            currentShader->setMat4("projection", projection);
 
-        cmd.material->bind();
-
-        for (unsigned int i = 0; i < cmd.material->textures.size(); i++) {
-            const std::string& type = cmd.material->textures[i]->type;
-            shader->setInt(type + std::to_string(i + 1), i);
+            currentMaterial = nullptr;
         }
 
-        shader->setVec3("diffuseFallback", cmd.material->diffuseFallback);
-        shader->setVec3("specularFallback", cmd.material->specularFallback);
+        if (cmd.material != currentMaterial) {
+            currentMaterial = cmd.material;
+
+            currentMaterial->bind();
+
+            currentShader->setVec3(
+                "diffuseFallback",
+                currentMaterial->diffuseFallback);
+
+            currentShader->setVec3(
+                "specularFallback",
+                currentMaterial->specularFallback);
+
+            for (unsigned int i = 0;
+            i < currentMaterial->textures.size();
+            i++)
+            {
+                const std::string& type =
+                    currentMaterial->textures[i]->type;
+
+                currentShader->setInt(
+                    type + std::to_string(i + 1),
+                    i);
+            }
+        }
+
+        currentShader->setMat4("model", cmd.model);
 
         cmd.mesh->draw();
     }

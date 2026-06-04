@@ -28,7 +28,7 @@ void collectRenderCommands(
     glm::mat4 world = parent * local;
 
     if (obj.model) {
-        for (const auto& part : obj.model->getParts()) {
+        for (auto& part : obj.model->getParts()) {
             RenderCommand cmd;
             cmd.mesh = &part.mesh;
             cmd.material = &part.material;
