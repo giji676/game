@@ -7,6 +7,8 @@
 
 class Material {
 public:
+    uint32_t id = 0;
+
     Shader* shader;
 
     std::vector<Texture*> textures;

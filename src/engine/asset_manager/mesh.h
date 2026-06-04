@@ -14,7 +14,8 @@ struct Vertex {
 
 class Mesh {
 public:
-    // mesh data
+    uint32_t id = 0;
+
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 

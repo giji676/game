@@ -113,10 +113,12 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     }
 
     Mesh myMesh = Mesh(vertices, indices);
+    myMesh.id = assetManager->allocateMeshId();
     Material material;
     material.diffuseFallback = diffuseFallback;
     material.specularFallback = specularFallback;
     material.shader = &assetManager->getShader("textured_mat");
+    material.id = assetManager->allocateMaterialId();
 
     if (diffuseMap)
         material.textures.push_back(diffuseMap);

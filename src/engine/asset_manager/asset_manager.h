@@ -30,8 +30,14 @@ public:
 
     Model& getModel(const std::string& name);
 
+    uint32_t allocateMaterialId() { return nextMaterialId++; }
+    uint32_t allocateMeshId() { return nextMeshId++; }
+
 private:
     std::unordered_map<std::string, std::unique_ptr<Shader>> shaders;
     std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
     std::unordered_map<std::string, std::unique_ptr<Model>> models;
+
+    uint32_t nextMaterialId = 1;
+    uint32_t nextMeshId = 1;
 };

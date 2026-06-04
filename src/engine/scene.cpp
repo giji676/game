@@ -33,12 +33,10 @@ void collectRenderCommands(
             cmd.mesh = &part.mesh;
             cmd.material = &part.material;
             cmd.model = world;
-            // TODO: Add id to material and mesh
-            cmd.sortKey = (uint64_t)cmd.material->shader->ID << 48;
-            // cmd.sortKey =
-            //     (uint64_t)cmd.material->shader->ID << 48 |
-            //     (uint64_t)cmd.material->id       << 32 |
-            //     (uint64_t)cmd.mesh->id           << 16;
+            cmd.sortKey =
+                (uint64_t)cmd.material->shader->ID << 48 |
+                (uint64_t)cmd.material->id       << 32 |
+                (uint64_t)cmd.mesh->id           << 16;
             out.push_back(cmd);
         }
     }
