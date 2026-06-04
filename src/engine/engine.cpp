@@ -125,9 +125,4 @@ void Engine::loadAssets() {
 void Engine::setupCamera() {
     cameras.emplace_back(Camera());
     activeCamera = 0;
-    Camera* camera = getActiveCamera();
-
-    camera->pos = glm::vec3(0.0f, 0.0f, 3.0f);
-    camera->front = glm::vec3(0.0f, 0.0f, -1.0f);
-    camera->up = glm::vec3(0.0f, 1.0f, 0.0f);
 }
