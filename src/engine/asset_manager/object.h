@@ -26,7 +26,8 @@ public:
     template <typename T, typename... Args>
     T& addScript(Args&&... args) {
         auto script = std::make_unique<T>(std::forward<Args>(args)...);
-        script->parentObject = getID();
+        script->object = getID();
+
         scripts.push_back(std::move(script));
         return *script;
     }
@@ -40,6 +41,7 @@ public:
     Object& operator=(Object&&) = default;
 
     ObjectID getID() const { return ID; }
+    void setID(ObjectID id) { ID = id; }
 
 private:
     ObjectID ID;

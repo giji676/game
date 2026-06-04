@@ -4,7 +4,7 @@
 
 class IScript {
 public:
-    ObjectID parentObject;
+    ObjectID object;
 
     IScript(){}
     virtual ~IScript(){}

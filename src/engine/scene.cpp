@@ -20,6 +20,7 @@ void Scene::reparent(ObjectID childId, ObjectID newParentId) {
 
 ObjectID Scene::createObject() {
     ObjectID id = createObjectInternal();
+    objects[id].setID(id);
     objects[id].parent = rootId;
     objects[rootId].children.push_back(id);
     return id;
