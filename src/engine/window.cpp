@@ -37,6 +37,9 @@ int App::initialize() {
         return -1;
     }
 
+    // FPS limt: Uncapped - 0, VSync - 1, Adaptive VSync (if supported) - -1
+    SDL_GL_SetSwapInterval(0);
+
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
         return -1;
     }

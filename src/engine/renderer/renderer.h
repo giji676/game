@@ -9,12 +9,14 @@ typedef struct {
     const Mesh* mesh;
     const Material* material;
     glm::mat4 model;
+
+    uint64_t sortKey;
 } RenderCommand;
 
 class Renderer {
 public:
     void render(
-        const std::vector<RenderCommand>& queue,
+        std::vector<RenderCommand>& queue,
         const glm::mat4& view,
         const glm::mat4& projection);
 

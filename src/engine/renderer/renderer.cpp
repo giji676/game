@@ -1,10 +1,16 @@
+#include <algorithm>
+
 #include "renderer.h"
 
-void Renderer::render(const std::vector<RenderCommand>& queue,
+void Renderer::render(std::vector<RenderCommand>& queue,
                       const glm::mat4& view,
                       const glm::mat4& projection)
 {
-    // TODO: sort by shader, material, etc. to minimize state changes
+    std::sort(queue.begin(), queue.end(),
+              [](const RenderCommand& a, const RenderCommand& b) {
+              return a.sortKey < b.sortKey;
+              });
+
     for (const RenderCommand& cmd : queue) {
         Shader* shader = cmd.material->shader;
 
