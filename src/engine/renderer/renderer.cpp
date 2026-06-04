@@ -1,20 +1,7 @@
 #include "renderer.h"
 
-void Renderer::submit(const Object& object,
-                      const glm::mat4& modelMatrix) {
-    if (!object.model)
-        return;
-
-    for (const SubMesh& part : object.model->getParts()) {
-        RenderCommand cmd;
-        cmd.mesh = &part.mesh;
-        cmd.material = &part.material;
-        cmd.model = modelMatrix;
-        queue.push_back(cmd);
-    }
-}
-
-void Renderer::render(const glm::mat4& view,
+void Renderer::render(const std::vector<RenderCommand>& queue,
+                      const glm::mat4& view,
                       const glm::mat4& projection)
 {
     // TODO: sort by shader, material, etc. to minimize state changes
@@ -39,6 +26,4 @@ void Renderer::render(const glm::mat4& view,
 
         cmd.mesh->draw();
     }
-
-    queue.clear();
 }

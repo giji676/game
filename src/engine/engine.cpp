@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 
 #include "engine/engine.h"
+#include "engine/renderer/renderer.h"
 #include "game/game.h"
 #include "gj_image/gj_image.h"
 
@@ -37,8 +38,9 @@ void Engine::run() {
         getInput(event);
         game->update();
         scene.update();
+        auto commands = scene.buildRenderList();
         game->render();
-        scene.render();
+        callRenderer(commands);
 
         endFrame();
     }
@@ -47,6 +49,25 @@ void Engine::run() {
     SDL_GL_DeleteContext(app.glContext);
     SDL_DestroyWindow(app.window);
     SDL_Quit();
+}
+
+void Engine::callRenderer(std::vector<RenderCommand>& que) {
+    Camera& camera = *getActiveCamera();
+
+    glm::mat4 view = glm::lookAt(
+        camera.pos,
+        camera.pos + camera.front,
+        camera.up
+    );
+
+    glm::mat4 projection = glm::perspective(
+        glm::radians(45.f),
+        app.width() / (float)app.height(),
+        0.1f,
+        100.0f
+    );
+
+    renderer.render(que, view, projection);
 }
 
 void Engine::beginFrame() {

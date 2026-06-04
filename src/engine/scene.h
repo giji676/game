@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/asset_manager/object.h"
+#include "renderer/renderer.h"
 
 class Scene {
 public:
@@ -8,11 +9,7 @@ public:
 
     void init();
     void update();
-    void render();
-
-    ObjectID getRoot() const { return rootId; }
-    Object& root() { return objects[rootId]; }
-    const Object& root() const { return objects[rootId]; }
+    std::vector<RenderCommand> buildRenderList();
 
     ObjectID createObject();
 
@@ -20,6 +17,10 @@ public:
 
     Object& get(ObjectID id) { return objects[id]; }
     const Object& get(ObjectID id) const { return objects[id]; }
+
+    ObjectID getRoot() const { return rootId; }
+    Object& root() { return objects[rootId]; }
+    const Object& root() const { return objects[rootId]; }
 
 private:
     std::vector<Object> objects;

@@ -45,6 +45,7 @@ private:
     void setupKeyBindings();
     void loadAssets();
     void setupCamera();
+    void callRenderer(std::vector<RenderCommand>& que);
 
     void beginFrame();
     void endFrame();

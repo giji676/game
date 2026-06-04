@@ -4,7 +4,6 @@
 
 #include "engine/asset_manager/material.h"
 #include "engine/asset_manager/mesh.h"
-#include "engine/asset_manager/object.h"
 
 typedef struct {
     const Mesh* mesh;
@@ -14,8 +13,10 @@ typedef struct {
 
 class Renderer {
 public:
-    void submit(const Object& object, const glm::mat4& worldMatrix);
-    void render(const glm::mat4& view, const glm::mat4& projection);
+    void render(
+        const std::vector<RenderCommand>& queue,
+        const glm::mat4& view,
+        const glm::mat4& projection);
 
 private:
     std::vector<RenderCommand> queue;

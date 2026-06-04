@@ -3,40 +3,42 @@
 #include "scene.h"
 #include "engine.h"
 
+void collectRenderCommands(
+    const Scene& scene,
+    ObjectID id,
+    const glm::mat4& parent,
+    std::vector<RenderCommand>& out);
 glm::mat4 transformToMatrix(const Transform& t);
 
-void Scene::render() {
-    Engine& engine = Engine::instance();
-    Camera& camera = *engine.getActiveCamera();
-
-    glm::mat4 view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
-    glm::mat4 projection = glm::perspective(
-        glm::radians(45.f),
-        (float)engine.app.width() / (float)engine.app.height(),
-        0.1f, 100.0f);
-
-    glm::mat4 identity(1.0f);
-
-    recurseRender(getRoot(), identity);
-    Engine::instance().renderer.render(view, projection);
+std::vector<RenderCommand> Scene::buildRenderList() {
+    std::vector<RenderCommand> out;
+    collectRenderCommands(*this, rootId, glm::mat4(1.0f), out);
+    return out;
 }
 
-void Scene::recurseRender(
-    const ObjectID objId,
-    const glm::mat4& parentMatrix)
+void collectRenderCommands(
+    const Scene& scene,
+    ObjectID id,
+    const glm::mat4& parent,
+    std::vector<RenderCommand>& out)
 {
-    Object& obj = Engine::instance().scene.get(objId);
+    const Object& obj = scene.get(id);
 
-    glm::mat4 localMatrix =
-        transformToMatrix(obj.transform);
+    glm::mat4 local = transformToMatrix(obj.transform);
+    glm::mat4 world = parent * local;
 
-    glm::mat4 worldMatrix =
-        parentMatrix * localMatrix;
+    if (obj.model) {
+        for (const auto& part : obj.model->getParts()) {
+            RenderCommand cmd;
+            cmd.mesh = &part.mesh;
+            cmd.material = &part.material;
+            cmd.model = world;
+            out.push_back(cmd);
+        }
+    }
 
-    Engine::instance().renderer.submit(obj, worldMatrix);
-
-    for (const auto& child : obj.children) {
-        recurseRender(child, worldMatrix);
+    for (auto child : obj.children) {
+        collectRenderCommands(scene, child, world, out);
     }
 }
 
