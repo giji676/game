@@ -2,13 +2,11 @@
 
 #include <vector>
 
+#include "engine/engine.h"
 #include "game/player.h"
 
 #include "engine/camera.h"
-#include "engine/scene.h"
-#include "engine/asset_manager/object.h"
-
-class Engine;
+#include "engine/defines.h"
 
 typedef struct {
     std::vector<float> vertices;   // x y z nx ny nz
@@ -29,22 +27,23 @@ typedef struct {
 
 class Game {
 public:
-    void init(Engine *engine);
+    Game(Engine& engine);
+
+    void init();
     void update();
     void render();
     void initScripts(ObjectID id);
-    void updateScripts(ObjectID id, float dt);
+    void updateScripts(ObjectID id);
     void recurseRender(
         const ObjectID objId,
         const glm::mat4& parentMatrix);
 
 private:
-    Engine *engine;
+    Engine& engine;
     Player player;
     Camera camera;
     World world;
     Light light;
-    Scene scene;
 
     unsigned int planeVBO, planeVAO, planeEBO;
 

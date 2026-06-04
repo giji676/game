@@ -6,6 +6,11 @@
 #include "game/game.h"
 #include "gj_image/gj_image.h"
 
+Engine& Engine::instance() {
+    static Engine instance;
+    return instance;
+}
+
 void Engine::init(Game *g) {
     app = App();
     app.initialize();
@@ -18,7 +23,7 @@ void Engine::init(Game *g) {
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     
     game = g;
-    game->init(this);
+    game->init();
 }
 
 void Engine::run() {

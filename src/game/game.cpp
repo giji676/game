@@ -10,8 +10,12 @@ Terrain generateTerrain(int width, int height, float scale, float heightScale);
 
 glm::mat4 transformToMatrix(const Transform& t);
 
-void Game::init(Engine *engine) {
-    this->engine = engine;
+Game::Game(Engine& engine)
+    : engine(engine)
+{}
+
+void Game::init() {
+    Scene& scene = engine.scene;
     setupTerrain();
 
     player.pos = glm::vec3(0.f);
@@ -24,7 +28,7 @@ void Game::init(Engine *engine) {
     light.pos = glm::vec3(0.f, 3.f, 0.f);
     light.color = glm::vec3(1.f);
 
-    Shader& sceneShader = engine->assets.getShader("scene");
+    Shader& sceneShader = engine.assets.getShader("scene");
 
     sceneShader.use();
     sceneShader.setVec3("lightPos", light.pos);
@@ -32,19 +36,19 @@ void Game::init(Engine *engine) {
 
     ObjectID objId = scene.createObject();
     Object& obj = scene.get(objId);
-    obj.model = &engine->assets.getModel("backpack");
+    obj.model = &engine.assets.getModel("backpack");
     obj.transform.position = glm::vec3(0.0f, 0.5f, -1.5f);
     obj.transform.scale = glm::vec3(0.1f);
     obj.addScript<Test>();
 
     ObjectID objId2 = scene.createObject();
     Object& obj2 = scene.get(objId2);
-    obj2.model = &engine->assets.getModel("backpack");
+    obj2.model = &engine.assets.getModel("backpack");
     obj2.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
     obj2.transform.scale = glm::vec3(0.2f);
     scene.reparent(objId2, objId);
 
-    Shader& texturedMatShader = engine->assets.getShader("textured_mat");
+    Shader& texturedMatShader = engine.assets.getShader("textured_mat");
     texturedMatShader.use();
     texturedMatShader.setVec3("lightPos", light.pos);
     texturedMatShader.setVec3("lightColor", light.color);
@@ -173,8 +177,8 @@ Terrain generateTerrain(int width, int height, float scale, float heightScale) {
 }
 
 void Game::update() {
-    float cameraSpeed = player.speed * engine->app.deltaTime;
-    Input &input = engine->input;
+    float cameraSpeed = player.speed * engine.app.deltaTime;
+    Input &input = engine.input;
 
     // Input processing
     if (input.down(Action::MoveForward))
@@ -195,14 +199,14 @@ void Game::update() {
         player.velocity.y = player.jumpForce;
 
     if (input.pressed(Action::ToggleScreen))
-        engine->app.toggleWindow();
+        engine.app.toggleWindow();
 
     if (input.pressed(Action::Quit))
-        engine->app.running = false;
+        engine.app.running = false;
 
     // Physics and collision
-    player.velocity.y += -engine->G * engine->app.deltaTime;
-    player.pos.y += player.velocity.y * engine->app.deltaTime;
+    player.velocity.y += -engine.G * engine.app.deltaTime;
+    player.pos.y += player.velocity.y * engine.app.deltaTime;
 
     float halfW = (world.width - 1) * world.scale * 0.5f;
     float halfH = (world.height - 1) * world.scale * 0.5f;
@@ -246,10 +250,10 @@ void Game::render() {
     glm::mat4 view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
     glm::mat4 projection = glm::perspective(
         glm::radians(45.f),
-        (float)engine->app.width() / (float)engine->app.height(),
+        (float)engine.app.width() / (float)engine.app.height(),
         0.1f, 100.0f);
 
-    Shader& sceneShader = engine->assets.getShader("scene");
+    Shader& sceneShader = engine.assets.getShader("scene");
     sceneShader.use();
     sceneShader.setMat4("model", model);
     sceneShader.setMat4("view", view);
@@ -264,16 +268,16 @@ void Game::render() {
 
     glm::mat4 identity(1.0f);
 
-    updateScripts(scene.getRoot(), engine->app.deltaTime);
-    recurseRender(scene.getRoot(), identity);
-    engine->renderer.render(view, projection);
+    updateScripts(engine.scene.getRoot());
+    recurseRender(engine.scene.getRoot(), identity);
+    engine.renderer.render(view, projection);
 }
 
 void Game::recurseRender(
     const ObjectID objId,
     const glm::mat4& parentMatrix)
 {
-    Object& obj = scene.get(objId);
+    Object& obj = engine.scene.get(objId);
 
     glm::mat4 localMatrix =
         transformToMatrix(obj.transform);
@@ -281,7 +285,7 @@ void Game::recurseRender(
     glm::mat4 worldMatrix =
         parentMatrix * localMatrix;
 
-    engine->renderer.submit(obj, worldMatrix);
+    engine.renderer.submit(obj, worldMatrix);
 
     for (const auto& child : obj.children) {
         recurseRender(child, worldMatrix);
@@ -289,7 +293,7 @@ void Game::recurseRender(
 }
 
 void Game::initScripts(ObjectID id) {
-    Object& obj = scene.get(id);
+    Object& obj = engine.scene.get(id);
 
     for (auto& script : obj.scripts) {
         script->init();
@@ -300,15 +304,15 @@ void Game::initScripts(ObjectID id) {
     }
 }
 
-void Game::updateScripts(ObjectID id, float dt) {
-    Object& obj = scene.get(id);
+void Game::updateScripts(ObjectID id) {
+    Object& obj = engine.scene.get(id);
 
     for (auto& script : obj.scripts) {
-        script->update(dt);
+        script->update();
     }
 
     for (ObjectID child : obj.children) {
-        updateScripts(child, dt);
+        updateScripts(child);
     }
 }
 

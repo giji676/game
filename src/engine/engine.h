@@ -2,6 +2,7 @@
 
 #include <SDL2/SDL_events.h>
 
+#include "scene.h"
 #include "input.h"
 #include "window.h"
 #include "asset_manager/asset_manager.h"
@@ -11,10 +12,13 @@ class Game;
 
 class Engine {
 public:
+    static Engine& instance();
+
     App app;
     Input input;
     AssetManager assets;
     Renderer renderer;
+    Scene scene;
 
     float G = 9.81;
     float fps = 0.0f;
@@ -34,4 +38,10 @@ private:
     void loadAssets();
     void beginFrame();
     void endFrame();
+
+    Engine() = default;
+    ~Engine() = default;
+
+    Engine(const Engine&) = delete;
+    Engine& operator=(const Engine&) = delete;
 };
