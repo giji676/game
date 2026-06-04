@@ -2,6 +2,7 @@
 
 #include <SDL2/SDL_events.h>
 
+#include "camera.h"
 #include "scene.h"
 #include "input.h"
 #include "window.h"
@@ -20,11 +21,18 @@ public:
     Renderer renderer;
     Scene scene;
 
+    unsigned int activeCamera = 0;
+    std::vector<Camera> cameras;
+
     float G = 9.81;
     float fps = 0.0f;
 
     void init(Game *g);
     void run();
+
+    Camera* getActiveCamera() { return &cameras[activeCamera]; }
+
+    Camera* getCamera(unsigned int camera) { return &cameras[camera]; }
 
 private:
     Game *game;
@@ -36,6 +44,8 @@ private:
     void getInput(SDL_Event &event);
     void setupKeyBindings();
     void loadAssets();
+    void setupCamera();
+
     void beginFrame();
     void endFrame();
 

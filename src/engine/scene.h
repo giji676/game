@@ -6,6 +6,10 @@ class Scene {
 public:
     Scene() { rootId = createObjectInternal(); }
 
+    void init();
+    void update();
+    void render();
+
     ObjectID getRoot() const { return rootId; }
     Object& root() { return objects[rootId]; }
     const Object& root() const { return objects[rootId]; }
@@ -22,4 +26,9 @@ private:
     ObjectID rootId = 0;
 
     ObjectID createObjectInternal();
+    void updateScripts(ObjectID id);
+    void initScripts(ObjectID id);
+    void recurseRender(
+        const ObjectID objId,
+        const glm::mat4& parentMatrix);
 };

@@ -17,6 +17,7 @@ void Engine::init(Game *g) {
 
     setupKeyBindings();
     loadAssets();
+    setupCamera();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
@@ -35,7 +36,9 @@ void Engine::run() {
 
         getInput(event);
         game->update();
+        scene.update();
         game->render();
+        scene.render();
 
         endFrame();
     }
@@ -117,4 +120,14 @@ void Engine::loadAssets() {
 
     gj_vflip_image(1);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
+}
+
+void Engine::setupCamera() {
+    cameras.emplace_back(Camera());
+    activeCamera = 0;
+    Camera* camera = getActiveCamera();
+
+    camera->pos = glm::vec3(0.0f, 0.0f, 3.0f);
+    camera->front = glm::vec3(0.0f, 0.0f, -1.0f);
+    camera->up = glm::vec3(0.0f, 1.0f, 0.0f);
 }

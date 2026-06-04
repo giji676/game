@@ -8,8 +8,6 @@
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale);
 
-glm::mat4 transformToMatrix(const Transform& t);
-
 Game::Game(Engine& engine)
     : engine(engine)
 {}
@@ -20,10 +18,6 @@ void Game::init() {
 
     player.pos = glm::vec3(0.f);
     player.velocity = glm::vec3(0.f);
-
-    camera.pos = glm::vec3(0.0f, 0.0f, 3.0f);
-    camera.front = glm::vec3(0.0f, 0.0f, -1.0f);
-    camera.up = glm::vec3(0.0f, 1.0f, 0.0f);
 
     light.pos = glm::vec3(0.f, 3.f, 0.f);
     light.color = glm::vec3(1.f);
@@ -52,8 +46,6 @@ void Game::init() {
     texturedMatShader.use();
     texturedMatShader.setVec3("lightPos", light.pos);
     texturedMatShader.setVec3("lightColor", light.color);
-
-    initScripts(scene.getRoot());
 }
 
 void Game::setupTerrain() {
@@ -177,6 +169,7 @@ Terrain generateTerrain(int width, int height, float scale, float heightScale) {
 }
 
 void Game::update() {
+    Camera& camera = *engine.getActiveCamera();
     float cameraSpeed = player.speed * engine.app.deltaTime;
     Input &input = engine.input;
 
@@ -243,6 +236,7 @@ void Game::update() {
 }
 
 void Game::render() {
+    Camera& camera = *engine.getActiveCamera();
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -265,70 +259,4 @@ void Game::render() {
                    GL_UNSIGNED_INT,
                    0);
     glBindVertexArray(0);
-
-    glm::mat4 identity(1.0f);
-
-    updateScripts(engine.scene.getRoot());
-    recurseRender(engine.scene.getRoot(), identity);
-    engine.renderer.render(view, projection);
-}
-
-void Game::recurseRender(
-    const ObjectID objId,
-    const glm::mat4& parentMatrix)
-{
-    Object& obj = engine.scene.get(objId);
-
-    glm::mat4 localMatrix =
-        transformToMatrix(obj.transform);
-
-    glm::mat4 worldMatrix =
-        parentMatrix * localMatrix;
-
-    engine.renderer.submit(obj, worldMatrix);
-
-    for (const auto& child : obj.children) {
-        recurseRender(child, worldMatrix);
-    }
-}
-
-void Game::initScripts(ObjectID id) {
-    Object& obj = engine.scene.get(id);
-
-    for (auto& script : obj.scripts) {
-        script->init();
-    }
-
-    for (ObjectID child : obj.children) {
-        initScripts(child);
-    }
-}
-
-void Game::updateScripts(ObjectID id) {
-    Object& obj = engine.scene.get(id);
-
-    for (auto& script : obj.scripts) {
-        script->update();
-    }
-
-    for (ObjectID child : obj.children) {
-        updateScripts(child);
-    }
-}
-
-glm::mat4 transformToMatrix(const Transform& t) {
-    glm::mat4 m(1.0f);
-
-    m = glm::translate(m, t.position);
-
-    m = glm::rotate(m, glm::radians(t.rotation.x),
-                    glm::vec3(1,0,0));
-    m = glm::rotate(m, glm::radians(t.rotation.y),
-                    glm::vec3(0,1,0));
-    m = glm::rotate(m, glm::radians(t.rotation.z),
-                    glm::vec3(0,0,1));
-
-    m = glm::scale(m, t.scale);
-
-    return m;
 }

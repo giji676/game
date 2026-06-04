@@ -5,7 +5,6 @@
 #include "engine/engine.h"
 #include "game/player.h"
 
-#include "engine/camera.h"
 #include "engine/defines.h"
 
 typedef struct {
@@ -32,8 +31,6 @@ public:
     void init();
     void update();
     void render();
-    void initScripts(ObjectID id);
-    void updateScripts(ObjectID id);
     void recurseRender(
         const ObjectID objId,
         const glm::mat4& parentMatrix);
@@ -41,7 +38,6 @@ public:
 private:
     Engine& engine;
     Player player;
-    Camera camera;
     World world;
     Light light;
 
