@@ -5,6 +5,7 @@
 #include "game/player.h"
 
 #include "engine/camera.h"
+#include "engine/scene.h"
 #include "engine/asset_manager/object.h"
 
 class Engine;
@@ -31,8 +32,10 @@ public:
     void init(Engine *engine);
     void update();
     void render();
+    void initScripts(ObjectID id);
+    void updateScripts(ObjectID id, float dt);
     void recurseRender(
-        const Object& obj,
+        const ObjectID objId,
         const glm::mat4& parentMatrix);
 
 private:
@@ -41,8 +44,7 @@ private:
     Camera camera;
     World world;
     Light light;
-
-    std::vector<Object> scene;
+    Scene scene;
 
     unsigned int planeVBO, planeVAO, planeEBO;
 

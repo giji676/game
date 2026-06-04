@@ -2,6 +2,7 @@
 
 #include "game/game.h"
 #include "game/perlin.h"
+#include "game/scripts/test.h"
 
 #include "engine/engine.h"
 
@@ -29,23 +30,26 @@ void Game::init(Engine *engine) {
     sceneShader.setVec3("lightPos", light.pos);
     sceneShader.setVec3("lightColor", light.color);
 
-
-    Object obj;
+    ObjectID objId = scene.createObject();
+    Object& obj = scene.get(objId);
     obj.model = &engine->assets.getModel("backpack");
     obj.transform.position = glm::vec3(0.0f, 0.5f, -1.5f);
     obj.transform.scale = glm::vec3(0.1f);
+    obj.addScript<Test>();
 
-    Object obj2;
+    ObjectID objId2 = scene.createObject();
+    Object& obj2 = scene.get(objId2);
     obj2.model = &engine->assets.getModel("backpack");
     obj2.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
     obj2.transform.scale = glm::vec3(0.2f);
-    obj.setChild(obj2);
-    scene.push_back(obj);
+    scene.reparent(objId2, objId);
 
     Shader& texturedMatShader = engine->assets.getShader("textured_mat");
     texturedMatShader.use();
     texturedMatShader.setVec3("lightPos", light.pos);
     texturedMatShader.setVec3("lightColor", light.color);
+
+    initScripts(scene.getRoot());
 }
 
 void Game::setupTerrain() {
@@ -223,7 +227,6 @@ void Game::update() {
 
     camera.yaw += xoffset * sensitivity;
     camera.pitch -= yoffset * sensitivity;
-
     camera.pitch = glm::clamp(camera.pitch, -89.0f, 89.0f);
 
     glm::vec3 direction;
@@ -261,15 +264,17 @@ void Game::render() {
 
     glm::mat4 identity(1.0f);
 
-    for (auto &obj : scene) {
-        recurseRender(obj, identity);
-    }
+    updateScripts(scene.getRoot(), engine->app.deltaTime);
+    recurseRender(scene.getRoot(), identity);
     engine->renderer.render(view, projection);
 }
 
 void Game::recurseRender(
-    const Object& obj,
-    const glm::mat4& parentMatrix) {
+    const ObjectID objId,
+    const glm::mat4& parentMatrix)
+{
+    Object& obj = scene.get(objId);
+
     glm::mat4 localMatrix =
         transformToMatrix(obj.transform);
 
@@ -280,6 +285,30 @@ void Game::recurseRender(
 
     for (const auto& child : obj.children) {
         recurseRender(child, worldMatrix);
+    }
+}
+
+void Game::initScripts(ObjectID id) {
+    Object& obj = scene.get(id);
+
+    for (auto& script : obj.scripts) {
+        script->init();
+    }
+
+    for (ObjectID child : obj.children) {
+        initScripts(child);
+    }
+}
+
+void Game::updateScripts(ObjectID id, float dt) {
+    Object& obj = scene.get(id);
+
+    for (auto& script : obj.scripts) {
+        script->update(dt);
+    }
+
+    for (ObjectID child : obj.children) {
+        updateScripts(child, dt);
     }
 }
 

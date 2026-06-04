@@ -2,6 +2,9 @@
 
 void Renderer::submit(const Object& object,
                       const glm::mat4& modelMatrix) {
+    if (!object.model)
+        return;
+
     for (const SubMesh& part : object.model->getParts()) {
         RenderCommand cmd;
         cmd.mesh = &part.mesh;
@@ -14,6 +17,7 @@ void Renderer::submit(const Object& object,
 void Renderer::render(const glm::mat4& view,
                       const glm::mat4& projection)
 {
+    // TODO: sort by shader, material, etc. to minimize state changes
     for (const RenderCommand& cmd : queue) {
         Shader* shader = cmd.material->shader;
 
