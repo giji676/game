@@ -2,6 +2,36 @@
 #include "engine/asset_manager/shader.h"
 #include "engine/engine.h"
 
+void DebugRenderer::box(
+    const glm::mat4& world,
+    const glm::vec3& size,
+    const glm::vec3& color)
+{
+    glm::vec3 halfSize = size * 0.5f;
+    glm::vec3 vertices[8] = {
+        {-halfSize.x, -halfSize.y, -halfSize.z},
+        { halfSize.x, -halfSize.y, -halfSize.z},
+        { halfSize.x,  halfSize.y, -halfSize.z},
+        {-halfSize.x,  halfSize.y, -halfSize.z},
+        {-halfSize.x, -halfSize.y,  halfSize.z},
+        { halfSize.x, -halfSize.y,  halfSize.z},
+        { halfSize.x,  halfSize.y,  halfSize.z},
+        {-halfSize.x,  halfSize.y,  halfSize.z}
+    };
+    unsigned int indices[24] = {
+        0, 1, 1, 2, 2, 3, 3, 0,
+        4, 5, 5, 6, 6, 7, 7, 4,
+        0, 4, 1, 5, 2, 6, 3, 7
+    };
+    for (unsigned int i = 0; i < 24; i += 2) {
+        line(
+            world * glm::vec4(vertices[indices[i]],   1.0f),
+            world * glm::vec4(vertices[indices[i+1]], 1.0f),
+            color
+        );
+    }
+}
+
 void DebugRenderer::render(
     const glm::mat4& view,
     const glm::mat4& projection)

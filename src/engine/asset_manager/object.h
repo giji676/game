@@ -18,6 +18,17 @@ public:
 
     std::vector<std::unique_ptr<IScript>> scripts;
 
+    Bounds getBounds() const {
+        if (model) return model->getBounds();
+
+        return Bounds{
+            .min = glm::vec3(0.0f),
+            .max = glm::vec3(0.0f),
+            .center = glm::vec3(0.0f),
+            .size = glm::vec3(0.0f),
+        };
+    }
+
     bool debug = false;
 
     template <typename T, typename... Args>

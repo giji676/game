@@ -8,6 +8,13 @@
 #include "mesh.h"
 #include "asset_manager.h"
 
+struct Bounds {
+    glm::vec3 min;
+    glm::vec3 max;
+    glm::vec3 center;
+    glm::vec3 size;
+};
+
 typedef struct {
     Mesh mesh;
     Material material;
@@ -23,6 +30,8 @@ public:
     Model& operator=(const Model&) = delete;
     void draw();
     std::vector<SubMesh>& getParts();
+    // TODO: cache size during model load (should be static not changing)
+    Bounds getBounds();
 
 private:
     std::vector<SubMesh> parts;

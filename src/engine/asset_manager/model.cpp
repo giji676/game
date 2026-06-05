@@ -1,5 +1,26 @@
+#include <cfloat>
+
 #include "model.h"
 
+Bounds Model::getBounds() {
+    glm::vec3 min(FLT_MAX);
+    glm::vec3 max(-FLT_MAX);
+
+    for (const SubMesh& part : parts) {
+        for (const Vertex& v : part.mesh.vertices) {
+            min = glm::min(min, v.Position);
+            max = glm::max(max, v.Position);
+        }
+    }
+
+    Bounds b;
+    b.min = min;
+    b.max = max;
+    b.center = (min + max) * 0.5f;
+    b.size = max - min;
+
+    return b;
+}
 void Model::draw() {
     for (SubMesh& part : parts) {
         part.material.bind();

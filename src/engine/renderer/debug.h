@@ -31,6 +31,11 @@ public:
         const glm::vec3& end,
         const glm::vec3& color);
 
+    void box(
+        const glm::mat4& world,
+        const glm::vec3& size,
+        const glm::vec3& color);
+
     void axis(
         const glm::mat4& world,
         float size = 1.0f);

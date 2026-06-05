@@ -28,6 +28,10 @@ void collectRenderCommands(
     if (obj.debug) {
         DebugRenderer& debug = Engine::instance().debugRenderer;
         debug.axis(world, 2.5f);
+        Bounds bounds = obj.getBounds();
+        debug.box(
+            world * glm::translate(glm::mat4(1.f), bounds.center),
+            bounds.size, {1.f, 1.f, 1.f});
     }
 
     if (obj.model) {
