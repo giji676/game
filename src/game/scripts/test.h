@@ -9,6 +9,6 @@ public:
     void init() override { }
     void update() override {
         Object& obj = Engine::instance().scene.get(object);
-        obj.transform.rotation.y += 45.f * Engine::instance().app.deltaTime;
+        obj.transform.rotate({0, 45.f * Engine::instance().app.deltaTime, 0});
     }
 };

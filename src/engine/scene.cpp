@@ -1,14 +1,12 @@
 #include <algorithm>
 
 #include "scene.h"
-#include "engine.h"
 
 void collectRenderCommands(
     const Scene& scene,
     ObjectID id,
     const glm::mat4& parent,
     std::vector<RenderCommand>& out);
-glm::mat4 transformToMatrix(const Transform& t);
 
 std::vector<RenderCommand> Scene::buildRenderList() {
     std::vector<RenderCommand> out;
@@ -24,8 +22,7 @@ void collectRenderCommands(
 {
     const Object& obj = scene.get(id);
 
-    glm::mat4 local = transformToMatrix(obj.transform);
-    glm::mat4 world = parent * local;
+    glm::mat4 world = parent * obj.transform.localMatrix();
 
     if (obj.model) {
         for (auto& part : obj.model->getParts()) {
@@ -44,23 +41,6 @@ void collectRenderCommands(
     for (auto child : obj.children) {
         collectRenderCommands(scene, child, world, out);
     }
-}
-
-glm::mat4 transformToMatrix(const Transform& t) {
-    glm::mat4 m(1.0f);
-
-    m = glm::translate(m, t.position);
-
-    m = glm::rotate(m, glm::radians(t.rotation.x),
-                    glm::vec3(1,0,0));
-    m = glm::rotate(m, glm::radians(t.rotation.y),
-                    glm::vec3(0,1,0));
-    m = glm::rotate(m, glm::radians(t.rotation.z),
-                    glm::vec3(0,0,1));
-
-    m = glm::scale(m, t.scale);
-
-    return m;
 }
 
 void Scene::update() {
