@@ -15,7 +15,6 @@ void Renderer::render(std::vector<RenderCommand>& queue,
     Material* currentMaterial = nullptr;
 
     for (const RenderCommand& cmd : queue) {
-
         if (cmd.material->shader != currentShader) {
             currentShader = cmd.material->shader;
 
@@ -39,10 +38,7 @@ void Renderer::render(std::vector<RenderCommand>& queue,
                 "specularFallback",
                 currentMaterial->specularFallback);
 
-            for (unsigned int i = 0;
-            i < currentMaterial->textures.size();
-            i++)
-            {
+            for (unsigned int i = 0; i < currentMaterial->textures.size(); i++) {
                 const std::string& type =
                     currentMaterial->textures[i]->type;
 

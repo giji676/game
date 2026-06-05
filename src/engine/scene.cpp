@@ -1,6 +1,8 @@
 #include <algorithm>
 
 #include "scene.h"
+#include "engine/renderer/debug.h"
+#include "engine/engine.h"
 
 void collectRenderCommands(
     const Scene& scene,
@@ -21,8 +23,12 @@ void collectRenderCommands(
     std::vector<RenderCommand>& out)
 {
     const Object& obj = scene.get(id);
-
     glm::mat4 world = parent * obj.transform.localMatrix();
+
+    if (obj.debug) {
+        DebugRenderer& debug = Engine::instance().debugRenderer;
+        debug.axis(world, 2.5f);
+    }
 
     if (obj.model) {
         for (auto& part : obj.model->getParts()) {

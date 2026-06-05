@@ -8,6 +8,7 @@
 #include "window.h"
 #include "asset_manager/asset_manager.h"
 #include "renderer/renderer.h"
+#include "renderer/debug.h"
 
 class Game;
 
@@ -19,6 +20,7 @@ public:
     Input input;
     AssetManager assets;
     Renderer renderer;
+    DebugRenderer debugRenderer;
     Scene scene;
 
     unsigned int activeCamera = 0;

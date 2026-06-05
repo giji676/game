@@ -34,12 +34,14 @@ void Game::init() {
     obj.transform.setPosition({0.0f, 0.5f, -1.5f});
     obj.transform.setScale({0.1f, 0.1f, 0.1f});
     obj.addScript<Test>();
+    obj.debug = true;
 
     ObjectID objId2 = scene.createObject();
     Object& obj2 = scene.get(objId2);
     obj2.model = &engine.assets.getModel("backpack");
     obj2.transform.setPosition({2.0f, 0.0f, 0.0f});
     obj2.transform.setScale({0.2f, 0.2f, 0.2f});
+    obj2.debug = true;
     scene.reparent(objId2, objId);
 
     Shader& texturedMatShader = engine.assets.getShader("textured_mat");

@@ -18,6 +18,8 @@ public:
 
     std::vector<std::unique_ptr<IScript>> scripts;
 
+    bool debug = false;
+
     template <typename T, typename... Args>
     T& addScript(Args&&... args) {
         auto script = std::make_unique<T>(std::forward<Args>(args)...);

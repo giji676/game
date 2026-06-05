@@ -26,6 +26,7 @@ void Engine::init(Game *g) {
     
     game = g;
     game->init();
+    debugRenderer.init();
 }
 
 void Engine::run() {
@@ -68,6 +69,7 @@ void Engine::callRenderer(std::vector<RenderCommand>& que) {
     );
 
     renderer.render(que, view, projection);
+    debugRenderer.render(view, projection);
 }
 
 void Engine::beginFrame() {
@@ -138,6 +140,13 @@ void Engine::loadAssets() {
         "shaders/textured_mat.v.glsl",
         "shaders/textured_mat.f.glsl"
     );
+
+    assets.loadShader(
+        "debug",
+        "shaders/debug_shader.v.glsl",
+        "shaders/debug_shader.f.glsl"
+    );
+
 
     gj_vflip_image(1);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
