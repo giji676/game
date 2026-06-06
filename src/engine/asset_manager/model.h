@@ -25,18 +25,20 @@ public:
     Model(const char *path, AssetManager *assetManager) {
         this->assetManager = assetManager;
         loadModel(path);
+        computeBounds();
     }
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;
     void draw();
     std::vector<SubMesh>& getParts();
-    // TODO: cache size during model load (should be static not changing)
-    Bounds getBounds();
+    const Bounds& getBounds() const;
+    void computeBounds();
 
 private:
     std::vector<SubMesh> parts;
     std::string directory;
     AssetManager *assetManager;
+    Bounds bounds_;
 
     void loadModel(std::string path);
     void processNode(struct gjNode *node, struct gjModel *model);

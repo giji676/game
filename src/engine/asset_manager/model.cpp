@@ -2,7 +2,11 @@
 
 #include "model.h"
 
-Bounds Model::getBounds() {
+const Bounds& Model::getBounds() const {
+    return bounds_;
+}
+
+void Model::computeBounds() {
     glm::vec3 min(FLT_MAX);
     glm::vec3 max(-FLT_MAX);
 
@@ -13,14 +17,12 @@ Bounds Model::getBounds() {
         }
     }
 
-    Bounds b;
-    b.min = min;
-    b.max = max;
-    b.center = (min + max) * 0.5f;
-    b.size = max - min;
-
-    return b;
+    bounds_.min = min;
+    bounds_.max = max;
+    bounds_.center = (min + max) * 0.5f;
+    bounds_.size = max - min;
 }
+
 void Model::draw() {
     for (SubMesh& part : parts) {
         part.material.bind();

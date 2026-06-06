@@ -244,11 +244,6 @@ void Game::update() {
     if (hit.object != INVALID_OBJECT_ID) {
         Object& obj = engine.scene.get(hit.object);
         obj.debug = true;
-            std::cout << "Sphere hit: "
-                << hit.object
-                << " distance="
-                << hit.distance
-                << std::endl;
     }
 }
 
