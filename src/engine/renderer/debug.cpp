@@ -77,7 +77,6 @@ void DebugRenderer::init() {
 }
 
 void DebugRenderer::upload() {
-    vertices_.clear();
     makeVertices(lines_);
 
     glBindVertexArray(vao);

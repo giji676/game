@@ -3,6 +3,7 @@
 #include <SDL2/SDL_events.h>
 
 #include "camera.h"
+#include "raycasting.h"
 #include "scene.h"
 #include "input.h"
 #include "window.h"
@@ -22,6 +23,7 @@ public:
     Renderer renderer;
     DebugRenderer debugRenderer;
     Scene scene;
+    Raycasting raycasting;
 
     unsigned int activeCamera = 0;
     std::vector<Camera> cameras;

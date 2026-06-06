@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 
 #include "game/game.h"
+#include "engine/raycasting.h"
 #include "game/perlin.h"
 #include "game/scripts/test.h"
 
@@ -34,14 +35,14 @@ void Game::init() {
     obj.transform.setPosition({0.0f, 0.5f, -1.5f});
     obj.transform.setScale({0.1f, 0.1f, 0.1f});
     obj.addScript<Test>();
-    obj.debug = true;
+    // obj.debug = true;
 
     ObjectID objId2 = scene.createObject();
     Object& obj2 = scene.get(objId2);
     obj2.model = &engine.assets.getModel("backpack");
     obj2.transform.setPosition({2.0f, 0.0f, 0.0f});
     obj2.transform.setScale({0.2f, 0.2f, 0.2f});
-    obj2.debug = true;
+    // obj2.debug = true;
     scene.reparent(objId2, objId);
 
     Shader& texturedMatShader = engine.assets.getShader("textured_mat");
@@ -235,6 +236,20 @@ void Game::update() {
 
     camera.front = glm::normalize(direction);
     camera.pos = player.pos;
+    // TEMP: reset debug state of all objects
+    engine.scene.get(1).debug = false;
+    engine.scene.get(2).debug = false;
+
+    RaycastHit hit = engine.raycasting.castRay();
+    if (hit.object != INVALID_OBJECT_ID) {
+        Object& obj = engine.scene.get(hit.object);
+        obj.debug = true;
+            std::cout << "Sphere hit: "
+                << hit.object
+                << " distance="
+                << hit.distance
+                << std::endl;
+    }
 }
 
 void Game::render() {
