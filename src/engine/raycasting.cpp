@@ -24,8 +24,11 @@ void Raycasting::checkIntersect(
     Engine& engine = Engine::instance();
     const Object& obj = engine.scene.get(id);
 
-    glm::vec3 rayOrigin = engine.getActiveCamera()->pos;
-    glm::vec3 rayDirection = glm::normalize(engine.getActiveCamera()->front);
+    Ray ray = Ray {
+        .origin = engine.getActiveCamera()->pos,
+        .direction = glm::normalize(engine.getActiveCamera()->front),
+    };
+
     glm::mat4 world = parent * obj.transform.localMatrix();
 
     Bounds bounds = obj.getBounds();
@@ -50,8 +53,7 @@ void Raycasting::checkIntersect(
         float distance;
 
         if (testSphereIntersection(
-            rayOrigin,
-            rayDirection,
+            ray,
             center,
             radius,
             distance))
@@ -59,12 +61,17 @@ void Raycasting::checkIntersect(
             glm::mat4 invWorld = glm::inverse(world);
 
             glm::vec3 localOrigin =
-                glm::vec3(invWorld * glm::vec4(rayOrigin, 1.0f));
+                glm::vec3(invWorld * glm::vec4(ray.origin, 1.0f));
 
             glm::vec3 localDirection =
                 glm::normalize(
-                    glm::vec3(invWorld * glm::vec4(rayDirection, 0.0f))
+                    glm::vec3(invWorld * glm::vec4(ray.direction, 0.0f))
                 );
+
+            Ray localRay = Ray {
+                .origin = localOrigin,
+                .direction = localDirection
+            };
 
             float closestTriDist = FLT_MAX;
             bool hitTriangle = false;
@@ -83,8 +90,7 @@ void Raycasting::checkIntersect(
 
                     auto hitPos =
                         testTriangleIntersection(
-                            localOrigin,
-                            localDirection,
+                            localRay,
                             tri);
 
                     if (!hitPos)
@@ -113,16 +119,15 @@ void Raycasting::checkIntersect(
 }
 
 bool Raycasting::testSphereIntersection(
-    const glm::vec3& rayOrigin,
-    const glm::vec3& rayDirection,
+    const Ray& ray,
     const glm::vec3& sphereCenter,
     float radius,
     float& intersectionDistance)
 {
-    glm::vec3 oc = rayOrigin - sphereCenter;
+    glm::vec3 oc = ray.origin - sphereCenter;
 
-    float a = glm::dot(rayDirection, rayDirection);
-    float b = 2.0f * glm::dot(oc, rayDirection);
+    float a = glm::dot(ray.direction, ray.direction);
+    float b = 2.0f * glm::dot(oc, ray.direction);
     float c = glm::dot(oc, oc) - radius * radius;
 
     float discriminant = b * b - 4.0f * a * c;
@@ -149,9 +154,9 @@ bool Raycasting::testSphereIntersection(
     return false;
 }
 
-std::optional<glm::vec3> Raycasting::testTriangleIntersection(const glm::vec3& ray_origin,
-                                                  const glm::vec3 &ray_vector,
-                                                  const triangle3& triangle)
+std::optional<glm::vec3> Raycasting::testTriangleIntersection(
+    const Ray& ray,
+    const triangle3& triangle)
 {
     // From https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
     constexpr float epsilon = std::numeric_limits<float>::epsilon();
@@ -161,21 +166,21 @@ std::optional<glm::vec3> Raycasting::testTriangleIntersection(const glm::vec3& r
 
     // Backface culling, assuming CCW-wound triangles.
     const glm::vec3 normal = cross(edge1, edge2); // No need to normalize
-    if (dot(normal, ray_vector) > 0) return {};
+    if (dot(normal, ray.direction) > 0) return {};
 
-    glm::vec3 ray_cross_e2 = cross(ray_vector, edge2);
+    glm::vec3 ray_cross_e2 = cross(ray.direction, edge2);
     float det = dot(edge1, ray_cross_e2);
 
     if (abs(det) < epsilon) return {}; // Ray is parallel to triangle
 
     float inv_det = 1.0 / det;
-    glm::vec3 s = ray_origin - triangle.a;
+    glm::vec3 s = ray.origin - triangle.a;
     float u = inv_det * dot(s, ray_cross_e2);
 
     if (u < -epsilon || u - 1 > epsilon) return {}; // Ray passes outside edge2's bounds
 
     glm::vec3 s_cross_e1 = cross(s, edge1);
-    float v = inv_det * dot(ray_vector, s_cross_e1);
+    float v = inv_det * dot(ray.direction, s_cross_e1);
 
     if (v < -epsilon || u + v - 1 > epsilon) return {}; // Ray passes outside edge1's bounds
 
@@ -184,7 +189,7 @@ std::optional<glm::vec3> Raycasting::testTriangleIntersection(const glm::vec3& r
     float t = inv_det * dot(edge2, s_cross_e1);
 
     if (t > epsilon) // Ray intersection
-        return  glm::vec3(ray_origin + ray_vector * t);
+        return  glm::vec3(ray.origin + ray.direction * t);
     else // This means that there is a line intersection but not a ray intersection.
         return {};
 }

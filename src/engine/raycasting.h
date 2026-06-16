@@ -17,6 +17,11 @@ struct RaycastHit {
     float distance = FLT_MAX;
 };
 
+typedef struct {
+    glm::vec3 origin;
+    glm::vec3 direction;
+} Ray;
+
 class Raycasting {
 public:
     RaycastHit castRay();
@@ -27,13 +32,12 @@ public:
         RaycastHit& bestHit);
 
     bool testSphereIntersection(
-        const glm::vec3& rayOrigin,
-        const glm::vec3& rayDirection,
+        const Ray& ray,
         const glm::vec3& sphereCenter,
         float radius,
         float& intersectionDistance);
 
-    std::optional<glm::vec3> testTriangleIntersection(const glm::vec3& ray_origin,
-                                                      const glm::vec3 &ray_vector,
-                                                      const triangle3& triangle);
+    std::optional<glm::vec3> testTriangleIntersection(
+        const Ray& ray,
+        const triangle3& triangle);
 };
