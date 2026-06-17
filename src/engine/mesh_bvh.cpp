@@ -114,7 +114,6 @@ void MeshBVH::subdivide(uint32_t nodeIdx) {
 
 void MeshBVH::intersectBVH(Ray& ray, uint32_t nodeIdx) {
     const MeshBVHNode& node = nodes[nodeIdx];
-
     if (!intersectAABB(ray, node.aabbMin, node.aabbMax))
         return;
 

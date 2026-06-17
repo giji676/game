@@ -4,6 +4,7 @@
 
 #include "engine/engine.h"
 #include "engine/renderer/renderer.h"
+#include "engine/profilers/profiler.h"
 #include "game/game.h"
 #include "gj_image/gj_image.h"
 
@@ -35,6 +36,7 @@ void Engine::run() {
 
     while (app.running) {
         beginFrame();
+        Profiler::instance().beginFrame();
 
         getInput(event);
         game->update();
@@ -43,6 +45,7 @@ void Engine::run() {
         game->render();
         callRenderer(commands);
 
+        Profiler::instance().endFrame();
         endFrame();
     }
 

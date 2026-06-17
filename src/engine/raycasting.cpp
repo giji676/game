@@ -2,9 +2,11 @@
 #include "raycasting.h"
 #include "engine.h"
 #include "engine/asset_manager/model.h"
+#include "engine/profilers/profile_scope.h"
 #include "glm/geometric.hpp"
 
 RaycastHit Raycasting::castRay() {
+    PROFILE_SCOPE("Raycasting::castRay");
     RaycastHit hit;
 
     checkIntersect(

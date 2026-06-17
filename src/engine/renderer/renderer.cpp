@@ -1,11 +1,13 @@
 #include <algorithm>
 
 #include "renderer.h"
+#include "engine/profilers/profile_scope.h"
 
 void Renderer::render(std::vector<RenderCommand>& queue,
                       const glm::mat4& view,
                       const glm::mat4& projection)
 {
+    PROFILE_SCOPE("Renderer::render");
     std::sort(queue.begin(), queue.end(),
               [](const RenderCommand& a, const RenderCommand& b) {
               return a.sortKey < b.sortKey;
