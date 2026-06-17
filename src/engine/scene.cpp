@@ -35,7 +35,7 @@ void collectRenderCommands(
     }
 
     if (obj.model) {
-        for (auto& part : obj.model->getParts()) {
+        for (const auto& part : obj.model->getParts()) {
             RenderCommand cmd;
             cmd.mesh = &part.mesh;
             cmd.material = &part.material;

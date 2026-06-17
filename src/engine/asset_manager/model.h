@@ -6,6 +6,7 @@
 #include "gj_model/gj_model.h"
 #include "material.h"
 #include "mesh.h"
+#include "engine/mesh_bvh.h"
 #include "asset_manager.h"
 
 struct Bounds {
@@ -26,19 +27,25 @@ public:
         this->assetManager = assetManager;
         loadModel(path);
         computeBounds();
+        bvh.build(*this);
     }
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;
+
+    MeshBVH bvh;
+    const std::vector<SubMesh>& getParts() const;
+
     void draw();
-    std::vector<SubMesh>& getParts();
     const Bounds& getBounds() const;
     void computeBounds();
+    uint32_t getTriCount() const { return this->triCount; }
 
 private:
     std::vector<SubMesh> parts;
     std::string directory;
     AssetManager *assetManager;
     Bounds bounds_;
+    uint32_t triCount;
 
     void loadModel(std::string path);
     void processNode(struct gjNode *node, struct gjModel *model);

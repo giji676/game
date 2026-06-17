@@ -22,10 +22,12 @@ public:
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices) {
         this->vertices = vertices;
         this->indices = indices;
+        this->triCount = indices.size() / 3;
         setupMeshGPU();
     }
 
     void draw() const;
+    uint32_t triCount;
 
 private:
     GLuint VAO, VBO, EBO;

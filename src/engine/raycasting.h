@@ -1,26 +1,34 @@
 #pragma once
 
+#include <cfloat>
 #include <glm/glm.hpp>
 #include <optional>
 #include "defines.h"
 
 #define INVALID_OBJECT_ID 0
 
-typedef struct {
+struct triangle3 {
     glm::vec3 a;
     glm::vec3 b;
     glm::vec3 c;
-} triangle3;
+};
 
 struct RaycastHit {
     ObjectID object = INVALID_OBJECT_ID;
     float distance = FLT_MAX;
 };
 
-typedef struct {
+struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
-} Ray;
+    float t = FLT_MAX;
+};
+
+struct TriangleHit {
+    float t;
+    glm::vec3 position;
+    glm::vec3 normal;
+};
 
 class Raycasting {
 public:
@@ -31,13 +39,13 @@ public:
         const glm::mat4& parent,
         RaycastHit& bestHit);
 
-    bool testSphereIntersection(
+    static bool testSphereIntersection(
         const Ray& ray,
         const glm::vec3& sphereCenter,
         float radius,
         float& intersectionDistance);
 
-    std::optional<glm::vec3> testTriangleIntersection(
+    static std::optional<TriangleHit> testTriangleIntersection(
         const Ray& ray,
         const triangle3& triangle);
 };

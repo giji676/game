@@ -6,8 +6,8 @@
 #include "engine/asset_manager/mesh.h"
 
 typedef struct {
-    Mesh* mesh;
-    Material* material;
+    const Mesh* mesh;
+    const Material* material;
     glm::mat4 model;
 
     uint64_t sortKey;

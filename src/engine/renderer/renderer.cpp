@@ -12,7 +12,7 @@ void Renderer::render(std::vector<RenderCommand>& queue,
               });
 
     Shader* currentShader = nullptr;
-    Material* currentMaterial = nullptr;
+    const Material* currentMaterial = nullptr;
 
     for (const RenderCommand& cmd : queue) {
         if (cmd.material->shader != currentShader) {

@@ -59,55 +59,19 @@ void Raycasting::checkIntersect(
             distance))
         {
             glm::mat4 invWorld = glm::inverse(world);
-
-            glm::vec3 localOrigin =
-                glm::vec3(invWorld * glm::vec4(ray.origin, 1.0f));
-
-            glm::vec3 localDirection =
-                glm::normalize(
+            Ray localRay;
+            localRay.origin = glm::vec3(invWorld * glm::vec4(ray.origin, 1.0f));
+            localRay.direction = glm::normalize(
                     glm::vec3(invWorld * glm::vec4(ray.direction, 0.0f))
-                );
+                    );
 
-            Ray localRay = Ray {
-                .origin = localOrigin,
-                .direction = localDirection
-            };
+            obj.model->bvh.intersectBVH(
+                    localRay,
+                    obj.model->bvh.rootNodeIdx
+                    );
 
-            float closestTriDist = FLT_MAX;
-            bool hitTriangle = false;
-
-            for (const SubMesh& part : obj.model->getParts()) {
-                const auto& verts = part.mesh.vertices;
-                const auto& indices = part.mesh.indices;
-
-                for (size_t i = 0; i < indices.size(); i += 3) {
-
-                    triangle3 tri{
-                        verts[indices[i + 0]].Position,
-                        verts[indices[i + 1]].Position,
-                        verts[indices[i + 2]].Position
-                    };
-
-                    auto hitPos =
-                        testTriangleIntersection(
-                            localRay,
-                            tri);
-
-                    if (!hitPos)
-                        continue;
-
-                    float dist =
-                        glm::length(*hitPos - localOrigin);
-
-                    if (dist < closestTriDist) {
-                        closestTriDist = dist;
-                        hitTriangle = true;
-                    }
-                }
-            }
-
-            if (hitTriangle && closestTriDist < bestHit.distance) {
-                bestHit.distance = closestTriDist;
+            if (localRay.t < bestHit.distance) {
+                bestHit.distance = localRay.t;
                 bestHit.object = obj.getID();
             }
         }
@@ -119,10 +83,10 @@ void Raycasting::checkIntersect(
 }
 
 bool Raycasting::testSphereIntersection(
-    const Ray& ray,
-    const glm::vec3& sphereCenter,
-    float radius,
-    float& intersectionDistance)
+        const Ray& ray,
+        const glm::vec3& sphereCenter,
+        float radius,
+        float& intersectionDistance)
 {
     glm::vec3 oc = ray.origin - sphereCenter;
 
@@ -154,9 +118,9 @@ bool Raycasting::testSphereIntersection(
     return false;
 }
 
-std::optional<glm::vec3> Raycasting::testTriangleIntersection(
-    const Ray& ray,
-    const triangle3& triangle)
+std::optional<TriangleHit> Raycasting::testTriangleIntersection(
+        const Ray& ray,
+        const triangle3& triangle)
 {
     // From https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
     constexpr float epsilon = std::numeric_limits<float>::epsilon();
@@ -189,7 +153,7 @@ std::optional<glm::vec3> Raycasting::testTriangleIntersection(
     float t = inv_det * dot(edge2, s_cross_e1);
 
     if (t > epsilon) // Ray intersection
-        return  glm::vec3(ray.origin + ray.direction * t);
+        return TriangleHit{t, ray.origin + ray.direction * t, normal};
     else // This means that there is a line intersection but not a ray intersection.
         return {};
 }

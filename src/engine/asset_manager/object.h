@@ -17,6 +17,7 @@ public:
     std::vector<ObjectID> children;
 
     std::vector<std::unique_ptr<IScript>> scripts;
+    bool debug = false;
 
     Bounds getBounds() const {
         if (model) return model->getBounds();
@@ -28,8 +29,6 @@ public:
             .size = glm::vec3(0.0f),
         };
     }
-
-    bool debug = false;
 
     template <typename T, typename... Args>
     T& addScript(Args&&... args) {

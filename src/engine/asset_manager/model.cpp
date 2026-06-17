@@ -43,7 +43,9 @@ void Model::processNode(struct gjNode *node, struct gjModel *model) {
     for (int i = 0; i < node->meshCount; i++) {
         int meshIndex = node->meshIndices[i];
         struct gjMesh *mesh = &model->meshes[meshIndex];
-        parts.push_back(processMesh(mesh, model));
+        SubMesh sm = processMesh(mesh, model);
+        parts.push_back(sm);
+        this->triCount += sm.mesh.triCount;
     }
     for (int i = 0; i < node->childCount; i++) {
         processNode(&node->children[i], model);
@@ -157,6 +159,6 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     return subMesh;
 }
 
-std::vector<SubMesh>& Model::getParts() {
+const std::vector<SubMesh>& Model::getParts() const {
     return parts;
 }
