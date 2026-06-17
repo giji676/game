@@ -1,6 +1,8 @@
 #include "engine/mesh_bvh.h"
+#include "engine/profilers/profile_scope.h"
 #include "engine/raycasting.h"
 #include "asset_manager/model.h"
+#include <algorithm>
 
 void MeshBVH::build(Model& model) {
     triangles.clear();
@@ -71,7 +73,18 @@ void MeshBVH::subdivide(uint32_t nodeIdx) {
     if (extent.y > extent.x) axis = 1;
     if (extent.z > extent[axis]) axis = 2;
 
-    float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+    std::nth_element(
+            triangles.begin() + node.firstPrim,
+            triangles.begin() + node.firstPrim + node.primCount / 2,
+            triangles.begin() + node.firstPrim + node.primCount,
+            [&](const Triangle& a, const Triangle& b)
+            {
+            return a.centroid[axis] < b.centroid[axis];
+            }
+            );
+
+    float splitPos =
+        triangles[node.firstPrim + node.primCount / 2].centroid[axis];
 
     uint32_t i = node.firstPrim;
     uint32_t j = node.firstPrim + node.primCount - 1;
@@ -113,20 +126,27 @@ void MeshBVH::subdivide(uint32_t nodeIdx) {
 }
 
 void MeshBVH::intersectBVH(Ray& ray, uint32_t nodeIdx) {
+    PROFILE_SCOPE("MeshBVH::intersectBVH");
+    _intersectBVH(ray, nodeIdx);
+}
+
+void MeshBVH::_intersectBVH(Ray& ray, uint32_t nodeIdx) {
     const MeshBVHNode& node = nodes[nodeIdx];
     if (!intersectAABB(ray, node.aabbMin, node.aabbMax))
         return;
 
     if (node.primCount > 0) {
+        PROFILE_SCOPE("TriangleIntersection");
         for (uint32_t i = 0; i < node.primCount; i++) {
             const Triangle& tri = triangles[node.firstPrim + i];
 
+            // TODO: top using triangle3, use Triangle instaed
+            // so no need to construct a new triangle3
             triangle3 tri3{
                 tri.v0,
-                tri.v1,
-                tri.v2
+                    tri.v1,
+                    tri.v2
             };
-
             auto hit = Raycasting::testTriangleIntersection(ray, tri3);
 
             if (hit && hit->t < ray.t)
@@ -135,8 +155,8 @@ void MeshBVH::intersectBVH(Ray& ray, uint32_t nodeIdx) {
         return;
     }
 
-    intersectBVH(ray, node.leftChild);
-    intersectBVH(ray, node.rightChild);
+    _intersectBVH(ray, node.leftChild);
+    _intersectBVH(ray, node.rightChild);
 }
 
 bool MeshBVH::intersectAABB(
@@ -144,6 +164,7 @@ bool MeshBVH::intersectAABB(
         const glm::vec3& bmin,
         const glm::vec3& bmax)
 {
+    PROFILE_SCOPE("MeshBVH::intersectAABB");
     glm::vec3 invD = 1.0f / ray.direction;
 
     glm::vec3 t0 = (bmin - ray.origin) * invD;

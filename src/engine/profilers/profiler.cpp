@@ -23,7 +23,7 @@ void Profiler::beginFrame() {
 }
 
 void Profiler::endFrame() {
-    constexpr double alpha = 0.05;
+    constexpr double alpha = 0.001;
 
     for (auto& [_, sample] : samples_) {
         sample.maxMs = std::max(sample.maxMs, sample.currentMs);
@@ -41,14 +41,14 @@ void Profiler::endFrame() {
 void Profiler::print() {
     std::cout << "\x1B[2J\x1B[H";
     std::cout
-        << "+----------------------+----------+----------+----------+--------+\n"
-        << "| Scope                | Current  | Average  | Max      | Calls  |\n"
-        << "+----------------------+----------+----------+----------+--------+\n";
+        << "+--------------------------+----------+----------+----------+--------+\n"
+        << "| Scope                    | Current  | Average  | Max      | Calls  |\n"
+        << "+--------------------------+----------+----------+----------+--------+\n";
 
     for (const auto& [name, sample] : samples_) {
         std::cout
             << "| "
-            << std::left << std::setw(20) << name
+            << std::left << std::setw(24) << name
             << " | "
             << std::right << std::setw(8) << std::fixed
             << std::setprecision(3) << sample.currentMs
@@ -62,5 +62,6 @@ void Profiler::print() {
     }
 
     std::cout
-        << "+----------------------+----------+----------+----------+--------+\n";
+        << "+--------------------------+----------+----------+----------+--------+\n";
+    std::cout << std::flush;
 }

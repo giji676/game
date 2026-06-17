@@ -60,6 +60,8 @@ void Raycasting::checkIntersect(
             radius,
             distance))
         {
+            // TODO: stop doing inverse (too expensive)
+            // cache world/local mats instead
             glm::mat4 invWorld = glm::inverse(world);
             Ray localRay;
             localRay.origin = glm::vec3(invWorld * glm::vec4(ray.origin, 1.0f));

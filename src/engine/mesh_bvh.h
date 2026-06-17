@@ -40,6 +40,7 @@ private:
     void updateNodeBounds(uint32_t nodeIdx);
     void subdivide(uint32_t nodeIdx);
 
+    void _intersectBVH(Ray& ray, uint32_t nodeIdx);
     static bool intersectAABB(
         const Ray& ray,
         const glm::vec3& bmin,
