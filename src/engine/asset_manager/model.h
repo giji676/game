@@ -35,7 +35,6 @@ public:
     MeshBVH bvh;
     const std::vector<SubMesh>& getParts() const;
 
-    void draw();
     const Bounds& getBounds() const;
     void computeBounds();
     uint32_t getTriCount() const { return this->triCount; }

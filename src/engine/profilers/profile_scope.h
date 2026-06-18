@@ -12,5 +12,8 @@ private:
     std::chrono::high_resolution_clock::time_point start_;
 };
 
+#define PROFILE_CONCAT_IMPL(x, y) x##y
+#define PROFILE_CONCAT(x, y) PROFILE_CONCAT_IMPL(x, y)
+
 #define PROFILE_SCOPE(name) \
-    ProfileScope profileScope##__LINE__(name)
+    ProfileScope PROFILE_CONCAT(profileScope, __LINE__)(name)

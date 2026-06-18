@@ -23,13 +23,6 @@ void Model::computeBounds() {
     bounds_.size = max - min;
 }
 
-void Model::draw() {
-    for (SubMesh& part : parts) {
-        part.material.bind();
-        part.mesh.draw();
-    }
-}
-
 void Model::loadModel(std::string path) {
     struct gjModel *gjModel = gj_model_load(path.c_str());
     if (!gjModel) {

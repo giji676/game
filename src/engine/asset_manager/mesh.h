@@ -25,7 +25,7 @@ public:
         setupMeshGPU();
     }
 
-    void draw() const;
+    void draw(GLuint lastVAO) const;
     uint32_t triCount;
 
 private:

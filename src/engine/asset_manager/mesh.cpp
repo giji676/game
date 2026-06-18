@@ -1,9 +1,11 @@
 #include "mesh.h"
 
-void Mesh::draw() const {
-    glBindVertexArray(VAO);
+void Mesh::draw(GLuint lastVAO) const {
+    if (lastVAO != VAO) {
+        glBindVertexArray(VAO);
+        lastVAO = VAO;
+    }
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
 }
 
 void Mesh::setupMeshGPU() {
@@ -31,5 +33,4 @@ void Mesh::setupMeshGPU() {
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                           (void*)offsetof(Vertex, TexCoords));
-    glBindVertexArray(0);
 }
