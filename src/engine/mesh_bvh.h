@@ -32,7 +32,7 @@ public:
     uint32_t nodesUsed = 1;
 
     void build(Model& model);
-    void intersectBVH(Ray& ray, uint32_t nodeIdx);
+    void intersectBVH(Ray& ray, uint32_t nodeIdx, const glm::mat4& world);
 
 private:
     std::vector<Triangle> triangles;
@@ -40,9 +40,10 @@ private:
     void updateNodeBounds(uint32_t nodeIdx);
     void subdivide(uint32_t nodeIdx);
 
-    void _intersectBVH(Ray& ray, uint32_t nodeIdx);
+    void _intersectBVH(Ray& ray, uint32_t nodeIdx, const glm::mat4& world);
     static bool intersectAABB(
         const Ray& ray,
         const glm::vec3& bmin,
-        const glm::vec3& bmax);
+        const glm::vec3& bmax,
+        const glm::mat4& world);
 };

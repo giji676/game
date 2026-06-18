@@ -126,15 +126,22 @@ void MeshBVH::subdivide(uint32_t nodeIdx) {
     subdivide(rightChild);
 }
 
-void MeshBVH::intersectBVH(Ray& ray, uint32_t nodeIdx) {
+void MeshBVH::intersectBVH(Ray& ray, uint32_t nodeIdx, const glm::mat4& world) {
     PROFILE_SCOPE("MeshBVH::intersectBVH");
-    _intersectBVH(ray, nodeIdx);
+    _intersectBVH(ray, nodeIdx, world);
 }
 
-void MeshBVH::_intersectBVH(Ray& ray, uint32_t nodeIdx) {
+void MeshBVH::_intersectBVH(Ray& ray, uint32_t nodeIdx, const glm::mat4& world) {
     const MeshBVHNode& node = nodes[nodeIdx];
-    if (!intersectAABB(ray, node.aabbMin, node.aabbMax))
+    if (!intersectAABB(ray, node.aabbMin, node.aabbMax, world))
         return;
+
+    Engine::instance().debugRenderer.aabb(
+        world,
+        node.aabbMin,
+        node.aabbMax,
+        {1,0,0}
+    );
 
     if (node.primCount > 0) {
         PROFILE_SCOPE("TriangleIntersection");
@@ -156,14 +163,15 @@ void MeshBVH::_intersectBVH(Ray& ray, uint32_t nodeIdx) {
         return;
     }
 
-    _intersectBVH(ray, node.leftChild);
-    _intersectBVH(ray, node.rightChild);
+    _intersectBVH(ray, node.leftChild, world);
+    _intersectBVH(ray, node.rightChild, world);
 }
 
 bool MeshBVH::intersectAABB(
         const Ray& ray,
         const glm::vec3& bmin,
-        const glm::vec3& bmax)
+        const glm::vec3& bmax,
+        const glm::mat4& world)
 {
     PROFILE_SCOPE("MeshBVH::intersectAABB");
     glm::vec3 invD = 1.0f / ray.direction;

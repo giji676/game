@@ -68,7 +68,8 @@ void Raycasting::checkIntersect(
 
             obj.model->bvh.intersectBVH(
                     localRay,
-                    obj.model->bvh.rootNodeIdx
+                    obj.model->bvh.rootNodeIdx,
+                    world
                     );
 
             if (localRay.t < bestHit.distance) {
