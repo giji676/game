@@ -31,7 +31,7 @@ void Raycasting::checkIntersect(
         .direction = glm::normalize(engine.getActiveCamera()->front),
     };
 
-    glm::mat4 world = parent * obj.transform.localMatrix();
+    glm::mat4 world = obj.worldMatrix;
 
     Bounds bounds = obj.getBounds();
     glm::vec3 size = bounds.size;
@@ -60,13 +60,10 @@ void Raycasting::checkIntersect(
             radius,
             distance))
         {
-            // TODO: stop doing inverse (too expensive)
-            // cache world/local mats instead
-            glm::mat4 invWorld = glm::inverse(world);
             Ray localRay;
-            localRay.origin = glm::vec3(invWorld * glm::vec4(ray.origin, 1.0f));
+            localRay.origin = glm::vec3(obj.worldInvMatrix * glm::vec4(ray.origin, 1.0f));
             localRay.direction = glm::normalize(
-                    glm::vec3(invWorld * glm::vec4(ray.direction, 0.0f))
+                    glm::vec3(obj.worldInvMatrix * glm::vec4(ray.direction, 0.0f))
                     );
 
             obj.model->bvh.intersectBVH(

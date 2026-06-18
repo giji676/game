@@ -32,4 +32,7 @@ private:
     void recurseRender(
         const ObjectID objId,
         const glm::mat4& parentMatrix);
+    void updateWorldTransforms(
+        const ObjectID objId,
+        const glm::mat4& parentWorld);
 };

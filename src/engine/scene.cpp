@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "scene.h"
+#include "engine/profilers/profile_scope.h"
 #include "engine/renderer/debug.h"
 #include "engine/engine.h"
 
@@ -12,6 +13,7 @@ void collectRenderCommands(
 
 std::vector<RenderCommand> Scene::buildRenderList() {
     std::vector<RenderCommand> out;
+    PROFILE_SCOPE("collectRenderCommands");
     collectRenderCommands(*this, rootId, glm::mat4(1.0f), out);
     return out;
 }
@@ -23,7 +25,7 @@ void collectRenderCommands(
     std::vector<RenderCommand>& out)
 {
     const Object& obj = scene.get(id);
-    glm::mat4 world = parent * obj.transform.localMatrix();
+    glm::mat4 world = obj.worldMatrix;
 
     if (obj.debug) {
         DebugRenderer& debug = Engine::instance().debugRenderer;
@@ -55,6 +57,9 @@ void collectRenderCommands(
 
 void Scene::update() {
     updateScripts(getRoot());
+
+    PROFILE_SCOPE("updateWorldTransforms");
+    updateWorldTransforms(rootId, glm::mat4(1.0f));
 }
 
 void Scene::updateScripts(ObjectID id) {
@@ -113,4 +118,14 @@ ObjectID Scene::createObjectInternal() {
     ObjectID id = static_cast<ObjectID>(objects.size());
     objects.emplace_back();
     return id;
+}
+
+void Scene::updateWorldTransforms(ObjectID id, const glm::mat4& parentWorld) {
+    Object& obj = objects[id];
+
+    glm::mat4 local = obj.transform.localMatrix();
+    obj.updateWorld(parentWorld * local);
+
+    for (auto child : obj.children)
+        updateWorldTransforms(child, obj.worldMatrix);
 }

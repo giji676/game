@@ -1,4 +1,5 @@
 #include "engine/mesh_bvh.h"
+#include "engine/engine.h"
 #include "engine/profilers/profile_scope.h"
 #include "engine/raycasting.h"
 #include "asset_manager/model.h"

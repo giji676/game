@@ -2,6 +2,44 @@
 #include "engine/asset_manager/shader.h"
 #include "engine/engine.h"
 
+void DebugRenderer::aabb(
+    const glm::mat4& world,
+    const glm::vec3& min,
+    const glm::vec3& max,
+    const glm::vec3& color)
+{
+    glm::vec3 p[8] = {
+        {min.x,min.y,min.z},
+        {max.x,min.y,min.z},
+        {max.x,max.y,min.z},
+        {min.x,max.y,min.z},
+
+        {min.x,min.y,max.z},
+        {max.x,min.y,max.z},
+        {max.x,max.y,max.z},
+        {min.x,max.y,max.z}
+    };
+
+    for (int i = 0; i < 8; i++) {
+        p[i] = glm::vec3(world * glm::vec4(p[i], 1.0f));
+    }
+
+    line(p[0], p[1], color);
+    line(p[1], p[2], color);
+    line(p[2], p[3], color);
+    line(p[3], p[0], color);
+
+    line(p[4], p[5], color);
+    line(p[5], p[6], color);
+    line(p[6], p[7], color);
+    line(p[7], p[4], color);
+
+    line(p[0], p[4], color);
+    line(p[1], p[5], color);
+    line(p[2], p[6], color);
+    line(p[3], p[7], color);
+}
+
 void DebugRenderer::box(
     const glm::mat4& world,
     const glm::vec3& size,
