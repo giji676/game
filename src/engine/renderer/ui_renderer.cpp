@@ -1,25 +1,36 @@
 #include "ui_renderer.h"
 #include "engine/asset_manager/shader.h"
-#include "engine/engine.h"
-#include "engine/profilers/profile_scope.h"
 
-void UIRenderer::render(const glm::mat4& projection) {
-    PROFILE_SCOPE("UIRenderer::render");
-
-    glEnable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    Font& font = Engine::instance().assets.getFont("InterVariable");
-    Shader& shader = Engine::instance().assets.getShader("glyph");
-
-    font.draw(
-        "WAZZAAAAAAPPP",
-        50.0f,
-        50.0f,
-        1.0f,
-        {1, 1, 0},
+void drawText(
+    const UIRenderCommand& cmd,
+    const glm::mat4& projection,
+    Shader& shader)
+{
+    cmd.font->draw(
+        cmd.text,
+        cmd.position,
+        cmd.size,
+        cmd.color,
         projection,
         shader
     );
+}
+void UIRenderer::render(
+    const std::vector<UIRenderCommand>& cmds,
+    const glm::mat4& projection,
+    Shader& textShader)
+{
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for (const auto& cmd : cmds) {
+        switch (cmd.type) {
+            case UICmdType::Text:
+                drawText(cmd, projection, textShader);
+                break;
+            default:
+                break;
+        }
+    }
 }

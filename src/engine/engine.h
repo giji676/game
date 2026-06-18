@@ -5,6 +5,7 @@
 #include "camera.h"
 #include "raycasting.h"
 #include "scene.h"
+#include "ui.h"
 #include "input.h"
 #include "window.h"
 #include "asset_manager/asset_manager.h"
@@ -25,6 +26,7 @@ public:
     UIRenderer uiRenderer;
     DebugRenderer debugRenderer;
     Scene scene;
+    UI ui;
     Raycasting raycasting;
 
     unsigned int activeCamera = 0;
@@ -51,7 +53,9 @@ private:
     void setupKeyBindings();
     void loadAssets();
     void setupCamera();
-    void callRenderer(std::vector<RenderCommand>& que);
+    void callRenderer(
+        std::vector<RenderCommand>& que,
+        std::vector<UIRenderCommand>& uiQue);
 
     void beginFrame();
     void endFrame();

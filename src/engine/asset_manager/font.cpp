@@ -4,9 +4,8 @@
 
 void Font::draw(
     const std::string& text,
-    float x,
-    float y,
-    float scale,
+    const glm::vec2 position,
+    const glm::vec2 size,
     const glm::vec3& color,
     const glm::mat4& projection,
     Shader& shader)
@@ -20,11 +19,14 @@ void Font::draw(
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
+    float scale = size.y / 48.f;
+    float x = position.x;
+
     for (char c : text) {
         const Character& ch = characters[c];
 
         float xpos = x + ch.bearing.x * scale;
-        float ypos = y - (ch.size.y - ch.bearing.y) * scale;
+        float ypos = position.y - (ch.size.y - ch.bearing.y) * scale;
 
         float w = ch.size.x * scale;
         float h = ch.size.y * scale;

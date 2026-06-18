@@ -23,12 +23,12 @@ public:
 
     void draw(
         const std::string& text,
-        float x,
-        float y,
-        float scale,
+        const glm::vec2 position,
+        const glm::vec2 size,
         const glm::vec3& color,
         const glm::mat4& projection,
         Shader& shader);
+
     void loadFont(const char* fontPath);
     std::map<char, Character> characters;
 

@@ -4,6 +4,7 @@
 
 #include "engine/engine.h"
 #include "engine/profilers/profiler.h"
+#include "engine/renderer/ui_renderer.h"
 #include "game/game.h"
 #include "gj_image/gj_image.h"
 #include "glm/ext/matrix_clip_space.hpp"
@@ -41,9 +42,11 @@ void Engine::run() {
         getInput(event);
         game->update();
         scene.update();
+        ui.update();
         auto commands = scene.buildRenderList();
+        auto uiCommands = ui.buildRenderList();
         game->render();
-        callRenderer(commands);
+        callRenderer(commands, uiCommands);
 
         Profiler::instance().endFrame();
         endFrame();
@@ -55,7 +58,10 @@ void Engine::run() {
     SDL_Quit();
 }
 
-void Engine::callRenderer(std::vector<RenderCommand>& que) {
+void Engine::callRenderer(
+        std::vector<RenderCommand>& que,
+        std::vector<UIRenderCommand>& uiQue)
+{
     Camera& camera = *getActiveCamera();
 
     glm::mat4 view = glm::lookAt(
@@ -76,7 +82,7 @@ void Engine::callRenderer(std::vector<RenderCommand>& que) {
             0.0f, static_cast<float>(app.height()));
 
     renderer.render(que, view, projection);
-    uiRenderer.render(orthoProjection);
+    uiRenderer.render(uiQue, orthoProjection, assets.getShader("glyph"));
     debugRenderer.render(view, projection);
 }
 

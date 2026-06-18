@@ -1,11 +1,13 @@
 #include <glad/glad.h>
 
 #include "game/game.h"
+#include "engine/defines.h"
 #include "engine/raycasting.h"
 #include "game/perlin.h"
 #include "game/scripts/test.h"
 
 #include "engine/engine.h"
+#include "engine/asset_manager/widgets.h"
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale);
 
@@ -15,6 +17,7 @@ Game::Game(Engine& engine)
 
 void Game::init() {
     Scene& scene = engine.scene;
+    UI& ui = engine.ui;
     setupTerrain();
 
     player.pos = glm::vec3(0.f);
@@ -35,20 +38,28 @@ void Game::init() {
     obj.transform.setPosition({0.0f, 0.5f, -1.5f});
     obj.transform.setScale({0.1f, 0.1f, 0.1f});
     obj.addScript<Test>();
-    // obj.debug = true;
 
     ObjectID objId2 = scene.createObject();
     Object& obj2 = scene.get(objId2);
     obj2.model = &engine.assets.getModel("backpack");
     obj2.transform.setPosition({2.0f, 0.0f, 0.0f});
     obj2.transform.setScale({0.2f, 0.2f, 0.2f});
-    // obj2.debug = true;
     scene.reparent(objId2, objId);
 
     Shader& texturedMatShader = engine.assets.getShader("textured_mat");
     texturedMatShader.use();
     texturedMatShader.setVec3("lightPos", light.pos);
     texturedMatShader.setVec3("lightColor", light.color);
+
+    UIElementID elemId1 = ui.createElement();
+    UIElement& elem = ui.get(elemId1);
+    elem.transform.position = {50.f, 50.f};
+    elem.transform.anchor = {0.f, 0.f};
+    elem.transform.size = {0.f, 48.f};
+    auto& lbl = elem.addWidget<Label>();
+    lbl.text = "WAZZAAAAAAPPP";
+    lbl.color = {1,0,0,1};
+    lbl.font = &engine.assets.getFont("InterVariable");
 }
 
 void Game::setupTerrain() {
