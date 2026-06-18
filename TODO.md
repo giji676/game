@@ -1,5 +1,6 @@
 # TODO:
 1. Figgure out storing and freeing of assets loaded with gj-lib
+2. Rename renderer/debug to debug_renderer for consistency
 
 # Features:
 1. UI system

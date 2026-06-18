@@ -74,6 +74,7 @@ void DebugRenderer::render(
     const glm::mat4& view,
     const glm::mat4& projection)
 {
+    glEnable(GL_DEPTH_TEST);
     upload();
 
     Shader& shader = Engine::instance().assets.getShader("debug");

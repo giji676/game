@@ -7,8 +7,10 @@
 #include "scene.h"
 #include "input.h"
 #include "window.h"
+#include "font.h"
 #include "asset_manager/asset_manager.h"
 #include "renderer/renderer.h"
+#include "renderer/ui_renderer.h"
 #include "renderer/debug.h"
 
 class Game;
@@ -21,9 +23,11 @@ public:
     Input input;
     AssetManager assets;
     Renderer renderer;
+    UIRenderer uiRenderer;
     DebugRenderer debugRenderer;
     Scene scene;
     Raycasting raycasting;
+    Font font;
 
     unsigned int activeCamera = 0;
     std::vector<Camera> cameras;
@@ -31,7 +35,7 @@ public:
     float G = 9.81;
     float fps = 0.0f;
 
-    void init(Game *g);
+    void init(Game* g);
     void run();
 
     Camera* getActiveCamera() { return &cameras[activeCamera]; }
@@ -39,7 +43,7 @@ public:
     Camera* getCamera(unsigned int camera) { return &cameras[camera]; }
 
 private:
-    Game *game;
+    Game* game;
 
     bool running = true;
     float fpsTimer = 0.0f;

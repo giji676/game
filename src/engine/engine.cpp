@@ -3,10 +3,10 @@
 #include <glad/glad.h>
 
 #include "engine/engine.h"
-#include "engine/renderer/renderer.h"
 #include "engine/profilers/profiler.h"
 #include "game/game.h"
 #include "gj_image/gj_image.h"
+#include "glm/ext/matrix_clip_space.hpp"
 
 Engine& Engine::instance() {
     static Engine instance;
@@ -71,7 +71,12 @@ void Engine::callRenderer(std::vector<RenderCommand>& que) {
         100.0f
     );
 
+    glm::mat4 orthoProjection = glm::ortho(
+            0.0f, static_cast<float>(app.width()),
+            0.0f, static_cast<float>(app.height()));
+
     renderer.render(que, view, projection);
+    uiRenderer.render(orthoProjection);
     debugRenderer.render(view, projection);
 }
 
@@ -150,9 +155,16 @@ void Engine::loadAssets() {
         "shaders/debug_shader.f.glsl"
     );
 
+    assets.loadShader(
+        "glyph",
+        "shaders/glyph.v.glsl",
+        "shaders/glyph.f.glsl"
+    );
 
     gj_vflip_image(1);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
+
+    font.loadFont("assets/fonts/Inter-4.1/InterVariable.ttf");
 }
 
 void Engine::setupCamera() {
