@@ -62,3 +62,22 @@ Model& AssetManager::getModel(const std::string& name)
     return *models.at(name);
 }
 
+Font& AssetManager::loadFont(const std::string& name,
+                               const std::string& path)
+{
+    auto it = fonts.find(name);
+    if (it != fonts.end()) {
+        return *it->second;
+    }
+
+    auto font = std::make_unique<Font>(path.c_str());
+    fonts.emplace(name, std::move(font));
+
+    return *fonts.at(name);
+}
+
+Font& AssetManager::getFont(const std::string& name)
+{
+    return *fonts.at(name);
+}
+

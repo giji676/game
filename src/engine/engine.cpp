@@ -163,8 +163,7 @@ void Engine::loadAssets() {
 
     gj_vflip_image(1);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
-
-    font.loadFont("assets/fonts/Inter-4.1/InterVariable.ttf");
+    assets.loadFont("InterVariable", "assets/fonts/Inter-4.1/InterVariable.ttf");
 }
 
 void Engine::setupCamera() {

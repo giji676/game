@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <memory>
 
+#include "font.h"
 #include "shader.h"
 #include "texture.h"
 
@@ -30,14 +31,22 @@ public:
 
     Model& getModel(const std::string& name);
 
+    Font& loadFont(const std::string& name,
+                     const std::string& path);
+
+    Font& getFont(const std::string& name);
+
     uint32_t allocateMaterialId() { return nextMaterialId++; }
     uint32_t allocateMeshId() { return nextMeshId++; }
+    uint32_t allocateFontId() { return nextFontId++; }
 
 private:
     std::unordered_map<std::string, std::unique_ptr<Shader>> shaders;
     std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
     std::unordered_map<std::string, std::unique_ptr<Model>> models;
+    std::unordered_map<std::string, std::unique_ptr<Font>> fonts;
 
     uint32_t nextMaterialId = 1;
     uint32_t nextMeshId = 1;
+    uint32_t nextFontId = 1;
 };

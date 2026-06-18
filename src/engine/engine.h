@@ -7,7 +7,6 @@
 #include "scene.h"
 #include "input.h"
 #include "window.h"
-#include "font.h"
 #include "asset_manager/asset_manager.h"
 #include "renderer/renderer.h"
 #include "renderer/ui_renderer.h"
@@ -27,7 +26,6 @@ public:
     DebugRenderer debugRenderer;
     Scene scene;
     Raycasting raycasting;
-    Font font;
 
     unsigned int activeCamera = 0;
     std::vector<Camera> cameras;
