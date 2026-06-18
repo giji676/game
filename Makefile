@@ -6,6 +6,10 @@ CFLAGS    = -Wall -Iinclude -Isrc -Llib
 
 LDFLAGS   = -Llib -lSDL2 -lGL -lgj_image -lgj_model
 
+# FreeType flags (for fonts)
+CXXFLAGS += $(shell pkg-config --cflags freetype2)
+LDFLAGS  += $(shell pkg-config --libs freetype2)
+
 SRC_DIR   = src
 BUILD_DIR = build
 
