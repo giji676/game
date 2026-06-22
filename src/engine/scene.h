@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/asset_manager/object.h"
+#include "engine/frustrum.h"
 #include "renderer/renderer.h"
 
 class Scene {
@@ -9,7 +10,9 @@ public:
 
     void init();
     void update();
-    void buildRenderList(std::vector<RenderCommand>& out);
+    void buildRenderList(
+            std::vector<RenderCommand>& out,
+            const Frustum& frustum);
 
     ObjectID createObject();
 

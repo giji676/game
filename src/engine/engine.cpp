@@ -50,12 +50,9 @@ void Engine::run() {
             scene.update();
             ui.update();
 
-            renderCommands.clear();
-            scene.buildRenderList(renderCommands);
-
             auto uiCommands = ui.buildRenderList();
             game->render();
-            callRenderer(renderCommands, uiCommands);
+            callRenderer(uiCommands);
 
             endFrame();
         }
@@ -69,7 +66,6 @@ void Engine::run() {
 }
 
 void Engine::callRenderer(
-        std::vector<RenderCommand>& que,
         std::vector<UIRenderCommand>& uiQue)
 {
     Camera& camera = *getActiveCamera();
@@ -91,7 +87,13 @@ void Engine::callRenderer(
             0.0f, static_cast<float>(app.width()),
             0.0f, static_cast<float>(app.height()));
 
-    renderer.render(que, view, projection);
+    glm::mat4 vp = projection * view;
+    Frustum frustum = Frustum::fromMatrix(vp);
+
+    renderCommands.clear();
+    scene.buildRenderList(renderCommands, frustum);
+
+    renderer.render(renderCommands, view, projection);
     uiRenderer.render(uiQue, orthoProjection, assets.getShader("glyph"));
     debugRenderer.render(view, projection);
 }

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdint>
 #include <numeric>
 
 #include "renderer.h"
@@ -10,7 +11,7 @@ void Renderer::init(MeshRegistry* registry) {
     glGenBuffers(NUM_BUFFERS, transformSSBO);
     glGenBuffers(NUM_BUFFERS, indirectBuffer);
 
-    for (int i = 0; i < NUM_BUFFERS; i++) {
+    for (uint32_t i = 0; i < NUM_BUFFERS; i++) {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, transformSSBO[i]);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
                      MAX_OBJECTS * sizeof(glm::mat4),

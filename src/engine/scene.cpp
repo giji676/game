@@ -9,12 +9,16 @@ void collectRenderCommands(
     const Scene& scene,
     ObjectID id,
     const glm::mat4& parent,
-    std::vector<RenderCommand>& out);
+    std::vector<RenderCommand>& out,
+    const Frustum& frustum);
 
-void Scene::buildRenderList(std::vector<RenderCommand>& out) {
+void Scene::buildRenderList(
+        std::vector<RenderCommand>& out,
+        const Frustum& frustum)
+{
     out.reserve(lastRenderListSize); // reserve based on last frame
     PROFILE_SCOPE("collectRenderCommands");
-    collectRenderCommands(*this, rootId, glm::mat4(1.0f), out);
+    collectRenderCommands(*this, rootId, glm::mat4(1.0f), out, frustum);
     lastRenderListSize = out.size(); // remember for next frame
 }
 
@@ -22,10 +26,25 @@ void collectRenderCommands(
     const Scene& scene,
     ObjectID id,
     const glm::mat4& parent,
-    std::vector<RenderCommand>& out)
+    std::vector<RenderCommand>& out,
+    const Frustum& frustum)
 {
     const Object& obj = scene.get(id);
     glm::mat4 world = obj.worldMatrix;
+
+    if (obj.model) {
+        Bounds local = obj.getBounds();
+        glm::vec3 wMin, wMax;
+        transformAABB(local, world, wMin, wMax);
+
+        if (!frustum.intersectsAABB(wMin, wMax)) {
+            // still recurse children — child objects may be visible
+            // even if parent is culled
+            for (ObjectID child : obj.children)
+                collectRenderCommands(scene, child, world, out, frustum);
+            return;
+        }
+    }
 
     if (obj.debug) {
         DebugRenderer& debug = Engine::instance().debugRenderer;
@@ -52,7 +71,7 @@ void collectRenderCommands(
     }
 
     for (auto child : obj.children) {
-        collectRenderCommands(scene, child, world, out);
+        collectRenderCommands(scene, child, world, out, frustum);
     }
 }
 
