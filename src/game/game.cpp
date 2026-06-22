@@ -77,7 +77,7 @@ void Game::init() {
     elem.transform.anchor = {0.f, 0.f};
     elem.transform.size = {0.f, 48.f};
     auto& lbl = elem.addWidget<Label>();
-    lbl.color = {1,0,0,1};
+    lbl.color = {1,1,1,1};
     lbl.font = &engine.assets.getFont("InterVariable");
 }
 

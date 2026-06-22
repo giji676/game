@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 
 #include "engine/engine.h"
+#include "engine/profilers/profile_scope.h"
 #include "engine/profilers/profiler.h"
 #include "engine/renderer/ui_renderer.h"
 #include "game/game.h"
@@ -37,23 +38,26 @@ void Engine::run() {
     app.initDeltaTime();
 
     while (app.running) {
-        beginFrame();
         Profiler::instance().beginFrame();
+        {
+            PROFILE_SCOPE("Engine::run");
+            beginFrame();
 
-        getInput(event);
-        game->update();
-        scene.update();
-        ui.update();
+            getInput(event);
+            game->update();
+            scene.update();
+            ui.update();
 
-        renderCommands.clear();
-        scene.buildRenderList(renderCommands);
+            renderCommands.clear();
+            scene.buildRenderList(renderCommands);
 
-        auto uiCommands = ui.buildRenderList();
-        game->render();
-        callRenderer(renderCommands, uiCommands);
+            auto uiCommands = ui.buildRenderList();
+            game->render();
+            callRenderer(renderCommands, uiCommands);
 
+            endFrame();
+        }
         Profiler::instance().endFrame();
-        endFrame();
     }
 
     SDL_ShowCursor(1);
@@ -106,6 +110,7 @@ void Engine::beginFrame() {
 }
 
 void Engine::endFrame() {
+    PROFILE_SCOPE("Engine::endFrame");
     SDL_GL_SwapWindow(app.window);
 }
 
