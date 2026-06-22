@@ -1,10 +1,7 @@
 #include "mesh.h"
 
-void Mesh::draw(GLuint lastVAO) const {
-    if (lastVAO != VAO) {
-        glBindVertexArray(VAO);
-        lastVAO = VAO;
-    }
+void Mesh::draw() const {
+    glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }
 

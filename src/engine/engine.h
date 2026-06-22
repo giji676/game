@@ -9,6 +9,7 @@
 #include "input.h"
 #include "window.h"
 #include "asset_manager/asset_manager.h"
+#include "asset_manager/mesh_registry.h"
 #include "renderer/renderer.h"
 #include "renderer/ui_renderer.h"
 #include "renderer/debug.h"
@@ -28,6 +29,7 @@ public:
     Scene scene;
     UI ui;
     Raycasting raycasting;
+    MeshRegistry meshRegistry;
 
     unsigned int activeCamera = 0;
     std::vector<Camera> cameras;

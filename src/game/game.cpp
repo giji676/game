@@ -1,7 +1,9 @@
 #include <glad/glad.h>
+#include <string>
 
 #include "game/game.h"
 #include "engine/defines.h"
+#include "engine/profilers/profile_scope.h"
 #include "engine/raycasting.h"
 #include "game/perlin.h"
 #include "game/scripts/test.h"
@@ -10,6 +12,15 @@
 #include "engine/asset_manager/widgets.h"
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale);
+
+void clearDebug(ObjectID id) {
+    Object& obj = Engine::instance().scene.get(id);
+
+    obj.debug = false;
+
+    for (ObjectID child : obj.children)
+        clearDebug(child);
+}
 
 Game::Game(Engine& engine)
     : engine(engine)
@@ -32,6 +43,15 @@ void Game::init() {
     sceneShader.setVec3("lightPos", light.pos);
     sceneShader.setVec3("lightColor", light.color);
 
+    for (int i = 0; i < 1000; i++) {
+        ObjectID objId = scene.createObject();
+        Object& obj = scene.get(objId);
+        obj.model = &engine.assets.getModel("backpack");
+        obj.transform.setPosition({0.0f, 0.5f, -i/10});
+        obj.transform.setScale({0.1f, 0.1f, 0.1f});
+        obj.addScript<Test>();
+    }
+
     ObjectID objId = scene.createObject();
     Object& obj = scene.get(objId);
     obj.model = &engine.assets.getModel("backpack");
@@ -53,11 +73,10 @@ void Game::init() {
 
     UIElementID elemId1 = ui.createElement();
     UIElement& elem = ui.get(elemId1);
-    elem.transform.position = {50.f, 50.f};
+    elem.transform.position = {50.f, engine.app.height() - 60.f};
     elem.transform.anchor = {0.f, 0.f};
     elem.transform.size = {0.f, 48.f};
     auto& lbl = elem.addWidget<Label>();
-    lbl.text = "WAZZAAAAAAPPP";
     lbl.color = {1,0,0,1};
     lbl.font = &engine.assets.getFont("InterVariable");
 }
@@ -183,6 +202,7 @@ Terrain generateTerrain(int width, int height, float scale, float heightScale) {
 }
 
 void Game::update() {
+    PROFILE_SCOPE("Game::update");
     Camera& camera = *engine.getActiveCamera();
     float cameraSpeed = player.speed * engine.app.deltaTime;
     Input &input = engine.input;
@@ -248,17 +268,25 @@ void Game::update() {
     camera.front = glm::normalize(direction);
     camera.pos = player.pos;
     // TEMP: reset debug state of all objects
-    engine.scene.get(1).debug = false;
-    engine.scene.get(2).debug = false;
+    // engine.scene.get(1).debug = false;
+    // engine.scene.get(2).debug = false;
+    clearDebug(engine.scene.getRoot());
 
     RaycastHit hit = engine.raycasting.castRay();
     if (hit.object != INVALID_OBJECT_ID) {
         Object& obj = engine.scene.get(hit.object);
         obj.debug = true;
     }
+
+    UIElement& e = engine.ui.get(1);
+    Label* lbl = dynamic_cast<Label*>(e.widget.get());
+    if (lbl) {
+        lbl->text = "FPS: " + std::to_string(engine.fps);
+    }
 }
 
 void Game::render() {
+    PROFILE_SCOPE("Game::render");
     Camera& camera = *engine.getActiveCamera();
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

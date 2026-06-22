@@ -28,6 +28,7 @@ void Engine::init(Game *g) {
     
     game = g;
     game->init();
+    renderer.init(&meshRegistry);
     debugRenderer.init();
 }
 
@@ -170,6 +171,15 @@ void Engine::loadAssets() {
     gj_vflip_image(1);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
     assets.loadFont("InterVariable", "assets/fonts/Inter-4.1/InterVariable.ttf");
+
+    meshRegistry.init();
+
+    Model& backpack = assets.getModel("backpack");
+    for (const SubMesh& sub : backpack.getParts()) {
+        meshRegistry.addMesh(&sub.mesh);
+    }
+
+    meshRegistry.uploadToGPU();
 }
 
 void Engine::setupCamera() {

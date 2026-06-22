@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "engine/asset_manager/shader.h"
 #include "engine/engine.h"
+#include "engine/profilers/profile_scope.h"
 
 void DebugRenderer::aabb(
     const glm::mat4& world,
@@ -74,6 +75,7 @@ void DebugRenderer::render(
     const glm::mat4& view,
     const glm::mat4& projection)
 {
+    PROFILE_SCOPE("DebugRenderer::render");
     glEnable(GL_DEPTH_TEST);
     upload();
 
