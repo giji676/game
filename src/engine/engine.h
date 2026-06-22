@@ -51,6 +51,8 @@ private:
     float fpsTimer = 0.0f;
     int fpsFrames = 0;
 
+    std::vector<RenderCommand> renderCommands;
+
     void getInput(SDL_Event &event);
     void setupKeyBindings();
     void loadAssets();

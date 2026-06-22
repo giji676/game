@@ -65,7 +65,7 @@ void MeshBVH::updateNodeBounds(uint32_t nodeIdx) {
 void MeshBVH::subdivide(uint32_t nodeIdx) {
     MeshBVHNode& node = nodes[nodeIdx];
 
-    if (node.primCount <= 2)
+    if (node.primCount <= 8)
         return;
 
     glm::vec3 extent = node.aabbMax - node.aabbMin;

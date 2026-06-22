@@ -11,11 +11,11 @@ void collectRenderCommands(
     const glm::mat4& parent,
     std::vector<RenderCommand>& out);
 
-std::vector<RenderCommand> Scene::buildRenderList() {
-    std::vector<RenderCommand> out;
+void Scene::buildRenderList(std::vector<RenderCommand>& out) {
+    out.reserve(lastRenderListSize); // reserve based on last frame
     PROFILE_SCOPE("collectRenderCommands");
     collectRenderCommands(*this, rootId, glm::mat4(1.0f), out);
-    return out;
+    lastRenderListSize = out.size(); // remember for next frame
 }
 
 void collectRenderCommands(

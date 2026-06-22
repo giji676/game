@@ -44,10 +44,13 @@ void Engine::run() {
         game->update();
         scene.update();
         ui.update();
-        auto commands = scene.buildRenderList();
+
+        renderCommands.clear();
+        scene.buildRenderList(renderCommands);
+
         auto uiCommands = ui.buildRenderList();
         game->render();
-        callRenderer(commands, uiCommands);
+        callRenderer(renderCommands, uiCommands);
 
         Profiler::instance().endFrame();
         endFrame();

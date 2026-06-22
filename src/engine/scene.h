@@ -9,7 +9,7 @@ public:
 
     void init();
     void update();
-    std::vector<RenderCommand> buildRenderList();
+    void buildRenderList(std::vector<RenderCommand>& out);
 
     ObjectID createObject();
 
@@ -25,6 +25,7 @@ public:
 private:
     std::vector<Object> objects;
     ObjectID rootId = 0;
+    size_t lastRenderListSize = 0;
 
     ObjectID createObjectInternal();
     void updateScripts(ObjectID id);
