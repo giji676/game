@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <iostream>
+#include <vector>
 #include "profiler.h"
 
 Profiler& Profiler::instance() {
@@ -39,13 +41,25 @@ void Profiler::endFrame() {
 }
 
 void Profiler::print() {
+    std::vector<const std::pair<const std::string, ProfileSample>*> sorted;
+    sorted.reserve(samples_.size());
+
+    for (const auto& entry : samples_)
+        sorted.push_back(&entry);
+
+    std::sort(sorted.begin(), sorted.end(),
+            [](const auto* a, const auto* b) {
+            return a->second.averageMs > b->second.averageMs;
+            });
+
     std::cout << "\x1B[2J\x1B[H";
     std::cout
         << "+----------------------------------+----------+----------+----------+--------+\n"
         << "| Scope                            | Current  | Average  | Max      | Calls  |\n"
         << "+----------------------------------+----------+----------+----------+--------+\n";
 
-    for (const auto& [name, sample] : samples_) {
+    for (const auto* entry : sorted) {
+        const auto& [name, sample] = *entry;
         std::cout
             << "| "
             << std::left << std::setw(32) << name
