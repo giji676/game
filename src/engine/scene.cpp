@@ -59,7 +59,7 @@ void collectRenderCommands(
         for (const auto& part : obj.model->getParts()) {
             RenderCommand cmd;
             cmd.mesh = &part.mesh;
-            cmd.material = &part.material;
+            cmd.material = part.material;
             cmd.model = world;
             cmd.sortKey =
                 (uint64_t)cmd.material->shader->ID << 48 |

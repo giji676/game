@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <memory>
 
+#include "engine/asset_manager/material.h"
 #include "font.h"
 #include "shader.h"
 #include "texture.h"
@@ -36,6 +37,13 @@ public:
 
     Font& getFont(const std::string& name);
 
+    Material& getOrCreateMaterial(
+            Shader* shader,
+            Texture* diffuse,
+            Texture* specular,
+            glm::vec3 diffuseFallback,
+            glm::vec3 specularFallback);
+
     uint32_t allocateMaterialId() { return nextMaterialId++; }
     uint32_t allocateMeshId() { return nextMeshId++; }
     uint32_t allocateFontId() { return nextFontId++; }
@@ -43,6 +51,7 @@ public:
 private:
     std::unordered_map<std::string, std::unique_ptr<Shader>> shaders;
     std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
+    std::unordered_map<std::string, std::unique_ptr<Material>> materials;
     std::unordered_map<std::string, std::unique_ptr<Model>> models;
     std::unordered_map<std::string, std::unique_ptr<Font>> fonts;
 

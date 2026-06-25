@@ -50,8 +50,6 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
 
-    glm::vec3 diffuseFallback(1.0f);
-    glm::vec3 specularFallback(0.0f);
     for (int i = 0; i < mesh->vertexCount; i++) {
         Vertex vertex;
         glm::vec3 vector;
@@ -73,11 +71,16 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
         }
         vertices.push_back(vertex);
     }
+
     for (int i = 0; i < mesh->indexCount; i++) {
         indices.push_back(mesh->indices[i]);
     }
+
+    glm::vec3 diffuseFallback(1.0f);
+    glm::vec3 specularFallback(0.0f);
     Texture* diffuseMap = nullptr;
     Texture* specularMap = nullptr;
+
     if (mesh->materialIndex >= 0) {
         struct gjMaterial material = model->materials[mesh->materialIndex];
         Texture* dtex = &assetManager->loadTexture(
@@ -132,21 +135,17 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
 
     Mesh myMesh = Mesh(vertices, indices);
     myMesh.id = assetManager->allocateMeshId();
-    Material material;
-    material.diffuseFallback = diffuseFallback;
-    material.specularFallback = specularFallback;
-    material.shader = &assetManager->getShader("textured_mat");
-    material.id = assetManager->allocateMaterialId();
-
-    if (diffuseMap)
-        material.textures.push_back(diffuseMap);
-
-    if (specularMap)
-        material.textures.push_back(specularMap);
+    Material& material = assetManager->getOrCreateMaterial(
+        &assetManager->getShader("textured_mat"),
+        diffuseMap,
+        specularMap,
+        diffuseFallback,
+        specularFallback
+    );
 
     SubMesh subMesh = {
         .mesh = myMesh,
-        .material = material,
+        .material = &material,
     };
 
     return subMesh;

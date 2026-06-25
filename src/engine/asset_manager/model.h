@@ -18,7 +18,7 @@ struct Bounds {
 
 typedef struct {
     Mesh mesh;
-    Material material;
+    Material *material;
 } SubMesh;
 
 class Model {

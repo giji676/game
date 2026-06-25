@@ -81,3 +81,30 @@ Font& AssetManager::getFont(const std::string& name)
     return *fonts.at(name);
 }
 
+Material& AssetManager::getOrCreateMaterial(
+    Shader* shader,
+    Texture* diffuse,
+    Texture* specular,
+    glm::vec3 diffuseFallback,
+    glm::vec3 specularFallback)
+{
+    // create a key from the combination
+    std::string key = std::to_string((uint64_t)shader)
+                    + "_" + std::to_string((uint64_t)diffuse)
+                    + "_" + std::to_string((uint64_t)specular);
+
+    auto it = materials.find(key);
+    if (it != materials.end())
+        return *it->second;
+
+    auto mat = std::make_unique<Material>();
+    mat->shader = shader;
+    mat->diffuseFallback = diffuseFallback;
+    mat->specularFallback = specularFallback;
+    mat->id = allocateMaterialId();
+    if (diffuse) mat->textures.push_back(diffuse);
+    if (specular) mat->textures.push_back(specular);
+
+    materials.emplace(key, std::move(mat));
+    return *materials.at(key);
+}
