@@ -32,10 +32,11 @@ struct TriangleHit {
 
 class Raycasting {
 public:
-    RaycastHit castRay();
+    RaycastHit castRay(const Ray& ray);
 
     void checkIntersect(
         ObjectID id,
+        const Ray& ray,
         const glm::mat4& parent,
         RaycastHit& bestHit);
 

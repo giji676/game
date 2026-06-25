@@ -272,7 +272,12 @@ void Game::update() {
     // engine.scene.get(2).debug = false;
     clearDebug(engine.scene.getRoot());
 
-    RaycastHit hit = engine.raycasting.castRay();
+    const Ray ray = Ray {
+        .origin = engine.getActiveCamera()->pos,
+        .direction = glm::normalize(engine.getActiveCamera()->front),
+    };
+
+    RaycastHit hit = engine.raycasting.castRay(ray);
     if (hit.object != INVALID_OBJECT_ID) {
         Object& obj = engine.scene.get(hit.object);
         obj.debug = true;
@@ -288,8 +293,6 @@ void Game::update() {
 void Game::render() {
     PROFILE_SCOPE("Game::render");
     Camera& camera = *engine.getActiveCamera();
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::mat4 model = glm::mat4(1.0f);
     glm::mat4 view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);

@@ -108,6 +108,10 @@ void Engine::beginFrame() {
         fpsTimer = 0.0f;
     }
 
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
     char title[128];
     snprintf(title, sizeof(title), "Game | FPS: %.1f", fps);
     SDL_SetWindowTitle(app.window, title);

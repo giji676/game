@@ -35,7 +35,7 @@ void Renderer::render(std::vector<RenderCommand>& queue,
 {
     PROFILE_SCOPE("Renderer::render");
 
-    // swap to next buffer — GPU is still using the previous one
+    // Swap to next buffer
     currentBuffer = (currentBuffer + 1) % NUM_BUFFERS;
     GLuint currentTransformSSBO  = transformSSBO[currentBuffer];
     GLuint currentIndirectBuffer = indirectBuffer[currentBuffer];
@@ -52,16 +52,16 @@ void Renderer::render(std::vector<RenderCommand>& queue,
 
     {
         PROFILE_SCOPE("Renderer::main");
-        // 1. Build indirect commands and transform buffer
+        // Build indirect commands and transform buffer
         {
             PROFILE_SCOPE("Renderer::build_buffers");
 
             transformData.resize(queue.size());
             commands.resize(queue.size());
             {
-                PROFILE_SCOPE("Renderer::build_arrays");  // just the loop
+                PROFILE_SCOPE("Renderer::build_arrays");
                 for (uint32_t i = 0; i < queue.size(); i++) {
-                    const RenderCommand& cmd = queue[sortedIndices[i]]; // ← indexed
+                    const RenderCommand& cmd = queue[sortedIndices[i]];
                     const MeshAllocation& alloc = *cmd.allocation;
 
                     transformData[i] = cmd.model;
@@ -92,7 +92,7 @@ void Renderer::render(std::vector<RenderCommand>& queue,
             }
         }
 
-        // 2. Draw groups by material
+        // Draw groups by material
         {
             PROFILE_SCOPE("Renderer::draw");
 

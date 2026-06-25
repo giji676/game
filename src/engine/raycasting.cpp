@@ -5,12 +5,13 @@
 #include "engine/profilers/profile_scope.h"
 #include "glm/geometric.hpp"
 
-RaycastHit Raycasting::castRay() {
+RaycastHit Raycasting::castRay(const Ray& ray) {
     PROFILE_SCOPE("Raycasting::castRay");
     RaycastHit hit;
 
     checkIntersect(
         Engine::instance().scene.getRoot(),
+        ray,
         glm::mat4(1.0f),
         hit
     );
@@ -20,16 +21,12 @@ RaycastHit Raycasting::castRay() {
 
 void Raycasting::checkIntersect(
     ObjectID id,
+    const Ray& ray,
     const glm::mat4& parent,
     RaycastHit& bestHit)
 {
     Engine& engine = Engine::instance();
     const Object& obj = engine.scene.get(id);
-
-    Ray ray = Ray {
-        .origin = engine.getActiveCamera()->pos,
-        .direction = glm::normalize(engine.getActiveCamera()->front),
-    };
 
     glm::mat4 world = obj.worldMatrix;
 
@@ -80,7 +77,7 @@ void Raycasting::checkIntersect(
     }
 
     for (ObjectID child : obj.children) {
-        checkIntersect(child, world, bestHit);
+        checkIntersect(child, ray, world, bestHit);
     }
 }
 
