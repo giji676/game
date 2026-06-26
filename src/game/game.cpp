@@ -84,13 +84,20 @@ void Game::init() {
             {10.f, 10.f},
             {1.f, 1.f, 1.f, 1.f});
 
-    ui.button(
+    auto btnId = ui.button(
             {110.f, 110.f},
             {10.f, 10.f},
             64.f,
             {1.f, 1.f, 1.f, 1.f},
             {0.f, 0.f, 0.f, 1.f},
             "hello");
+
+    auto& elem = ui.get(btnId);
+    auto* btn = dynamic_cast<Button*>(elem.widget.get());
+
+    btn->onClick = []() {
+        std::cout << "Button clicked\n";
+    };
 }
 
 void Game::setupTerrain() {

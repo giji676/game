@@ -1,8 +1,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_mouse.h>
 #include <glad/glad.h>
 
 #include "engine/engine.h"
+#include "engine/input.h"
 #include "engine/profilers/profile_scope.h"
 #include "engine/profilers/profiler.h"
 #include "engine/renderer/ui_renderer.h"
@@ -142,10 +144,23 @@ void Engine::getInput(SDL_Event &event) {
                 break;
 
             case SDL_MOUSEMOTION:
+                input.setMousePosition(
+                    event.motion.x,
+                    event.motion.y
+                );
+
                 input.addMouseDelta(
                     event.motion.xrel,
                     event.motion.yrel
                 );
+                break;
+
+            case SDL_MOUSEBUTTONDOWN:
+                input.setMouseButton(event.button.button, true);
+                break;
+
+            case SDL_MOUSEBUTTONUP:
+                input.setMouseButton(event.button.button, false);
                 break;
         }
     }
@@ -159,6 +174,10 @@ void Engine::setupKeyBindings() {
     input.bind(Action::Jump, SDL_SCANCODE_SPACE);
     input.bind(Action::ToggleScreen, SDL_SCANCODE_F11);
     input.bind(Action::Quit, SDL_SCANCODE_ESCAPE);
+
+    input.bind(MouseAction::Left, SDL_BUTTON_LEFT);
+    input.bind(MouseAction::Middle, SDL_BUTTON_MIDDLE);
+    input.bind(MouseAction::Right, SDL_BUTTON_RIGHT);
 }
 
 void Engine::loadAssets() {

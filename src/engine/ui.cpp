@@ -1,8 +1,47 @@
 #include "ui.h"
 #include "engine/engine.h"
+#include "engine/input.h"
 #include "engine/ui.h"
 #include "asset_manager/widgets.h"
 #include "asset_manager/ui_element.h"
+
+void UI::update() {
+    const glm::vec2 mouse = Engine::instance().input.mousePosition();
+    recurseUpdate(rootId, mouse);
+}
+
+void UI::recurseUpdate(UIElementID id, const glm::vec2& mouse) {
+    UIElement& e = get(id);
+
+    if (auto* btn = dynamic_cast<Button*>(e.widget.get())) {
+        btn->hovered =
+            mouse.x >= e.transform.position.x &&
+            mouse.x <= e.transform.position.x + e.transform.size.x &&
+            mouse.y >= e.transform.position.y &&
+            mouse.y <= e.transform.position.y + e.transform.size.y;
+
+        if (btn->hovered &&
+            Engine::instance().input.pressed(MouseAction::Left))
+        {
+            btn->pressed = true;
+        }
+
+        if (btn->pressed &&
+            Engine::instance().input.released(MouseAction::Left))
+        {
+            btn->pressed = false;
+
+            if (btn->hovered && btn->onClick)
+                btn->onClick();
+        }
+
+        if (!Engine::instance().input.down(MouseAction::Left))
+            btn->pressed = false;
+    }
+
+    for (UIElementID child : e.children)
+        recurseUpdate(child, mouse);
+}
 
 UIElementID UI::createElement() {
     UIElementID id = createElementInternal();
@@ -73,7 +112,6 @@ UIElementID UI::button(
         : &Engine::instance().assets.getFont("InterVariable");
 
     glm::vec2 textSize = btn.font->measure(btn.text, fontSize);
-    std::cout << "textSize: {" << textSize.x << ", " << textSize.y << "}\n";
 
     elem.transform.position = pos;
     elem.transform.size =

@@ -8,13 +8,15 @@ public:
     UI() { rootId = createElementInternal(); }
 
     void init();
-    void update() {};
+    void update();
 
     std::vector<UIRenderCommand> buildRenderList() {
         std::vector<UIRenderCommand> out;
         recurseBuild(rootId, out);
         return out;
     }
+
+    void recurseUpdate(UIElementID id, const glm::vec2& mouse);
 
     void recurseBuild(UIElementID id, std::vector<UIRenderCommand>& out) {
         UIElement& e = get(id);

@@ -3,10 +3,14 @@
 #include <SDL2/SDL_scancode.h>
 #include <array>
 #include <cstdint>
+#include <glm/glm.hpp>
 
 constexpr std::size_t KEY_COUNT = SDL_NUM_SCANCODES;
 
 using Key = SDL_Scancode;
+using MouseButton = uint8_t;
+
+constexpr std::size_t MOUSE_BUTTON_COUNT = 8;
 
 enum class Action : uint16_t {
     MoveLeft,
@@ -20,10 +24,26 @@ enum class Action : uint16_t {
     Count
 };
 
+enum class MouseAction : uint8_t {
+    Left,
+    Right,
+    Middle,
+    Count
+};
+
 class Input {
 public:
     float mouseDeltaX = 0.0f;
     float mouseDeltaY = 0.0f;
+    float x = 0.0f;
+    float y = 0.0f;
+
+    glm::vec2 mousePosition() const;
+
+    void setMousePosition(float _x, float _y) {
+        x = _x;
+        y = _y;
+    }
 
     void addMouseDelta(float dx, float dy) {
         mouseDeltaX += dx;
@@ -32,6 +52,7 @@ public:
 
     void beginFrame() {
         previous = current;
+        previousMouse = currentMouse;
 
         mouseDeltaX = 0.0f;
         mouseDeltaY = 0.0f;
@@ -69,9 +90,45 @@ public:
         return released(bindings[static_cast<std::size_t>(action)]);
     }
 
+    void setMouseButton(MouseButton button, bool down) {
+        currentMouse[button] = down;
+    }
+
+    bool mouseDown(MouseButton button) const {
+        return currentMouse[button];
+    }
+
+    bool mousePressed(MouseButton button) const {
+        return currentMouse[button] && !previousMouse[button];
+    }
+
+    bool mouseReleased(MouseButton button) const {
+        return !currentMouse[button] && previousMouse[button];
+    }
+
+    void bind(MouseAction action, MouseButton button) {
+        mouseBindings[static_cast<size_t>(action)] = button;
+    }
+
+    bool down(MouseAction action) const {
+        return mouseDown(mouseBindings[static_cast<size_t>(action)]);
+    }
+
+    bool pressed(MouseAction action) const {
+        return mousePressed(mouseBindings[static_cast<size_t>(action)]);
+    }
+
+    bool released(MouseAction action) const {
+        return mouseReleased(mouseBindings[static_cast<size_t>(action)]);
+    }
+
 private:
     std::array<uint8_t, KEY_COUNT> current{};
     std::array<uint8_t, KEY_COUNT> previous{};
 
+    std::array<uint8_t, MOUSE_BUTTON_COUNT> currentMouse{};
+    std::array<uint8_t, MOUSE_BUTTON_COUNT> previousMouse{};
+
     std::array<Key, static_cast<std::size_t>(Action::Count)> bindings{};
+    std::array<MouseButton, static_cast<std::size_t>(MouseAction::Count)> mouseBindings{};
 };
