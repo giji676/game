@@ -18,6 +18,7 @@ int App::initialize() {
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, antiAliasing());
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_ShowCursor(SDL_DISABLE);
 
     window = SDL_CreateWindow(
         "Game",
@@ -45,6 +46,29 @@ int App::initialize() {
     }
 
     return 0;
+}
+
+void App::getCursor() {
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    SDL_ShowCursor(SDL_ENABLE);
+
+    int w = width();
+    int h = height();
+
+    SDL_WarpMouseInWindow(window, w / 2, h / 2);
+}
+
+void App::releaseCursor() {
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_ShowCursor(SDL_DISABLE);
+}
+
+void App::cleanup() {
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    SDL_ShowCursor(SDL_ENABLE);
+    SDL_GL_DeleteContext(glContext);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 }
 
 int App::width() const {

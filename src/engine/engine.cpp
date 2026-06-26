@@ -60,10 +60,7 @@ void Engine::run() {
         Profiler::instance().endFrame();
     }
 
-    SDL_ShowCursor(1);
-    SDL_GL_DeleteContext(app.glContext);
-    SDL_DestroyWindow(app.window);
-    SDL_Quit();
+    app.cleanup();
 }
 
 void Engine::callRenderer(
@@ -133,7 +130,7 @@ void Engine::getInput(SDL_Event &event) {
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
             case SDL_QUIT:
-                running = false;
+                app.running = false;
                 break;
 
             case SDL_KEYDOWN:

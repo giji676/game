@@ -47,7 +47,6 @@ public:
 private:
     Game* game;
 
-    bool running = true;
     float fpsTimer = 0.0f;
     int fpsFrames = 0;
 

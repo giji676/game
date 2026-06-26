@@ -54,8 +54,11 @@ public:
     bool running = true;
 
     int initialize();
+    void cleanup();
     void initDeltaTime();
     void toggleWindow();
+    void getCursor();
+    void releaseCursor();
 
     int width() const;
     int height() const;

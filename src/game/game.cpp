@@ -215,89 +215,104 @@ Terrain generateTerrain(int width, int height, float scale, float heightScale) {
 
 void Game::update() {
     PROFILE_SCOPE("Game::update");
-    Camera& camera = *engine.getActiveCamera();
-    float cameraSpeed = player.speed * engine.app.deltaTime;
-    Input &input = engine.input;
 
-    // Input processing
-    if (input.down(Action::MoveForward))
-        player.pos += cameraSpeed * camera.front;
+    Input& input = engine.input;
 
-    if (input.down(Action::MoveBackward))
-        player.pos -= cameraSpeed * camera.front;
-
-    if (input.down(Action::MoveLeft))
-        player.pos -=
-            glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
-
-    if (input.down(Action::MoveRight))
-        player.pos +=
-            glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
-
-    if (input.pressed(Action::Jump) && player.grounded)
-        player.velocity.y = player.jumpForce;
+    // -------------------------
+    // 1. ALWAYS RUN (control input)
+    // -------------------------
+    if (input.pressed(Action::Quit)) {
+        is_paused = !is_paused;
+        if (is_paused)
+            Engine::instance().app.getCursor();
+        else
+            Engine::instance().app.releaseCursor();
+    }
 
     if (input.pressed(Action::ToggleScreen))
         engine.app.toggleWindow();
 
-    if (input.pressed(Action::Quit))
-        engine.app.running = false;
+    // -------------------------
+    // 2. SIMULATION (paused gate)
+    // -------------------------
+    if (!is_paused)
+    {
+        Camera& camera = *engine.getActiveCamera();
+        float dt = engine.app.deltaTime;
+        float cameraSpeed = player.speed * dt;
 
-    // Physics and collision
-    player.velocity.y += -engine.G * engine.app.deltaTime;
-    player.pos.y += player.velocity.y * engine.app.deltaTime;
+        if (input.down(Action::MoveForward))
+            player.pos += cameraSpeed * camera.front;
 
-    float halfW = (world.width - 1) * world.scale * 0.5f;
-    float halfH = (world.height - 1) * world.scale * 0.5f;
+        if (input.down(Action::MoveBackward))
+            player.pos -= cameraSpeed * camera.front;
 
-    int x = floor((camera.pos.x + halfW) / world.scale);
-    int z = floor((camera.pos.z + halfH) / world.scale);
+        if (input.down(Action::MoveLeft))
+            player.pos -= glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
 
-    int idx = z * world.width + x;
-    float groundY = world.terrain.vertices[idx * 6 + 1];
-    if (player.pos.y <= groundY) {
-        player.velocity.y = 0.f;
-        player.pos.y = groundY;
-        player.grounded = true;
-    } else {
-        player.grounded = false;
+        if (input.down(Action::MoveRight))
+            player.pos += glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
+
+        if (input.pressed(Action::Jump) && player.grounded)
+            player.velocity.y = player.jumpForce;
+
+        player.velocity.y += -engine.G * dt;
+        player.pos.y += player.velocity.y * dt;
+
+        // collision
+        float halfW = (world.width - 1) * world.scale * 0.5f;
+        float halfH = (world.height - 1) * world.scale * 0.5f;
+
+        int x = floor((camera.pos.x + halfW) / world.scale);
+        int z = floor((camera.pos.z + halfH) / world.scale);
+
+        int idx = z * world.width + x;
+        float groundY = world.terrain.vertices[idx * 6 + 1];
+
+        if (player.pos.y <= groundY) {
+            player.velocity.y = 0.f;
+            player.pos.y = groundY;
+            player.grounded = true;
+        } else {
+            player.grounded = false;
+        }
+
+        // camera
+        float xoffset = input.mouseDeltaX;
+        float yoffset = input.mouseDeltaY;
+
+        const float sensitivity = 0.1f;
+
+        camera.yaw += xoffset * sensitivity;
+        camera.pitch -= yoffset * sensitivity;
+        camera.pitch = glm::clamp(camera.pitch, -89.0f, 89.0f);
+
+        glm::vec3 direction;
+        direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+        direction.y = sin(glm::radians(camera.pitch));
+        direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+
+        camera.front = glm::normalize(direction);
+        camera.pos = player.pos;
+
+        clearDebug(engine.scene.getRoot());
+
+        Ray ray{
+            .origin = camera.pos,
+            .direction = glm::normalize(camera.front),
+        };
+
+        RaycastHit hit = engine.raycasting.castRay(ray);
+        if (hit.object != INVALID_OBJECT_ID) {
+            engine.scene.get(hit.object).debug = true;
+        }
     }
 
-    float xoffset = input.mouseDeltaX;
-    float yoffset = input.mouseDeltaY;
-
-    const float sensitivity = 0.1f;
-
-    camera.yaw += xoffset * sensitivity;
-    camera.pitch -= yoffset * sensitivity;
-    camera.pitch = glm::clamp(camera.pitch, -89.0f, 89.0f);
-
-    glm::vec3 direction;
-    direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-    direction.y = sin(glm::radians(camera.pitch));
-    direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-
-    camera.front = glm::normalize(direction);
-    camera.pos = player.pos;
-    // TEMP: reset debug state of all objects
-    // engine.scene.get(1).debug = false;
-    // engine.scene.get(2).debug = false;
-    clearDebug(engine.scene.getRoot());
-
-    const Ray ray = Ray {
-        .origin = engine.getActiveCamera()->pos,
-        .direction = glm::normalize(engine.getActiveCamera()->front),
-    };
-
-    RaycastHit hit = engine.raycasting.castRay(ray);
-    if (hit.object != INVALID_OBJECT_ID) {
-        Object& obj = engine.scene.get(hit.object);
-        obj.debug = true;
-    }
-
+    // -------------------------
+    // 3. UI (always runs)
+    // -------------------------
     UIElement& e = engine.ui.get(1);
-    Label* lbl = dynamic_cast<Label*>(e.widget.get());
-    if (lbl) {
+    if (auto* lbl = dynamic_cast<Label*>(e.widget.get())) {
         lbl->text = "FPS: " + std::to_string(engine.fps);
     }
 }
