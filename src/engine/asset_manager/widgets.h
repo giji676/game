@@ -1,5 +1,6 @@
 #include "engine/asset_manager/font.h"
 #include "ui_widget.h"
+#include "engine/engine.h"
 #include <functional>
 #include <string>
 
@@ -58,6 +59,38 @@ public:
     bool pressed = false;
 
     std::function<void()> onClick;
+
+    void update(
+            const UIElement& e,
+            const glm::vec2& pos) override
+    {
+        if (auto* btn = dynamic_cast<Button*>(e.widget.get())) {
+            btn->hovered =
+                pos.x >= e.transform.position.x &&
+                pos.x <= e.transform.position.x + e.transform.size.x &&
+                pos.y >= e.transform.position.y &&
+                pos.y <= e.transform.position.y + e.transform.size.y;
+
+            if (btn->hovered &&
+                    Engine::instance().input.pressed(MouseAction::Left))
+            {
+                btn->pressed = true;
+            }
+
+            if (btn->pressed &&
+                    Engine::instance().input.released(MouseAction::Left))
+            {
+                btn->pressed = false;
+
+                if (btn->hovered && btn->onClick)
+                    btn->onClick();
+            }
+
+            if (!Engine::instance().input.down(MouseAction::Left))
+                btn->pressed = false;
+        }
+
+    }
 
     void buildCommands(
         const UIElement& e,

@@ -12,32 +12,8 @@ void UI::update() {
 
 void UI::recurseUpdate(UIElementID id, const glm::vec2& mouse) {
     UIElement& e = get(id);
-
-    if (auto* btn = dynamic_cast<Button*>(e.widget.get())) {
-        btn->hovered =
-            mouse.x >= e.transform.position.x &&
-            mouse.x <= e.transform.position.x + e.transform.size.x &&
-            mouse.y >= e.transform.position.y &&
-            mouse.y <= e.transform.position.y + e.transform.size.y;
-
-        if (btn->hovered &&
-            Engine::instance().input.pressed(MouseAction::Left))
-        {
-            btn->pressed = true;
-        }
-
-        if (btn->pressed &&
-            Engine::instance().input.released(MouseAction::Left))
-        {
-            btn->pressed = false;
-
-            if (btn->hovered && btn->onClick)
-                btn->onClick();
-        }
-
-        if (!Engine::instance().input.down(MouseAction::Left))
-            btn->pressed = false;
-    }
+    if (e.widget)
+        e.widget->update(e, mouse);
 
     for (UIElementID child : e.children)
         recurseUpdate(child, mouse);
