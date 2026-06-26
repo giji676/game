@@ -26,6 +26,29 @@ public:
             recurseBuild(child, out);
     }
 
+    UIElementID label(
+        glm::vec2 pos,
+        glm::vec2 size,
+        glm::vec4 color = {1.f, 1.f, 1.f, 1.f},
+        std::string text = "",
+        Font* font = nullptr
+    );
+
+    UIElementID rect(
+        glm::vec2 pos,
+        glm::vec2 size,
+        glm::vec4 color = {1.f, 1.f, 1.f, 1.f}
+    );
+
+    UIElementID button(
+        glm::vec2 pos,
+        glm::vec2 size,
+        glm::vec4 bgColor = {1.f, 1.f, 1.f, 1.f},
+        glm::vec4 textColor = {0.f, 0.f, 0.f, 1.f},
+        std::string text = "",
+        Font* font = nullptr
+    );
+
     UIElementID createElement();
 
     void reparent(UIElementID childId, UIElementID newParentId);

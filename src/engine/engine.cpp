@@ -32,6 +32,7 @@ void Engine::init(Game *g) {
     game = g;
     game->init();
     renderer.init(&meshRegistry);
+    uiRenderer.init();
     debugRenderer.init();
 }
 
@@ -94,7 +95,11 @@ void Engine::callRenderer(
     scene.buildRenderList(renderCommands, frustum);
 
     renderer.render(renderCommands, view, projection);
-    uiRenderer.render(uiQue, orthoProjection, assets.getShader("glyph"));
+    uiRenderer.render(
+            uiQue,
+            orthoProjection,
+            assets.getShader("glyph"),
+            assets.getShader("rect"));
     debugRenderer.render(view, projection);
 }
 
@@ -182,6 +187,12 @@ void Engine::loadAssets() {
         "glyph",
         "shaders/glyph.v.glsl",
         "shaders/glyph.f.glsl"
+    );
+
+    assets.loadShader(
+        "rect",
+        "shaders/rect.v.glsl",
+        "shaders/rect.f.glsl"
     );
 
     gj_vflip_image(1);

@@ -27,9 +27,26 @@ struct UIRenderCommand {
 
 class UIRenderer {
 public:
+    void init();
     void render(
         const std::vector<UIRenderCommand>& cmds,
         const glm::mat4& projection,
-        Shader& textShader
-        );
+        Shader& textShader,
+        Shader& rectShader);
+
+    void drawText(
+        const UIRenderCommand& cmd,
+        const glm::mat4& projection,
+        Shader& shader);
+
+    void drawRect(
+        const UIRenderCommand& cmd,
+        const glm::mat4& projection,
+        Shader& shader);
+
+private:
+    GLuint quadVAO = 0;
+    GLuint quadVBO = 0;
+
+    void initQuad();
 };

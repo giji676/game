@@ -19,6 +19,8 @@ class Font {
 public:
     GLuint VAO, VBO;
 
+    std::map<char, Character> characters;
+
     Font(const char* fontPath);
 
     void draw(
@@ -29,8 +31,8 @@ public:
         const glm::mat4& projection,
         Shader& shader);
 
+    glm::vec2 measure(const std::string& text, float height);
     void loadFont(const char* fontPath);
-    std::map<char, Character> characters;
 
     Font(const Font&) = delete;
     Font& operator=(const Font&) = delete;

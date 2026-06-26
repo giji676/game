@@ -2,6 +2,23 @@
 #include <iostream>
 #include <glad/glad.h>
 
+glm::vec2 Font::measure(const std::string& text, float height) {
+    float scale = height / 48.f;
+    scale = 1.f;
+
+    float width = 0.0f;
+    float maxHeight = 0.0f;
+
+    for (char c : text) {
+        const Character& ch = characters[c];
+
+        width += (ch.advance >> 6) * scale;
+        maxHeight = std::max(maxHeight, ch.size.y * scale);
+    }
+
+    return { width, maxHeight };
+}
+
 void Font::draw(
     const std::string& text,
     const glm::vec2 position,

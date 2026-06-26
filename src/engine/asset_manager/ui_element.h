@@ -9,7 +9,7 @@
 struct Transform2D {
     glm::vec2 position;
     glm::vec2 size;
-    glm::vec2 anchor;
+    glm::vec2 anchor = {0.f, 0.f};
 };
 
 class UIElement {

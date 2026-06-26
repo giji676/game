@@ -1,8 +1,8 @@
 CXX = g++
 CC  = gcc
 
-CXXFLAGS  = -std=c++17 -Wall -Iinclude -Isrc -Llib -O2
-CFLAGS    = -Wall -Iinclude -Isrc -Llib -O2
+CXXFLAGS  = -std=c++17 -Wall -Iinclude -Isrc -Llib -O2 -g
+CFLAGS    = -Wall -Iinclude -Isrc -Llib -O2 -g
 
 LDFLAGS   = -Llib -lSDL2 -lGL -lgj_image -lgj_model
 

@@ -43,11 +43,13 @@ void Game::init() {
     sceneShader.setVec3("lightPos", light.pos);
     sceneShader.setVec3("lightColor", light.color);
 
+    int width = 10;
+
     for (int i = 0; i < 1000; i++) {
         ObjectID objId = scene.createObject();
         Object& obj = scene.get(objId);
         obj.model = &engine.assets.getModel("backpack");
-        obj.transform.setPosition({0.0f, 0.5f, -i/10});
+        obj.transform.setPosition({i % width, 0.5f, -i/10.f});
         obj.transform.setScale({0.1f, 0.1f, 0.1f});
         obj.addScript<Test>();
     }
@@ -71,14 +73,23 @@ void Game::init() {
     texturedMatShader.setVec3("lightPos", light.pos);
     texturedMatShader.setVec3("lightColor", light.color);
 
-    UIElementID elemId1 = ui.createElement();
-    UIElement& elem = ui.get(elemId1);
-    elem.transform.position = {50.f, engine.app.height() - 60.f};
-    elem.transform.anchor = {0.f, 0.f};
-    elem.transform.size = {0.f, 48.f};
-    auto& lbl = elem.addWidget<Label>();
-    lbl.color = {1,1,1,1};
-    lbl.font = &engine.assets.getFont("InterVariable");
+    ui.label(
+            {50.f, engine.app.height() - 60.f},
+            {0.f, 48.f},
+            {1.f, 0.f, 0.f, 1.f},
+            "hello");
+
+    ui.rect(
+            {10.f, 10.f},
+            {10.f, 10.f},
+            {1.f, 0.f, 0.f, 1.f});
+
+    ui.button(
+            {110.f, 110.f},
+            {10.f, 10.f},
+            {1.f, 1.f, 1.f, 1.f},
+            {0.f, 0.f, 0.f, 1.f},
+            "hello");
 }
 
 void Game::setupTerrain() {

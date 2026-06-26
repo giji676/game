@@ -19,6 +19,7 @@ void main() {
     vec4 worldPos = model * vec4(aPos, 1.0);
     gl_Position = projection * view * worldPos;
     FragPos = worldPos.xyz;
+    // TODO: procompute the normal instead of every frame/vertex
     Normal = mat3(transpose(inverse(model))) * aNormal;
     TexCoord = aTexCoord;
 }
