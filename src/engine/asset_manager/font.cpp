@@ -4,16 +4,15 @@
 
 glm::vec2 Font::measure(const std::string& text, float height) {
     float scale = height / 48.f;
-    scale = 1.f;
 
-    float width = 0.0f;
-    float maxHeight = 0.0f;
+    float width = 0.f;
+    float maxHeight = 0.f;
 
     for (char c : text) {
         const Character& ch = characters[c];
 
         width += (ch.advance >> 6) * scale;
-        maxHeight = std::max(maxHeight, ch.size.y * scale);
+        maxHeight = std::max(maxHeight, static_cast<float>(ch.size.y));
     }
 
     return { width, maxHeight };

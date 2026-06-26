@@ -47,7 +47,7 @@ public:
 class Button : public UIWidget {
 public:
     Font* font = nullptr;
-    glm::vec2 padding = {12.f, 6.f};
+    glm::vec2 padding = {0.f, 0.f};
 
     std::string text;
 
@@ -70,13 +70,22 @@ public:
             .color = bgColor
         });
 
+        glm::vec2 textSize = font->measure(text, e.transform.size.y);
+
+        glm::vec2 textPos =
+            e.transform.position +
+            glm::vec2(
+                    (e.transform.size.x - textSize.x) * 0.5f,
+                    (e.transform.size.y - textSize.y) * 0.5f
+                    );
+
         out.push_back({
-            .type = UICmdType::Text,
-            .position = e.transform.position + padding,
-            .size = e.transform.size,
-            .color = textColor,
-            .font = font,
-            .text = text
-        });
+                .type = UICmdType::Text,
+                .position = textPos,
+                .size = e.transform.size,
+                .color = textColor,
+                .font = font,
+                .text = text
+                });
     }
 };

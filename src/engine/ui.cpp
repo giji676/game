@@ -54,6 +54,7 @@ UIElementID UI::rect(
 UIElementID UI::button(
     glm::vec2 pos,
     glm::vec2 size,
+    float fontSize,
     glm::vec4 bgColor,
     glm::vec4 textColor,
     std::string text,
@@ -71,14 +72,14 @@ UIElementID UI::button(
         ? font
         : &Engine::instance().assets.getFont("InterVariable");
 
-    glm::vec2 textSize = btn.font->measure(btn.text, elem.transform.size.y);
+    glm::vec2 textSize = btn.font->measure(btn.text, fontSize);
     std::cout << "textSize: {" << textSize.x << ", " << textSize.y << "}\n";
 
     elem.transform.position = pos;
     elem.transform.size =
         {
-            std::max(size.x, textSize.x + btn.padding.x * 2.0f),
-            std::max(size.y, textSize.y + btn.padding.y * 2.0f)
+            textSize.x + btn.padding.x * 2.0f,
+            textSize.y + btn.padding.y * 2.0f
         };
 
     return id;

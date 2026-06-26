@@ -80,13 +80,14 @@ void Game::init() {
             "hello");
 
     ui.rect(
+            {engine.app.width()/2-5, engine.app.height()/2-5},
             {10.f, 10.f},
-            {10.f, 10.f},
-            {1.f, 0.f, 0.f, 1.f});
+            {1.f, 1.f, 1.f, 1.f});
 
     ui.button(
             {110.f, 110.f},
             {10.f, 10.f},
+            64.f,
             {1.f, 1.f, 1.f, 1.f},
             {0.f, 0.f, 0.f, 1.f},
             "hello");

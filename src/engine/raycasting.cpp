@@ -51,10 +51,12 @@ void Raycasting::checkIntersect(
 
         float distance;
 
+        // TODO: double check radius calculation
+        // backpacks torch thing isn't being hit because of radius sometimes
         if (testSphereIntersection(
             ray,
             center,
-            radius,
+            radius*1.5f,
             distance))
         {
             Ray localRay;

@@ -41,6 +41,8 @@ private:
     World world;
     Light light;
 
+    bool is_paused = false;
+
     unsigned int planeVBO, planeVAO, planeEBO;
 
     void setupTerrain();
