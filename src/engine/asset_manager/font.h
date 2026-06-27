@@ -15,9 +15,16 @@ struct Character {
     unsigned int advance;
 };
 
+struct FontMetrics {
+    float ascender;
+    float descender;
+    float lineHeight;
+};
+
 class Font {
 public:
     GLuint VAO, VBO;
+    FontMetrics metrics;
 
     std::map<char, Character> characters;
 

@@ -44,7 +44,6 @@ public:
 
     UIElementID button(
         glm::vec2 pos,
-        glm::vec2 size,
         float fontSize = 24.f,
         glm::vec4 bgColor = {1.f, 1.f, 1.f, 1.f},
         glm::vec4 textColor = {0.f, 0.f, 0.f, 1.f},

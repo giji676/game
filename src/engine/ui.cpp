@@ -68,7 +68,6 @@ UIElementID UI::rect(
 
 UIElementID UI::button(
     glm::vec2 pos,
-    glm::vec2 size,
     float fontSize,
     glm::vec4 bgColor,
     glm::vec4 textColor,
@@ -76,9 +75,9 @@ UIElementID UI::button(
     Font* font)
 {
     UIElementID id = createElement();
-    UIElement& elem = get(id);
+    UIElement& e = get(id);
 
-    auto& btn = elem.addWidget<Button>();
+    auto& btn = e.addWidget<Button>();
 
     btn.bgColor = bgColor;
     btn.textColor = textColor;
@@ -89,12 +88,16 @@ UIElementID UI::button(
 
     glm::vec2 textSize = btn.font->measure(btn.text, fontSize);
 
-    elem.transform.position = pos;
-    elem.transform.size =
-        {
-            textSize.x + btn.padding.x * 2.0f,
-            textSize.y + btn.padding.y * 2.0f
-        };
+    e.transform.position = pos;
+    e.transform.fontSize = fontSize;
+    e.transform.size = {
+        textSize.x + btn.padding.x * 2.f,
+        textSize.y + btn.font->metrics.descender + btn.padding.y * 2.f
+    };
+    e.transform.textPosition = {
+        pos.x + btn.padding.x,
+        pos.y + btn.font->metrics.descender + btn.padding.y
+    };
 
     return id;
 }

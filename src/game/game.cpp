@@ -85,12 +85,11 @@ void Game::init() {
             {1.f, 1.f, 1.f, 1.f});
 
     auto btnId = ui.button(
-            {110.f, 110.f},
-            {10.f, 10.f},
+            {10.f, 500.f},
             64.f,
             {1.f, 1.f, 1.f, 1.f},
             {0.f, 0.f, 0.f, 1.f},
-            "hello");
+            "abcdefghijklmnopqABCDEFGHIJKLMNOPQ");
 
     auto& elem = ui.get(btnId);
     auto* btn = dynamic_cast<Button*>(elem.widget.get());

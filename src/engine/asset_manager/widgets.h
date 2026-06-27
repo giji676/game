@@ -48,7 +48,7 @@ public:
 class Button : public UIWidget {
 public:
     Font* font = nullptr;
-    glm::vec2 padding = {0.f, 0.f};
+    glm::vec2 padding = {10.f, 10.f};
 
     std::string text;
 
@@ -89,7 +89,6 @@ public:
             if (!Engine::instance().input.down(MouseAction::Left))
                 btn->pressed = false;
         }
-
     }
 
     void buildCommands(
@@ -103,22 +102,15 @@ public:
             .color = bgColor
         });
 
-        glm::vec2 textSize = font->measure(text, e.transform.size.y);
-
-        glm::vec2 textPos =
-            e.transform.position +
-            glm::vec2(
-                    (e.transform.size.x - textSize.x) * 0.5f,
-                    (e.transform.size.y - textSize.y) * 0.5f
-                    );
+        glm::vec2 textSize = font->measure(text, e.transform.fontSize);
 
         out.push_back({
-                .type = UICmdType::Text,
-                .position = textPos,
-                .size = e.transform.size,
-                .color = textColor,
-                .font = font,
-                .text = text
-                });
+            .type = UICmdType::Text,
+            .position = e.transform.textPosition,
+            .size = textSize,
+            .color = textColor,
+            .font = font,
+            .text = text
+        });
     }
 };

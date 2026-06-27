@@ -6,16 +6,12 @@ glm::vec2 Font::measure(const std::string& text, float height) {
     float scale = height / 48.f;
 
     float width = 0.f;
-    float maxHeight = 0.f;
-
     for (char c : text) {
         const Character& ch = characters[c];
-
         width += (ch.advance >> 6) * scale;
-        maxHeight = std::max(maxHeight, static_cast<float>(ch.size.y));
     }
 
-    return { width, maxHeight };
+    return { width, height };
 }
 
 void Font::draw(
@@ -85,6 +81,10 @@ void Font::loadFont(const char* fontPath) {
         std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
 
     FT_Set_Pixel_Sizes(face, 0, 48);
+
+    metrics.ascender   =  (face->size->metrics.ascender  >> 6);
+    metrics.descender  = -(face->size->metrics.descender >> 6);
+    metrics.lineHeight =  (face->size->metrics.height    >> 6);
 
     setupFontGPU();
 
