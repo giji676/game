@@ -57,6 +57,14 @@ void Engine::run() {
             game->render();
             callRenderer(uiCommands);
 
+            {
+                GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+                PROFILE_SCOPE("CPU idle");
+                while (glClientWaitSync(fence, 0, 0) == GL_TIMEOUT_EXPIRED) {
+                }
+                glDeleteSync(fence);
+            }
+
             endFrame();
         }
         Profiler::instance().endFrame();
