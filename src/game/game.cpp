@@ -82,14 +82,18 @@ void Game::init() {
     ui.rect(
             {engine.app.width()/2-5, engine.app.height()/2-5},
             {10.f, 10.f},
-            {1.f, 1.f, 1.f, 1.f});
+            {1.f, 1.f, 1.f, 1.f},
+            {5.f, 5.f, 5.f, 5.f});
 
     auto btnId = ui.button(
-            {10.f, 500.f},
+            {10.f, 100.f},
             64.f,
             {1.f, 1.f, 1.f, 1.f},
             {0.f, 0.f, 0.f, 1.f},
-            "abcdefghijklmnopqABCDEFGHIJKLMNOPQ");
+            "abcdefghijklmnopqABCDEFGHIJKLMNOPQ",
+            nullptr,
+            {15.f, 15.f, 15.f, 15.f}
+            );
 
     auto& elem = ui.get(btnId);
     auto* btn = dynamic_cast<Button*>(elem.widget.get());

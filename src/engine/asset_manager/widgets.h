@@ -28,19 +28,19 @@ public:
 class Rect : public UIWidget {
 public:
     glm::vec4 color = {1.f, 1.f, 1.f, 1.f};
-    bool rounded = false;
-    float radius = 0.f;
+    glm::vec4 cornerRadii = {0,0,0,0};
+    float borderWidth = 0.f;
+    glm::vec4 borderColor = {0,0,0,0};
 
-    void buildCommands(
-        const UIElement& e,
-        std::vector<UIRenderCommand>& out) const override
-    {
+    void buildCommands(const UIElement& e, std::vector<UIRenderCommand>& out) const override {
         out.push_back({
             .type = UICmdType::Rect,
             .position = e.transform.position,
             .size = e.transform.size,
             .color = color,
-            // .radius = radius
+            .cornerRadii = cornerRadii,
+            .borderWidth = borderWidth,
+            .borderColor = borderColor,
         });
     }
 };
@@ -54,6 +54,10 @@ public:
 
     glm::vec4 bgColor = {1,1,1,1};
     glm::vec4 textColor = {0,0,0,1};
+
+    glm::vec4 cornerRadii = {0,0,0,0};
+    float borderWidth = 0.f;
+    glm::vec4 borderColor = {0,0,0,0};
 
     bool hovered = false;
     bool pressed = false;
@@ -99,7 +103,10 @@ public:
             .type = UICmdType::Rect,
             .position = e.transform.position,
             .size = e.transform.size,
-            .color = bgColor
+            .color = bgColor,
+            .cornerRadii = cornerRadii,
+            .borderWidth = borderWidth,
+            .borderColor = borderColor
         });
 
         glm::vec2 textSize = font->measure(text, e.transform.fontSize);

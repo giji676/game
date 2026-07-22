@@ -55,7 +55,10 @@ UIElementID UI::label(
 UIElementID UI::rect(
     glm::vec2 pos,
     glm::vec2 size,
-    glm::vec4 color)
+    glm::vec4 color,
+    glm::vec4 cornerRadii,
+    float borderWidth,
+    glm::vec4 borderColor)
 {
     UIElementID elemId = createElement();
     UIElement& elem = get(elemId);
@@ -63,6 +66,9 @@ UIElementID UI::rect(
     elem.transform.size = size;
     auto& r = elem.addWidget<Rect>();
     r.color = color;
+    r.cornerRadii = cornerRadii;
+    r.borderWidth = borderWidth;
+    r.borderColor = borderColor;
     return elemId;
 }
 
@@ -72,7 +78,10 @@ UIElementID UI::button(
     glm::vec4 bgColor,
     glm::vec4 textColor,
     std::string text,
-    Font* font)
+    Font* font,
+    glm::vec4 cornerRadii,
+    float borderWidth,
+    glm::vec4 borderColor)
 {
     UIElementID id = createElement();
     UIElement& e = get(id);
@@ -85,6 +94,9 @@ UIElementID UI::button(
     btn.font = font
         ? font
         : &Engine::instance().assets.getFont("InterVariable");
+    btn.cornerRadii = cornerRadii;
+    btn.borderWidth = borderWidth;
+    btn.borderColor = borderColor;
 
     glm::vec2 textSize = btn.font->measure(btn.text, fontSize);
 
