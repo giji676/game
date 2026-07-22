@@ -88,15 +88,16 @@ void Game::init() {
     auto btnId = ui.button(
             {10.f, 100.f},
             64.f,
-            {1.f, 1.f, 1.f, 1.f},
-            {0.f, 0.f, 0.f, 1.f},
             "abcdefghijklmnopqABCDEFGHIJKLMNOPQ",
-            nullptr,
-            {15.f, 15.f, 15.f, 15.f}
-            );
+            nullptr);
 
     auto& elem = ui.get(btnId);
     auto* btn = dynamic_cast<Button*>(elem.widget.get());
+    btn->normal.bgColor = {1, 1, 1, 1};
+    btn->hoveredStyle.bgColor = {0, 1, 0, 0.2};
+    btn->normal.borderColor = {1, 0, 0, 1};
+    btn->normal.borderWidth = 10.f;
+    btn->cornerRadii = {10.f, 10.f, 10.f, 10.f};
 
     btn->onClick = []() {
         std::cout << "Button clicked\n";

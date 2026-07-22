@@ -75,28 +75,18 @@ UIElementID UI::rect(
 UIElementID UI::button(
     glm::vec2 pos,
     float fontSize,
-    glm::vec4 bgColor,
-    glm::vec4 textColor,
     std::string text,
-    Font* font,
-    glm::vec4 cornerRadii,
-    float borderWidth,
-    glm::vec4 borderColor)
+    Font* font)
 {
     UIElementID id = createElement();
     UIElement& e = get(id);
 
     auto& btn = e.addWidget<Button>();
 
-    btn.bgColor = bgColor;
-    btn.textColor = textColor;
     btn.text = std::move(text);
     btn.font = font
         ? font
         : &Engine::instance().assets.getFont("InterVariable");
-    btn.cornerRadii = cornerRadii;
-    btn.borderWidth = borderWidth;
-    btn.borderColor = borderColor;
 
     glm::vec2 textSize = btn.font->measure(btn.text, fontSize);
 

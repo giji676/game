@@ -46,15 +46,10 @@ public:
     );
 
     UIElementID button(
-        glm::vec2 pos,
-        float fontSize = 24.f,
-        glm::vec4 bgColor = {1.f, 1.f, 1.f, 1.f},
-        glm::vec4 textColor = {0.f, 0.f, 0.f, 1.f},
-        std::string text = "",
-        Font* font = nullptr,
-        glm::vec4 cornerRadii = {0,0,0,0},
-        float borderWidth = 0.f,
-        glm::vec4 borderColor = {0,0,0,0}
+            glm::vec2 pos,
+            float fontSize,
+            std::string text,
+            Font* font
     );
 
     UIElementID createElement();
