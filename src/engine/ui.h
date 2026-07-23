@@ -16,7 +16,8 @@ public:
         return out;
     }
 
-    void recurseUpdate(UIElementID id, const glm::vec2& mouse);
+    void recurseTick(UIElementID id, float dt);
+    void recurseUpdateInput(UIElementID id, const glm::vec2& mouse);
 
     void recurseBuild(UIElementID id, std::vector<UIRenderCommand>& out) {
         UIElement& e = get(id);

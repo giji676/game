@@ -6,17 +6,24 @@
 #include "asset_manager/ui_element.h"
 
 void UI::update() {
-    const glm::vec2 mouse = Engine::instance().input.mousePosition();
-    recurseUpdate(rootId, mouse);
+    Engine& engine = Engine::instance();
+    recurseTick(rootId, engine.app.deltaTime);
+    if (!engine.app.cursorCaptured) {
+        const glm::vec2 mouse = engine.input.mousePosition();
+        recurseUpdateInput(rootId, mouse);
+    }
 }
 
-void UI::recurseUpdate(UIElementID id, const glm::vec2& mouse) {
+void UI::recurseTick(UIElementID id, float dt) {
     UIElement& e = get(id);
-    if (e.widget)
-        e.widget->update(e, mouse);
+    if (e.widget) e.widget->tick(e, dt);
+    for (UIElementID child : e.children) recurseTick(child, dt);
+}
 
-    for (UIElementID child : e.children)
-        recurseUpdate(child, mouse);
+void UI::recurseUpdateInput(UIElementID id, const glm::vec2& mouse) {
+    UIElement& e = get(id);
+    if (e.widget) e.widget->updateInput(e, mouse);
+    for (UIElementID child : e.children) recurseUpdateInput(child, mouse);
 }
 
 UIElementID UI::createElement() {

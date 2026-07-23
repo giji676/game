@@ -45,7 +45,7 @@ void Game::init() {
 
     int width = 10;
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 100; i++) {
         ObjectID objId = scene.createObject();
         Object& obj = scene.get(objId);
         obj.model = &engine.assets.getModel("backpack");

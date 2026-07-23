@@ -52,6 +52,7 @@ public:
     float deltaTime = 0.0f;
     float lastFrameTime = 0.0f;
     bool running = true;
+    bool cursorCaptured = false;
 
     int initialize();
     void cleanup();

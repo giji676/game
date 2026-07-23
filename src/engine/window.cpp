@@ -56,11 +56,13 @@ void App::getCursor() {
     int h = height();
 
     SDL_WarpMouseInWindow(window, w / 2, h / 2);
+    cursorCaptured = false;
 }
 
 void App::releaseCursor() {
     SDL_SetRelativeMouseMode(SDL_TRUE);
     SDL_ShowCursor(SDL_DISABLE);
+    cursorCaptured = true;
 }
 
 void App::cleanup() {

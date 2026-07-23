@@ -89,11 +89,12 @@ public:
 
     ResolvedButtonStyle current;
 
-    void update(
+    void updateInput(
             const UIElement& e,
             const glm::vec2& pos) override
     {
-        if (!disabled) {
+        if (disabled) { hovered = pressed = false; }
+        else {
             hovered =
                 pos.x >= e.transform.position.x &&
                 pos.x <= e.transform.position.x + e.transform.size.x &&
@@ -108,10 +109,10 @@ public:
             }
             if (!Engine::instance().input.down(MouseAction::Left))
                 pressed = false;
-        } else {
-            hovered = pressed = false;
         }
+    }
 
+    void tick(const UIElement& e, float dt) override {
         current = resolve(normal, overridesFor(resolveState()));
     }
 
@@ -164,6 +165,15 @@ public:
             case ButtonState::Hovered:  return hoveredStyle;
             case ButtonState::Disabled: return disabledStyle;
             default: { static ButtonStyle empty; return empty; }
+        }
+    }
+
+    const ButtonStyle& styleFor(ButtonState s) const {
+        switch (s) {
+            case ButtonState::Pressed:  return pressedStyle;
+            case ButtonState::Hovered:  return hoveredStyle;
+            case ButtonState::Disabled: return disabledStyle;
+            default:                    return normal;
         }
     }
 };

@@ -8,9 +8,11 @@ class UIWidget {
 public:
     virtual ~UIWidget() = default;
 
-    virtual void update(
+    virtual void tick(const UIElement& e, float dt) {}
+
+    virtual void updateInput(
             const UIElement& e,
-            const glm::vec2& pos) {}
+            const glm::vec2& mouse) {}
 
     virtual void buildCommands(
         const UIElement& element,
