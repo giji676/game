@@ -175,3 +175,24 @@ UIElementID UI::button(
 
     return id;
 }
+
+UIElementID UI::toolbar(
+    glm::vec2 pos,
+    glm::vec2 size,
+    float fontSize,
+    Font* font)
+{
+    UIElementID id = createElement();
+    UIElement& e = get(id);
+
+    auto& tb = e.addWidget<Toolbar>();
+    tb.font = font
+        ? font
+        : &Engine::instance().assets.getFont("InterVariable");
+
+    e.transform.position = pos;
+    e.transform.size = size;
+    e.transform.fontSize = fontSize;
+
+    return id;
+}

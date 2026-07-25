@@ -3,6 +3,16 @@
 #include "engine/engine.h"
 #include <functional>
 #include <string>
+#include <vector>
+
+namespace {
+bool hitRect(glm::vec2 pos, glm::vec2 rectPos, glm::vec2 rectSize) {
+    return pos.x >= rectPos.x &&
+           pos.x <= rectPos.x + rectSize.x &&
+           pos.y >= rectPos.y &&
+           pos.y <= rectPos.y + rectSize.y;
+}
+} // namespace
 
 class Label : public UIWidget {
 public:
@@ -105,33 +115,35 @@ public:
         pressed = false;
     }
 
-    // TODO: if mouse is hovered in the 'paused' game state
-    // and gets unpaused, the buttons stays hovered
     void updateInput(
             const UIElement& e,
             const glm::vec2& pos) override
     {
-        if (disabled) { hovered = pressed = false; }
-        else {
-            hovered =
-                pos.x >= e.transform.position.x &&
-                pos.x <= e.transform.position.x + e.transform.size.x &&
-                pos.y >= e.transform.position.y &&
-                pos.y <= e.transform.position.y + e.transform.size.y;
-
-            if (hovered && Engine::instance().input.pressed(MouseAction::Left))
-                pressed = true;
-            if (pressed && Engine::instance().input.released(MouseAction::Left)) {
-                pressed = false;
-                if (hovered && onClick) onClick();
-            }
-            if (!Engine::instance().input.down(MouseAction::Left))
-                pressed = false;
+        if (disabled) {
+            hovered = pressed = false;
+            return;
         }
+
+        hovered = hitRect(pos, e.transform.position, e.transform.size);
+
+        Input& input = Engine::instance().input;
+        if (hovered && input.pressed(MouseAction::Left))
+            pressed = true;
+        if (pressed && input.released(MouseAction::Left)) {
+            pressed = false;
+            if (hovered && onClick)
+                onClick();
+        }
+        if (!input.down(MouseAction::Left))
+            pressed = false;
     }
 
     void tick(const UIElement& e, float dt) override {
+        if (Engine::instance().app.cursorCaptured)
+            resetInteraction();
         current = resolve(normal, overridesFor(resolveState()));
+        (void)e;
+        (void)dt;
     }
 
     void buildCommands(
@@ -425,5 +437,180 @@ public:
             o.borderWidth.value_or(base.borderWidth.value_or(0.f)),
             o.caretColor.value_or(base.caretColor.value_or(glm::vec4{0,0,0,1})),
         };
+    }
+};
+
+struct ToolbarItem {
+    std::string label;
+    std::function<void()> onClick;
+    bool toggleable = false;
+    bool toggled = false;
+};
+
+class Toolbar : public UIWidget {
+public:
+    Font* font = nullptr;
+    std::vector<ToolbarItem> items;
+
+    glm::vec4 bgColor = {0.18f, 0.18f, 0.18f, 1.f};
+    glm::vec4 borderColor = {0.08f, 0.08f, 0.08f, 1.f};
+    float borderWidth = 1.f;
+
+    glm::vec4 itemBgColor = {0.28f, 0.28f, 0.28f, 1.f};
+    glm::vec4 itemHoverBgColor = {0.36f, 0.36f, 0.36f, 1.f};
+    glm::vec4 itemPressedBgColor = {0.22f, 0.22f, 0.22f, 1.f};
+    glm::vec4 itemToggledBgColor = {0.2f, 0.45f, 0.82f, 1.f};
+    glm::vec4 itemTextColor = {0.95f, 0.95f, 0.95f, 1.f};
+
+    glm::vec2 padding = {8.f, 4.f};
+    glm::vec2 itemPadding = {12.f, 4.f};
+    float itemSpacing = 4.f;
+
+    void addItem(std::string label, std::function<void()> onClick) {
+        items.push_back({
+            .label = std::move(label),
+            .onClick = std::move(onClick),
+            .toggleable = false,
+            .toggled = false,
+        });
+        ensureStateSize();
+    }
+
+    void addToggle(
+        std::string label,
+        bool initialToggled,
+        std::function<void(bool toggled)> onToggle = nullptr)
+    {
+        size_t index = items.size();
+        items.push_back({
+            .label = std::move(label),
+            .onClick = nullptr,
+            .toggleable = true,
+            .toggled = initialToggled,
+        });
+
+        items[index].onClick = [this, index, onToggle = std::move(onToggle)]() {
+            items[index].toggled = !items[index].toggled;
+            if (onToggle)
+                onToggle(items[index].toggled);
+        };
+        ensureStateSize();
+    }
+
+    void resetInteraction() override {
+        hovered.assign(items.size(), false);
+        pressed.assign(items.size(), false);
+    }
+
+    void updateInput(const UIElement& e, const glm::vec2& pos) override {
+        Input& input = Engine::instance().input;
+        ensureStateSize();
+
+        for (size_t i = 0; i < items.size(); ++i) {
+            glm::vec2 itemPos = itemPosition(e, static_cast<int>(i));
+            glm::vec2 itemSize = measureItem(static_cast<int>(i), e.transform.fontSize);
+
+            hovered[i] = hitRect(pos, itemPos, itemSize);
+            if (!hovered[i]) {
+                if (!input.down(MouseAction::Left))
+                    pressed[i] = false;
+                continue;
+            }
+
+            if (input.pressed(MouseAction::Left))
+                pressed[i] = true;
+
+            if (pressed[i] && input.released(MouseAction::Left)) {
+                pressed[i] = false;
+                if (items[i].onClick)
+                    items[i].onClick();
+            }
+
+            if (!input.down(MouseAction::Left))
+                pressed[i] = false;
+        }
+    }
+
+    void buildCommands(
+        const UIElement& e,
+        std::vector<UIRenderCommand>& out) const override
+    {
+        out.push_back({
+            .type = UICmdType::Rect,
+            .position = e.transform.position,
+            .size = e.transform.size,
+            .color = bgColor,
+            .borderWidth = borderWidth,
+            .borderColor = borderColor,
+        });
+
+        float fontSize = e.transform.fontSize;
+        for (size_t i = 0; i < items.size(); ++i) {
+            const ToolbarItem& item = items[i];
+            glm::vec2 itemPos = itemPosition(e, static_cast<int>(i));
+            glm::vec2 itemSize = measureItem(static_cast<int>(i), fontSize);
+
+            glm::vec4 bg = itemBgColor;
+            if (item.toggleable && item.toggled)
+                bg = itemToggledBgColor;
+            else if (pressed.size() > i && pressed[i])
+                bg = itemPressedBgColor;
+            else if (hovered.size() > i && hovered[i])
+                bg = itemHoverBgColor;
+
+            out.push_back({
+                .type = UICmdType::Rect,
+                .position = itemPos,
+                .size = itemSize,
+                .color = bg,
+            });
+
+            glm::vec2 textPos = font->baselineInRect(
+                itemPos, itemSize, itemPadding, fontSize);
+            glm::vec2 textSize = font->measure(item.label, fontSize);
+
+            out.push_back({
+                .type = UICmdType::Text,
+                .position = textPos,
+                .size = textSize,
+                .color = itemTextColor,
+                .font = font,
+                .text = item.label,
+            });
+        }
+    }
+
+private:
+    mutable std::vector<bool> hovered;
+    mutable std::vector<bool> pressed;
+
+    void ensureStateSize() {
+        hovered.resize(items.size(), false);
+        pressed.resize(items.size(), false);
+    }
+
+    glm::vec2 measureItem(int index, float fontSize) const {
+        const ToolbarItem& item = items[index];
+        glm::vec2 textSize = font->measure(item.label, fontSize);
+        return {
+            textSize.x + itemPadding.x * 2.f,
+            font->lineHeightAt(fontSize) + itemPadding.y * 2.f,
+        };
+    }
+
+    glm::vec2 itemPosition(const UIElement& e, int index) const {
+        float x = e.transform.position.x + padding.x;
+        float y = e.transform.position.y + padding.y;
+        float fontSize = e.transform.fontSize;
+
+        for (int i = 0; i < index; ++i) {
+            x += measureItem(i, fontSize).x + itemSpacing;
+        }
+
+        float itemH = measureItem(index, fontSize).y;
+        float innerH = e.transform.size.y - padding.y * 2.f;
+        y += (innerH - itemH) * 0.5f;
+
+        return {x, y};
     }
 };

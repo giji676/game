@@ -56,6 +56,13 @@ public:
             Font* font
     );
 
+    UIElementID toolbar(
+            glm::vec2 pos,
+            glm::vec2 size,
+            float fontSize,
+            Font* font = nullptr
+    );
+
     UIElementID createElement();
 
     void reparent(UIElementID childId, UIElementID newParentId);

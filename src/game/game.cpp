@@ -133,6 +133,26 @@ void Game::init() {
     field.onSubmit = [](const std::string& text) {
         // std::cout << "Submitted: " << text << "\n";
     };
+
+    constexpr float toolbarH = 40.f;
+    toolbarId = ui.toolbar(
+            {0.f, static_cast<float>(engine.app.height()) - toolbarH},
+            {static_cast<float>(engine.app.width()), toolbarH},
+            18.f);
+
+    auto& toolbarElem = ui.get(toolbarId);
+    toolbarElem.visible = false;
+    auto* toolbar = dynamic_cast<Toolbar*>(toolbarElem.widget.get());
+    toolbar->addItem("New", []() {
+        std::cout << "Toolbar: New\n";
+    });
+    toolbar->addToggle("Play", playToggled, [this](bool toggled) {
+        playToggled = toggled;
+        std::cout << "Toolbar: Play " << (toggled ? "on" : "off") << "\n";
+    });
+    toolbar->addItem("Save", []() {
+        std::cout << "Toolbar: Save\n";
+    });
 }
 
 void Game::setupTerrain() {
@@ -268,6 +288,7 @@ void Game::update() {
         engine.setPaused(nowPaused);
         engine.ui.get(pauseButtonId).visible = nowPaused;
         engine.ui.get(pauseInputId).visible = nowPaused;
+        engine.ui.get(toolbarId).visible = nowPaused;
     }
 
     if (input.pressed(Action::ToggleScreen))
