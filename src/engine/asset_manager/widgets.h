@@ -266,11 +266,7 @@ public:
     void updateInput(const UIElement& e, const glm::vec2& pos) override {
         if (disabled) { hovered = false; return; }
 
-        hovered =
-            pos.x >= e.transform.position.x &&
-            pos.x <= e.transform.position.x + e.transform.size.x &&
-            pos.y >= e.transform.position.y &&
-            pos.y <= e.transform.position.y + e.transform.size.y;
+        hovered = hitRect(pos, e.transform.position, e.transform.size);
 
         if (hovered && Engine::instance().input.pressed(MouseAction::Left)) {
             Engine::instance().ui.requestFocus(selfId);

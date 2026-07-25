@@ -59,6 +59,17 @@ void UI::update() {
     if (!engine.app.cursorCaptured) {
         const glm::vec2 mouse = engine.input.mousePosition();
         recurseUpdateInput(rootId, mouse);
+
+        if (engine.input.pressed(MouseAction::Left) && focusedId != INVALID_UI_ELEMENT) {
+            const UIElement& focused = get(focusedId);
+            const glm::vec2& pos = focused.transform.position;
+            const glm::vec2& size = focused.transform.size;
+            bool overFocused =
+                mouse.x >= pos.x && mouse.x <= pos.x + size.x &&
+                mouse.y >= pos.y && mouse.y <= pos.y + size.y;
+            if (!overFocused)
+                requestFocus(INVALID_UI_ELEMENT);
+        }
     }
 }
 
