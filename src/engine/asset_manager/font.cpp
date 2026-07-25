@@ -2,16 +2,56 @@
 #include <iostream>
 #include <glad/glad.h>
 
-glm::vec2 Font::measure(const std::string& text, float height) {
-    float scale = height / 48.f;
+glm::vec2 Font::measure(const std::string& text, float size) const {
+    float scale = scaleFor(size);
 
     float width = 0.f;
     for (char c : text) {
-        const Character& ch = characters[c];
+        const Character& ch = characters.at(c);
         width += (ch.advance >> 6) * scale;
     }
 
-    return { width, height };
+    return { width, size };
+}
+
+glm::vec2 Font::baselineInRect(
+    glm::vec2 rectPos,
+    glm::vec2 rectSize,
+    glm::vec2 padding,
+    float size,
+    TextAlignV align) const
+{
+    float innerHeight = rectSize.y - padding.y * 2.f;
+    float lineH = lineHeightAt(size);
+    float descender = descenderAt(size);
+
+    float y;
+    switch (align) {
+        case TextAlignV::Bottom:
+            y = rectPos.y + padding.y + descender;
+            break;
+        case TextAlignV::Top:
+            y = rectPos.y + rectSize.y - padding.y - ascenderAt(size);
+            break;
+        case TextAlignV::Center:
+        default:
+            y = rectPos.y + padding.y + (innerHeight - lineH) * 0.5f + descender;
+            break;
+    }
+
+    return { rectPos.x + padding.x, y };
+}
+
+Font::CaretRect Font::caretAt(
+    glm::vec2 baseline,
+    float xOffset,
+    float size,
+    float width) const
+{
+    return {
+        { baseline.x + xOffset, baseline.y - descenderAt(size) },
+        { width, lineHeightAt(size) },
+    };
 }
 
 void Font::draw(
@@ -31,7 +71,7 @@ void Font::draw(
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    float scale = size.y / 48.f;
+    float scale = size.y / referenceSize;
     float x = position.x;
 
     for (char c : text) {
@@ -80,7 +120,7 @@ void Font::loadFont(const char* fontPath) {
     if (FT_New_Face(ft, fontPath, 0, &face))
         std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
 
-    FT_Set_Pixel_Sizes(face, 0, 48);
+    FT_Set_Pixel_Sizes(face, 0, static_cast<FT_UInt>(referenceSize));
 
     metrics.ascender   =  (face->size->metrics.ascender  >> 6);
     metrics.descender  = -(face->size->metrics.descender >> 6);

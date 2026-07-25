@@ -14,10 +14,18 @@ public:
         const UIElement& e,
         std::vector<UIRenderCommand>& out) const override
     {
+        glm::vec2 layoutSize = e.transform.size;
+        if (layoutSize.y <= 0.f)
+            layoutSize.y = e.transform.fontSize;
+
+        glm::vec2 baseline = font->baselineInRect(
+            e.transform.position, layoutSize, {0.f, 0.f}, e.transform.fontSize);
+        glm::vec2 textSize = font->measure(text, e.transform.fontSize);
+
         out.push_back({
             .type = UICmdType::Text,
-            .position = e.transform.position,
-            .size = e.transform.size,
+            .position = baseline,
+            .size = textSize,
             .color = color,
             .font = font,
             .text = text
@@ -32,7 +40,10 @@ public:
     float borderWidth = 0.f;
     glm::vec4 borderColor = {0,0,0,0};
 
-    void buildCommands(const UIElement& e, std::vector<UIRenderCommand>& out) const override {
+    void buildCommands(
+            const UIElement& e,
+            std::vector<UIRenderCommand>& out) const override
+    {
         out.push_back({
             .type = UICmdType::Rect,
             .position = e.transform.position,
@@ -89,6 +100,8 @@ public:
 
     ResolvedButtonStyle current;
 
+    // TODO: if mouse is hovered in the 'paused' game state
+    // and gets unpaused, the buttons stays hovered
     void updateInput(
             const UIElement& e,
             const glm::vec2& pos) override
@@ -175,5 +188,207 @@ public:
             case ButtonState::Disabled: return disabledStyle;
             default:                    return normal;
         }
+    }
+};
+
+enum class FieldState {
+    Normal,
+    Hovered,
+    Focused,
+    Disabled
+};
+
+struct InputFieldStyle {
+    std::optional<glm::vec4> bgColor;
+    std::optional<glm::vec4> textColor;
+    std::optional<glm::vec4> borderColor;
+    std::optional<float>     borderWidth;
+    std::optional<glm::vec4> caretColor;
+};
+
+struct ResolvedInputFieldStyle {
+    glm::vec4 bgColor;
+    glm::vec4 textColor;
+    glm::vec4 borderColor;
+    float     borderWidth;
+    glm::vec4 caretColor;
+};
+
+class InputField : public UIWidget {
+public:
+    InputFieldStyle normal;
+    InputFieldStyle hoveredStyle;
+    InputFieldStyle focusedStyle;
+    InputFieldStyle disabledStyle;
+    ResolvedInputFieldStyle current;
+
+    Font* font = nullptr;
+    glm::vec4 cornerRadii = {0,0,0,0};
+    glm::vec2 padding = {10.f, 10.f};
+    std::string placeholder;
+    std::string text;
+    size_t caretPos = 0;
+
+    bool hovered = false;
+    bool focused = false;
+    bool disabled = false;
+
+    float caretBlinkTimer = 0.f;
+    bool  caretVisible = true;
+
+    std::function<void(const std::string&)> onChange;
+    std::function<void(const std::string&)> onSubmit;
+
+    UIElementID selfId = INVALID_UI_ELEMENT;
+
+    void updateInput(const UIElement& e, const glm::vec2& pos) override {
+        if (disabled) { hovered = false; return; }
+
+        hovered =
+            pos.x >= e.transform.position.x &&
+            pos.x <= e.transform.position.x + e.transform.size.x &&
+            pos.y >= e.transform.position.y &&
+            pos.y <= e.transform.position.y + e.transform.size.y;
+
+        if (hovered && Engine::instance().input.pressed(MouseAction::Left)) {
+            Engine::instance().ui.requestFocus(selfId);
+        }
+    }
+
+    void tick(const UIElement& e, float dt) override {
+        current = resolve(normal, overridesFor(resolveState()));
+
+        if (focused) {
+            caretBlinkTimer += dt;
+            if (caretBlinkTimer >= 0.5f) {
+                caretBlinkTimer = 0.f;
+                caretVisible = !caretVisible;
+            }
+        } else {
+            caretVisible = false;
+            caretBlinkTimer = 0.f;
+        }
+    }
+
+    void onFocusGained() override {
+        focused = true;
+        caretVisible = true;
+        caretBlinkTimer = 0.f;
+        caretPos = text.size();
+    }
+
+    void onFocusLost() override {
+        focused = false;
+    }
+
+    void onTextInput(const std::string& input) override {
+        if (!focused) return;
+        text.insert(caretPos, input);
+        caretPos += input.size();
+        if (onChange) onChange(text);
+    }
+
+    void onKeyInput(Key key) override {
+        if (!focused) return;
+        switch (key) {
+            case Key::SDL_SCANCODE_BACKSPACE:
+                if (caretPos > 0) {
+                    text.erase(caretPos - 1, 1);
+                    caretPos--;
+                    if (onChange) onChange(text);
+                }
+                break;
+            case Key::SDL_SCANCODE_DELETE:
+                if (caretPos < text.size()) {
+                    text.erase(caretPos, 1);
+                    if (onChange) onChange(text);
+                }
+                break;
+            case Key::SDL_SCANCODE_LEFT:
+                if (caretPos > 0) caretPos--;
+                break;
+            case Key::SDL_SCANCODE_RIGHT:
+                if (caretPos < text.size()) caretPos++;
+                break;
+            case Key::SDL_SCANCODE_RETURN:
+                if (onSubmit) onSubmit(text);
+                break;
+            default: break;
+        }
+        caretVisible = true;
+        caretBlinkTimer = 0.f; // reset blink so caret is visible right after typing
+    }
+
+    void buildCommands(
+            const UIElement& e,
+            std::vector<UIRenderCommand>& out) const override
+    {
+        out.push_back({
+            .type = UICmdType::Rect,
+            .position = e.transform.position,
+            .size = e.transform.size,
+            .color = current.bgColor,
+            .cornerRadii = cornerRadii,
+            .borderWidth = current.borderWidth,
+            .borderColor = current.borderColor,
+        });
+
+        bool showPlaceholder = text.empty() && !focused;
+        const std::string& displayText = showPlaceholder ? placeholder : text;
+        glm::vec2 textPos = font->baselineInRect(
+            e.transform.position, e.transform.size, padding, e.transform.fontSize);
+        glm::vec2 textSize = font->measure(displayText, e.transform.fontSize);
+
+        out.push_back({
+            .type = UICmdType::Text,
+            .position = textPos,
+            .size = textSize,
+            .color = current.textColor,
+            .font = font,
+            .text = displayText,
+        });
+
+        if (focused && caretVisible) {
+            float caretX = font->measure(
+                text.substr(0, caretPos),
+                e.transform.fontSize).x;
+            Font::CaretRect caret = font->caretAt(textPos, caretX, e.transform.fontSize);
+
+            out.push_back({
+                .type = UICmdType::Rect,
+                .position = caret.position,
+                .size = caret.size,
+                .color = current.caretColor,
+            });
+        }
+    }
+
+    FieldState resolveState() const {
+        if (disabled) return FieldState::Disabled;
+        if (focused)  return FieldState::Focused;
+        if (hovered)  return FieldState::Hovered;
+        return FieldState::Normal;
+    }
+
+    const InputFieldStyle& overridesFor(FieldState s) const {
+        switch (s) {
+            case FieldState::Focused:  return focusedStyle;
+            case FieldState::Hovered:  return hoveredStyle;
+            case FieldState::Disabled: return disabledStyle;
+            default: { static InputFieldStyle empty; return empty; }
+        }
+    }
+
+    ResolvedInputFieldStyle resolve(
+            const InputFieldStyle& base,
+            const InputFieldStyle& o) const
+    {
+        return {
+            o.bgColor.value_or(base.bgColor.value_or(glm::vec4{1,1,1,1})),
+            o.textColor.value_or(base.textColor.value_or(glm::vec4{0,0,0,1})),
+            o.borderColor.value_or(base.borderColor.value_or(glm::vec4{0,0,0,0})),
+            o.borderWidth.value_or(base.borderWidth.value_or(0.f)),
+            o.caretColor.value_or(base.caretColor.value_or(glm::vec4{0,0,0,1})),
+        };
     }
 };

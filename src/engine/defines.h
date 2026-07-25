@@ -2,5 +2,8 @@
 
 #include <cstdint>
 
-using ObjectID = uint32_t;
-using UIElementID = uint32_t;
+#define INVALID_UI_ELEMENT -1
+#define INVALID_OBJECT -1
+
+using ObjectID = int64_t;
+using UIElementID = int64_t;

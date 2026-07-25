@@ -5,6 +5,50 @@
 #include "asset_manager/widgets.h"
 #include "asset_manager/ui_element.h"
 
+void UI::dispatchTextInput(const std::string& text) {
+    if (UIElement* e = getFocusedElement()) {
+        if (e->widget) e->widget->onTextInput(text);
+    }
+}
+
+void UI::dispatchKeyInput(Key key) {
+    if (UIElement* e = getFocusedElement()) {
+        if (e->widget) e->widget->onKeyInput(key);
+    }
+}
+
+void UI::requestFocus(UIElementID id) {
+    if (focusedId == id) return;
+    if (focusedId != INVALID_UI_ELEMENT) {
+        if (UIElement* prev = getFocusedElement())
+            if (prev->widget) prev->widget->onFocusLost();
+    }
+    focusedId = id;
+    if (id != INVALID_UI_ELEMENT) {
+        get(id).widget->onFocusGained();
+        SDL_StartTextInput();
+    } else {
+        SDL_StopTextInput();
+    }
+}
+
+UIElement* UI::getFocusedElement() {
+    if (focusedId == INVALID_UI_ELEMENT) return nullptr;
+    return &get(focusedId);
+}
+
+UIElement& UI::get(UIElementID id) {
+    assert(id != INVALID_UI_ELEMENT && "UI::get called with INVALID_UI_ELEMENT");
+    assert(id < elements.size() && "UI::get called with out-of-range UIElementID");
+    return elements[id];
+}
+
+const UIElement& UI::get(UIElementID id) const {
+    assert(id != INVALID_UI_ELEMENT && "UI::get called with INVALID_UI_ELEMENT");
+    assert(id < elements.size() && "UI::get called with out-of-range UIElementID");
+    return elements[id];
+}
+
 void UI::update() {
     Engine& engine = Engine::instance();
     recurseTick(rootId, engine.app.deltaTime);
@@ -56,6 +100,8 @@ UIElementID UI::label(
         font ? font : &Engine::instance().assets.getFont("InterVariable");
     lbl.font = resolvedFont;
     lbl.color = color;
+    lbl.text = std::move(text);
+    elem.transform.fontSize = size.y > 0.f ? size.y : resolvedFont->referenceSize;
     return elemId;
 }
 
@@ -101,12 +147,10 @@ UIElementID UI::button(
     e.transform.fontSize = fontSize;
     e.transform.size = {
         textSize.x + btn.padding.x * 2.f,
-        textSize.y + btn.font->metrics.descender + btn.padding.y * 2.f
+        btn.font->lineHeightAt(fontSize) + btn.padding.y * 2.f
     };
-    e.transform.textPosition = {
-        pos.x + btn.padding.x,
-        pos.y + btn.font->metrics.descender + btn.padding.y
-    };
+    e.transform.textPosition = btn.font->baselineInRect(
+        pos, e.transform.size, btn.padding, fontSize, TextAlignV::Bottom);
 
     return id;
 }

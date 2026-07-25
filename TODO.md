@@ -5,30 +5,30 @@
     object being retreived doesn't exist. Print the error atleast.
 
 # Features:
-1. UI system
-2. Editor UI
-3. Improved shaders
-4. Physics
-5. Collisions
-6. Animations
-7. Audio
-8. Navigation
-9. Networking
-10. Live script loading
-11. LOD
+1. Editor UI
+2. Improved shaders
+3. Physics
+4. Collisions
+5. Animations
+6. Audio
+7. Navigation
+8. Networking
+00. Live script loading
+01. LOD
 
 *wip* = Work In Progress / Early Stages / Very Basic
 
 # Completed features:
-1. Asset loading
-2. Scene graph
-3. Materials
-4. Profiler (wip)
-5. Debug renderer
-6. Renderer
-7. Script system
-8. Raycasting
-9. Input system (wip)
+1. UI system (wip)
+2. Asset loading
+3. Scene graph
+4. Materials
+5. Profiler (wip)
+6. Debug renderer
+7. Renderer
+8. Script system
+9. Raycasting
+10. Input system (wip)
 
 # TODO dumps:
 1. Precompute normal matrix — transpose(inverse(model)) is computed per vertex in the shader right now. Add a second SSBO with precomputed normal matrices, update it alongside the transform SSBO each frame

@@ -102,6 +102,34 @@ void Game::init() {
     btn->onClick = []() {
         std::cout << "Button clicked\n";
     };
+
+    auto inputFieldId = ui.createElement();
+    auto& inputElem = ui.get(inputFieldId);
+    inputElem.transform.position = {10.f, 200.f};
+    inputElem.transform.size = {400.f, 64.f};
+    inputElem.transform.fontSize = 32.f;
+
+    auto& field = inputElem.addWidget<InputField>();
+    field.selfId = inputFieldId;              // required — used in updateInput to call requestFocus(selfId)
+    field.font = &engine.assets.getFont("InterVariable");
+    field.placeholder = "Enter text...";
+
+    field.normal.bgColor = {1, 1, 1, 1};
+    field.normal.textColor = {0, 0, 0, 1};
+    field.normal.borderColor = {0.7f, 0.7f, 0.7f, 1};
+    field.normal.borderWidth = 2.f;
+
+    field.focusedStyle.borderColor = {0.2f, 0.5f, 1.f, 1}; // blue border when focused
+    field.focusedStyle.borderWidth = 2.f;
+
+    field.cornerRadii = {6.f, 6.f, 6.f, 6.f};
+
+    field.onChange = [](const std::string& text) {
+        std::cout << "Input changed: " << text << "\n";
+    };
+    field.onSubmit = [](const std::string& text) {
+        std::cout << "Submitted: " << text << "\n";
+    };
 }
 
 void Game::setupTerrain() {

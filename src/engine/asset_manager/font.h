@@ -21,10 +21,17 @@ struct FontMetrics {
     float lineHeight;
 };
 
+enum class TextAlignV {
+    Top,
+    Center,
+    Bottom,
+};
+
 class Font {
 public:
     GLuint VAO, VBO;
     FontMetrics metrics;
+    float referenceSize = 48.f;
 
     std::map<char, Character> characters;
 
@@ -38,7 +45,26 @@ public:
         const glm::mat4& projection,
         Shader& shader);
 
-    glm::vec2 measure(const std::string& text, float height);
+    glm::vec2 measure(const std::string& text, float size) const;
+
+    float scaleFor(float size) const { return size / referenceSize; }
+    float lineHeightAt(float size) const { return metrics.lineHeight * scaleFor(size); }
+    float descenderAt(float size) const { return metrics.descender * scaleFor(size); }
+    float ascenderAt(float size) const { return metrics.ascender * scaleFor(size); }
+
+    glm::vec2 baselineInRect(
+        glm::vec2 rectPos,
+        glm::vec2 rectSize,
+        glm::vec2 padding,
+        float size,
+        TextAlignV align = TextAlignV::Center) const;
+
+    struct CaretRect {
+        glm::vec2 position;
+        glm::vec2 size;
+    };
+    CaretRect caretAt(glm::vec2 baseline, float xOffset, float size, float width = 2.f) const;
+
     void loadFont(const char* fontPath);
 
     Font(const Font&) = delete;

@@ -144,11 +144,16 @@ void Engine::getInput(SDL_Event &event) {
                 break;
 
             case SDL_KEYDOWN:
+                ui.dispatchKeyInput(event.key.keysym.scancode);
                 input.setKey(event.key.keysym.scancode, true);
                 break;
 
             case SDL_KEYUP:
                 input.setKey(event.key.keysym.scancode, false);
+                break;
+
+            case SDL_TEXTINPUT:
+                ui.dispatchTextInput(event.text.text);
                 break;
 
             case SDL_MOUSEMOTION:

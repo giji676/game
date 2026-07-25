@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/asset_manager/ui_element.h"
+#include "engine/defines.h"
 #include "engine/renderer/ui_renderer.h"
 
 class UI {
@@ -56,9 +57,15 @@ public:
     UIElementID createElement();
 
     void reparent(UIElementID childId, UIElementID newParentId);
+    void requestFocus(UIElementID id);
 
-    UIElement& get(UIElementID id) { return elements[id]; }
-    const UIElement& get(UIElementID id) const { return elements[id]; }
+    void dispatchTextInput(const std::string& text);
+    void dispatchKeyInput(Key key);
+
+    UIElement& get(UIElementID id);
+    const UIElement& get(UIElementID id) const;
+
+    UIElement* getFocusedElement();
 
     UIElementID getRoot() const { return rootId; }
     UIElement& root() { return elements[rootId]; }
@@ -67,6 +74,7 @@ public:
 private:
     std::vector<UIElement> elements;
     UIElementID rootId = 0;
+    UIElementID focusedId = INVALID_UI_ELEMENT;
 
     UIElementID createElementInternal();
     void recurseRender(
