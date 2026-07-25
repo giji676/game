@@ -10,6 +10,7 @@
 
 #include "engine/engine.h"
 #include "engine/asset_manager/widgets.h"
+#include "engine/ui.h"
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale);
 
@@ -73,7 +74,7 @@ void Game::init() {
     texturedMatShader.setVec3("lightPos", light.pos);
     texturedMatShader.setVec3("lightColor", light.color);
 
-    ui.label(
+    fpsLabelId = ui.label(
             {50.f, engine.app.height() - 60.f},
             {0.f, 48.f},
             {1.f, 0.f, 0.f, 1.f},
@@ -85,13 +86,14 @@ void Game::init() {
             {1.f, 1.f, 1.f, 1.f},
             {5.f, 5.f, 5.f, 5.f});
 
-    auto btnId = ui.button(
+    pauseButtonId = ui.button(
             {10.f, 100.f},
             64.f,
             "abcdefghijklmnopqABCDEFGHIJKLMNOPQ",
             nullptr);
 
-    auto& elem = ui.get(btnId);
+    auto& elem = ui.get(pauseButtonId);
+    elem.visible = false;
     auto* btn = dynamic_cast<Button*>(elem.widget.get());
     btn->normal.bgColor = {1, 1, 1, 1};
     btn->hoveredStyle.bgColor = {0, 1, 0, 0.2};
@@ -103,14 +105,15 @@ void Game::init() {
         std::cout << "Button clicked\n";
     };
 
-    auto inputFieldId = ui.createElement();
-    auto& inputElem = ui.get(inputFieldId);
+    pauseInputId = ui.createElement();
+    auto& inputElem = ui.get(pauseInputId);
+    inputElem.visible = false;
     inputElem.transform.position = {10.f, 200.f};
     inputElem.transform.size = {400.f, 64.f};
     inputElem.transform.fontSize = 32.f;
 
     auto& field = inputElem.addWidget<InputField>();
-    field.selfId = inputFieldId;              // required — used in updateInput to call requestFocus(selfId)
+    field.selfId = pauseInputId;              // required — used in updateInput to call requestFocus(selfId)
     field.font = &engine.assets.getFont("InterVariable");
     field.placeholder = "Enter text...";
 
@@ -125,10 +128,10 @@ void Game::init() {
     field.cornerRadii = {6.f, 6.f, 6.f, 6.f};
 
     field.onChange = [](const std::string& text) {
-        std::cout << "Input changed: " << text << "\n";
+        // std::cout << "Input changed: " << text << "\n";
     };
     field.onSubmit = [](const std::string& text) {
-        std::cout << "Submitted: " << text << "\n";
+        // std::cout << "Submitted: " << text << "\n";
     };
 }
 
@@ -260,21 +263,17 @@ void Game::update() {
     // -------------------------
     // 1. ALWAYS RUN (control input)
     // -------------------------
-    if (input.pressed(Action::Quit)) {
-        is_paused = !is_paused;
-        if (is_paused)
-            Engine::instance().app.getCursor();
-        else
-            Engine::instance().app.releaseCursor();
+    if (input.pressed(Action::Pause)) {
+        bool nowPaused = !engine.isPaused();
+        engine.setPaused(nowPaused);
+        engine.ui.get(pauseButtonId).visible = nowPaused;
+        engine.ui.get(pauseInputId).visible = nowPaused;
     }
 
     if (input.pressed(Action::ToggleScreen))
         engine.app.toggleWindow();
 
-    // -------------------------
-    // 2. SIMULATION (paused gate)
-    // -------------------------
-    if (!is_paused)
+    if (!engine.isPaused())
     {
         Camera& camera = *engine.getActiveCamera();
         float dt = engine.app.deltaTime;
@@ -350,7 +349,7 @@ void Game::update() {
     // -------------------------
     // 3. UI (always runs)
     // -------------------------
-    UIElement& e = engine.ui.get(1);
+    UIElement& e = engine.ui.get(fpsLabelId);
     if (auto* lbl = dynamic_cast<Label*>(e.widget.get())) {
         lbl->text = "FPS: " + std::to_string(engine.fps);
     }

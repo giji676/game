@@ -6,12 +6,16 @@
 #include "asset_manager/ui_element.h"
 
 void UI::dispatchTextInput(const std::string& text) {
+    if (Engine::instance().app.cursorCaptured)
+        return;
     if (UIElement* e = getFocusedElement()) {
         if (e->widget) e->widget->onTextInput(text);
     }
 }
 
 void UI::dispatchKeyInput(Key key) {
+    if (Engine::instance().app.cursorCaptured)
+        return;
     if (UIElement* e = getFocusedElement()) {
         if (e->widget) e->widget->onKeyInput(key);
     }
@@ -60,14 +64,31 @@ void UI::update() {
 
 void UI::recurseTick(UIElementID id, float dt) {
     UIElement& e = get(id);
+    if (!e.visible)
+        return;
     if (e.widget) e.widget->tick(e, dt);
     for (UIElementID child : e.children) recurseTick(child, dt);
 }
 
 void UI::recurseUpdateInput(UIElementID id, const glm::vec2& mouse) {
     UIElement& e = get(id);
+    if (!e.visible)
+        return;
     if (e.widget) e.widget->updateInput(e, mouse);
     for (UIElementID child : e.children) recurseUpdateInput(child, mouse);
+}
+
+void UI::onUnpause() {
+    requestFocus(INVALID_UI_ELEMENT);
+    recurseResetInteraction(rootId);
+}
+
+void UI::recurseResetInteraction(UIElementID id) {
+    UIElement& e = get(id);
+    if (e.widget)
+        e.widget->resetInteraction();
+    for (UIElementID child : e.children)
+        recurseResetInteraction(child);
 }
 
 UIElementID UI::createElement() {

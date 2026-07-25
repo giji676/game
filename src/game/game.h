@@ -41,7 +41,9 @@ private:
     World world;
     Light light;
 
-    bool is_paused = false;
+    UIElementID fpsLabelId = INVALID_UI_ELEMENT;
+    UIElementID pauseButtonId = INVALID_UI_ELEMENT;
+    UIElementID pauseInputId = INVALID_UI_ELEMENT;
 
     unsigned int planeVBO, planeVAO, planeEBO;
 

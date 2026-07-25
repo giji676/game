@@ -37,6 +37,9 @@ public:
     float G = 9.81;
     float fps = 0.0f;
 
+    bool isPaused() const { return paused; }
+    void setPaused(bool value);
+
     void init(Game* g);
     void run();
 
@@ -46,6 +49,7 @@ public:
 
 private:
     Game* game;
+    bool paused = false;
 
     float fpsTimer = 0.0f;
     int fpsFrames = 0;

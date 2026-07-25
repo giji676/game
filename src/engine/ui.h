@@ -22,6 +22,8 @@ public:
 
     void recurseBuild(UIElementID id, std::vector<UIRenderCommand>& out) {
         UIElement& e = get(id);
+        if (!e.visible)
+            return;
 
         if (e.widget)
             e.widget->buildCommands(e, out);
@@ -70,6 +72,9 @@ public:
     UIElementID getRoot() const { return rootId; }
     UIElement& root() { return elements[rootId]; }
     const UIElement& root() const { return elements[rootId]; }
+
+    void onUnpause();
+    void recurseResetInteraction(UIElementID id);
 
 private:
     std::vector<UIElement> elements;

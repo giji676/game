@@ -50,7 +50,8 @@ void Engine::run() {
 
             getInput(event);
             game->update();
-            scene.update();
+            if (!paused)
+                scene.update();
             ui.update();
 
             auto uiCommands = ui.buildRenderList();
@@ -186,7 +187,7 @@ void Engine::setupKeyBindings() {
     input.bind(Action::MoveRight, SDL_SCANCODE_D);
     input.bind(Action::Jump, SDL_SCANCODE_SPACE);
     input.bind(Action::ToggleScreen, SDL_SCANCODE_F11);
-    input.bind(Action::Quit, SDL_SCANCODE_ESCAPE);
+    input.bind(Action::Pause, SDL_SCANCODE_ESCAPE);
 
     input.bind(MouseAction::Left, SDL_BUTTON_LEFT);
     input.bind(MouseAction::Middle, SDL_BUTTON_MIDDLE);
@@ -241,4 +242,20 @@ void Engine::loadAssets() {
 void Engine::setupCamera() {
     cameras.emplace_back(Camera());
     activeCamera = 0;
+}
+
+void Engine::setPaused(bool value) {
+    if (paused == value)
+        return;
+
+    paused = value;
+    input.mouseDeltaX = 0.f;
+    input.mouseDeltaY = 0.f;
+
+    if (paused) {
+        app.getCursor();
+    } else {
+        app.releaseCursor();
+        ui.onUnpause();
+    }
 }

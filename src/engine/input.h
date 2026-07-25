@@ -19,7 +19,7 @@ enum class Action : uint16_t {
     MoveBackward,
     ToggleScreen,
     Jump,
-    Quit,
+    Pause,
 
     Count
 };

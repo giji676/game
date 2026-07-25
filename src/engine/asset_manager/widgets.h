@@ -100,6 +100,11 @@ public:
 
     ResolvedButtonStyle current;
 
+    void resetInteraction() override {
+        hovered = false;
+        pressed = false;
+    }
+
     // TODO: if mouse is hovered in the 'paused' game state
     // and gets unpaused, the buttons stays hovered
     void updateInput(
@@ -241,6 +246,10 @@ public:
     std::function<void(const std::string&)> onSubmit;
 
     UIElementID selfId = INVALID_UI_ELEMENT;
+
+    void resetInteraction() override {
+        hovered = false;
+    }
 
     void updateInput(const UIElement& e, const glm::vec2& pos) override {
         if (disabled) { hovered = false; return; }

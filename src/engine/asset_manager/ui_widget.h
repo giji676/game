@@ -23,4 +23,5 @@ public:
     virtual void onFocusLost(void) {}
     virtual void onTextInput(const std::string& text) {}
     virtual void onKeyInput(Key key) {}
+    virtual void resetInteraction() {}
 };
