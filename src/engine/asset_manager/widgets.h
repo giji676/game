@@ -235,6 +235,7 @@ public:
 
     float caretBlinkTimer = 0.f;
     bool  caretVisible = true;
+    float scrollOffset = 0.f;
 
     std::function<void(const std::string&)> onChange;
     std::function<void(const std::string&)> onSubmit;
@@ -257,6 +258,14 @@ public:
 
     void tick(const UIElement& e, float dt) override {
         current = resolve(normal, overridesFor(resolveState()));
+
+        float innerWidth = e.transform.size.x - padding.x * 2.f;
+        if (focused) {
+            scrollOffset = font->horizontalScrollOffset(
+                text, caretPos, innerWidth, e.transform.fontSize, scrollOffset);
+        } else {
+            scrollOffset = 0.f;
+        }
 
         if (focused) {
             caretBlinkTimer += dt;
@@ -335,8 +344,19 @@ public:
 
         bool showPlaceholder = text.empty() && !focused;
         const std::string& displayText = showPlaceholder ? placeholder : text;
+        glm::vec2 clipPos = {
+            e.transform.position.x + padding.x,
+            e.transform.position.y + padding.y,
+        };
+        glm::vec2 clipSize = {
+            e.transform.size.x - padding.x * 2.f,
+            e.transform.size.y - padding.y * 2.f,
+        };
+
         glm::vec2 textPos = font->baselineInRect(
             e.transform.position, e.transform.size, padding, e.transform.fontSize);
+        if (!showPlaceholder)
+            textPos.x -= scrollOffset;
         glm::vec2 textSize = font->measure(displayText, e.transform.fontSize);
 
         out.push_back({
@@ -346,6 +366,9 @@ public:
             .color = current.textColor,
             .font = font,
             .text = displayText,
+            .clip = true,
+            .clipPos = clipPos,
+            .clipSize = clipSize,
         });
 
         if (focused && caretVisible) {
@@ -359,6 +382,9 @@ public:
                 .position = caret.position,
                 .size = caret.size,
                 .color = current.caretColor,
+                .clip = true,
+                .clipPos = clipPos,
+                .clipSize = clipSize,
             });
         }
     }

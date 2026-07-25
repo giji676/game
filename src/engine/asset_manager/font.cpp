@@ -1,4 +1,5 @@
 #include "font.h"
+#include <algorithm>
 #include <iostream>
 #include <glad/glad.h>
 
@@ -40,6 +41,29 @@ glm::vec2 Font::baselineInRect(
     }
 
     return { rectPos.x + padding.x, y };
+}
+
+float Font::horizontalScrollOffset(
+    const std::string& text,
+    size_t caretPos,
+    float innerWidth,
+    float size,
+    float currentScroll) const
+{
+    float textWidth = measure(text, size).x;
+    if (textWidth <= innerWidth)
+        return 0.f;
+
+    float maxScroll = textWidth - innerWidth;
+    float caretX = measure(text.substr(0, caretPos), size).x;
+
+    float scroll = currentScroll;
+    if (caretX < scroll)
+        scroll = caretX;
+    else if (caretX > scroll + innerWidth)
+        scroll = caretX - innerWidth;
+
+    return std::clamp(scroll, 0.f, maxScroll);
 }
 
 Font::CaretRect Font::caretAt(

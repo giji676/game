@@ -59,6 +59,13 @@ public:
         float size,
         TextAlignV align = TextAlignV::Center) const;
 
+    float horizontalScrollOffset(
+        const std::string& text,
+        size_t caretPos,
+        float innerWidth,
+        float size,
+        float currentScroll) const;
+
     struct CaretRect {
         glm::vec2 position;
         glm::vec2 size;

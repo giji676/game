@@ -2,11 +2,36 @@
 #include "engine/asset_manager/shader.h"
 #include <iostream>
 
+namespace {
+void setClipRect(const UIRenderCommand& cmd) {
+    if (!cmd.clip) return;
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(
+        static_cast<GLint>(cmd.clipPos.x),
+        static_cast<GLint>(cmd.clipPos.y),
+        static_cast<GLsizei>(cmd.clipSize.x),
+        static_cast<GLsizei>(cmd.clipSize.y));
+}
+
+void clearClipRect(const UIRenderCommand& cmd) {
+    if (!cmd.clip) return;
+    glDisable(GL_SCISSOR_TEST);
+}
+
+RectInstance toRectInstance(const UIRenderCommand& cmd) {
+    return {
+        cmd.position, cmd.size, cmd.color,
+        cmd.borderColor, cmd.cornerRadii, cmd.borderWidth
+    };
+}
+} // namespace
+
 void UIRenderer::drawText(
     const UIRenderCommand& cmd,
     const glm::mat4& projection,
     Shader& shader)
 {
+    setClipRect(cmd);
     cmd.font->draw(
         cmd.text,
         cmd.position,
@@ -15,25 +40,7 @@ void UIRenderer::drawText(
         projection,
         shader
     );
-}
-
-void UIRenderer::drawRect(
-    const UIRenderCommand& cmd,
-    const glm::mat4& projection,
-    Shader& shader)
-{
-    shader.use();
-    shader.setMat4("uProjection", projection);
-
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(cmd.position, 0.0f));
-    model = glm::scale(model, glm::vec3(cmd.size, 1.0f));
-
-    shader.setMat4("uModel", model);
-    shader.setVec4("uColor", cmd.color);
-
-    glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    clearClipRect(cmd);
 }
 
 void UIRenderer::render(
@@ -57,13 +64,20 @@ void UIRenderer::render(
 
     for (const auto& cmd : cmds) {
         if (cmd.type == UICmdType::Rect) {
-            batch.push_back({
-                cmd.position, cmd.size, cmd.color,
-                cmd.borderColor, cmd.cornerRadii, cmd.borderWidth
-            });
-            if (batch.size() == MAX_INSTANCES) flush();
+            if (cmd.clip) {
+                flush();
+                setClipRect(cmd);
+                flushRectBatch({ toRectInstance(cmd) }, projection, rectShader);
+                clearClipRect(cmd);
+            } else {
+                batch.push_back({
+                    cmd.position, cmd.size, cmd.color,
+                    cmd.borderColor, cmd.cornerRadii, cmd.borderWidth
+                });
+                if (batch.size() == MAX_INSTANCES) flush();
+            }
         } else if (cmd.type == UICmdType::Text) {
-            flush(); // rects must be drawn in order before text overlaps them
+            flush();
             drawText(cmd, projection, textShader);
         }
     }

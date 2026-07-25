@@ -24,6 +24,10 @@ struct UIRenderCommand {
 
     Font* font = nullptr;
     std::string text;
+
+    bool clip = false;
+    glm::vec2 clipPos;
+    glm::vec2 clipSize;
 };
 
 struct RectInstance {
@@ -46,11 +50,6 @@ public:
         Shader& rectShader);
 
     void drawText(
-        const UIRenderCommand& cmd,
-        const glm::mat4& projection,
-        Shader& shader);
-
-    void drawRect(
         const UIRenderCommand& cmd,
         const glm::mat4& projection,
         Shader& shader);
