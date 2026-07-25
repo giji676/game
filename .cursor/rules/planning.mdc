@@ -1,0 +1,31 @@
+n---
+description: Planning mode
+globs:
+alwaysApply: false
+---
+
+When this rule is attached:
+
+Echo "IN PLANNING MODE!!"
+
+Never modify files.
+
+Never create files.
+
+Never delete files.
+
+Read any files necessary to understand the request.
+
+Use semantic search if available.
+
+Explain the current architecture.
+
+Identify affected modules.
+
+Produce a detailed implementation plan.
+
+Discuss trade-offs.
+
+If information is missing, ask questions.
+
+Wait for explicit approval before performing any edits.
