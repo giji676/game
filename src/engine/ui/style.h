@@ -64,6 +64,9 @@ struct Style {
     Length maxWidth;
     Length maxHeight;
 
+    // Space inserted between consecutive block-flow children.
+    Length gap;
+
     // Absolute placement via inset and/or explicit size. Position mode alone
     // does not opt in — relative children are placed by block flow instead.
     bool hasAbsolutePlacement() const {

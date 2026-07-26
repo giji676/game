@@ -197,10 +197,11 @@ void layoutElement(
 }
 
 void layoutBlockFlow(UI& ui, UIElementID parentId, LayoutRect content) {
-    UIElement& parent = ui.get(parentId);
+    const float gap = ui.resolvedStyle(parentId).gap.resolve(content.size.y);
     float cursorTop = content.pos.y + content.size.y;
+    bool placedFlowChild = false;
 
-    for (UIElementID childId : parent.children) {
+    for (UIElementID childId : ui.get(parentId).children) {
         UIElement& child = ui.get(childId);
         const Style& childStyle = ui.resolvedStyle(childId);
 
@@ -213,6 +214,9 @@ void layoutBlockFlow(UI& ui, UIElementID parentId, LayoutRect content) {
 
         if (childStyle.position != PositionMode::Relative)
             continue;
+
+        if (placedFlowChild)
+            cursorTop -= gap;
 
         glm::vec2 intrinsic = {0.f, 0.f};
         if (child.widget)
@@ -239,6 +243,7 @@ void layoutBlockFlow(UI& ui, UIElementID parentId, LayoutRect content) {
         child.transform.size = {childWidth, childHeight};
 
         cursorTop = childBottom - marginBottom;
+        placedFlowChild = true;
 
         const LayoutRect childBorder = {child.transform.position, child.transform.size};
         const LayoutRect childContent = contentBox(childBorder, childStyle);

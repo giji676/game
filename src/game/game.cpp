@@ -103,6 +103,7 @@ void Game::init() {
     pausePanel.style.inset.top = Length::percent(20.f);
     pausePanel.style.height = Length::percent(55.f);
     pausePanel.style.display = Display::Block;
+    pausePanel.style.gap = Length::px(12.f);
     pausePanel.style.padding.left = Length::px(16.f);
     pausePanel.style.padding.right = Length::px(16.f);
     pausePanel.style.padding.top = Length::px(16.f);
@@ -142,7 +143,6 @@ void Game::init() {
     inputElem.style.position = PositionMode::Relative;
     inputElem.style.width = Length::percent(100.f);
     inputElem.style.height = Length::px(64.f);
-    inputElem.style.margin.top = Length::px(12.f);
 
     ui.reparent(pauseInputId, pausePanelId);
 
