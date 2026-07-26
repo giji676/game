@@ -50,6 +50,13 @@ enum class FlexDirection {
     Column,
 };
 
+enum class JustifyContent {
+    Start,
+    Center,
+    End,
+    SpaceBetween,
+};
+
 enum class PositionMode {
     Absolute,
     Relative,
@@ -59,6 +66,7 @@ struct Style {
     Display display = Display::None;
     PositionMode position = PositionMode::Absolute;
     FlexDirection flexDirection = FlexDirection::Row;
+    JustifyContent justifyContent = JustifyContent::Start;
 
     Insets inset;
     Insets margin;

@@ -1,6 +1,7 @@
 #include "engine/ui/layout.h"
 
 #include <algorithm>
+#include <vector>
 
 #include "engine/asset_manager/ui_element.h"
 #include "engine/ui.h"
@@ -165,6 +166,87 @@ float resolveBlockWidth(
     return std::min(width, availableWidth);
 }
 
+struct FlowMetrics {
+    UIElementID id = INVALID_UI_ELEMENT;
+    float mainBefore = 0.f;
+    float mainSize = 0.f;
+    float mainAfter = 0.f;
+};
+
+struct FlowMainAxisLayout {
+    float startOffset = 0.f;
+    float gap = 0.f;
+};
+
+FlowMainAxisLayout computeMainAxisLayout(
+    float containerSize,
+    const std::vector<FlowMetrics>& items,
+    float gap,
+    JustifyContent justify)
+{
+    FlowMainAxisLayout result{.startOffset = 0.f, .gap = gap};
+    if (items.empty())
+        return result;
+
+    float total = 0.f;
+    for (const FlowMetrics& item : items)
+        total += item.mainBefore + item.mainSize + item.mainAfter;
+    if (items.size() > 1)
+        total += gap * static_cast<float>(items.size() - 1);
+
+    const float free = containerSize - total;
+    if (items.size() == 1) {
+        switch (justify) {
+            case JustifyContent::Center:
+                result.startOffset = free * 0.5f;
+                break;
+            case JustifyContent::End:
+                result.startOffset = free;
+                break;
+            default:
+                break;
+        }
+        result.gap = 0.f;
+        return result;
+    }
+
+    switch (justify) {
+        case JustifyContent::Center:
+            result.startOffset = free * 0.5f;
+            break;
+        case JustifyContent::End:
+            result.startOffset = free;
+            break;
+        case JustifyContent::SpaceBetween:
+            result.gap = gap + free / static_cast<float>(items.size() - 1);
+            break;
+        default:
+            break;
+    }
+
+    return result;
+}
+
+float resolveFlowCrossHeight(
+    UI& ui,
+    UIElementID id,
+    const Style& style,
+    glm::vec2 contentSize,
+    glm::vec2 intrinsic,
+    float availableHeight)
+{
+    float height;
+    if (!style.height.isAuto())
+        height = style.height.resolve(contentSize.y);
+    else if (intrinsic.y > 0.f)
+        height = intrinsic.y;
+    else
+        height = availableHeight;
+
+    height = clampMinMax(height, style.minHeight, style.maxHeight, contentSize.y);
+    return std::min(height, availableHeight);
+}
+
 void layoutChildren(
     UI& ui,
     UIElementID parentId,
@@ -210,72 +292,53 @@ void layoutFlowAbsoluteChildren(
     }
 }
 
-void layoutColumnFlow(UI& ui, UIElementID parentId, LayoutRect content) {
-    const float gap = ui.resolvedStyle(parentId).gap.resolve(content.size.y);
-    float cursorTop = content.pos.y + content.size.y;
-    bool placedFlowChild = false;
-
+void layoutColumnFlow(
+    UI& ui,
+    UIElementID parentId,
+    LayoutRect content,
+    const Style& parentStyle)
+{
     layoutFlowAbsoluteChildren(ui, parentId, content);
 
-    for (UIElementID childId : ui.get(parentId).children) {
-        UIElement& child = ui.get(childId);
-        const Style& childStyle = ui.resolvedStyle(childId);
+    const float gap = parentStyle.gap.resolve(content.size.y);
+    std::vector<FlowMetrics> items;
+    items.reserve(ui.get(parentId).children.size());
 
+    for (UIElementID childId : ui.get(parentId).children) {
+        const Style& childStyle = ui.resolvedStyle(childId);
         if (childStyle.position != PositionMode::Relative)
             continue;
 
-        if (placedFlowChild)
-            cursorTop -= gap;
-
+        UIElement& child = ui.get(childId);
         glm::vec2 intrinsic = {0.f, 0.f};
         if (child.widget)
             intrinsic = child.widget->measureContent(child, content.size);
 
-        const float marginLeft = childStyle.margin.left.resolve(content.size.x);
-        const float marginRight = childStyle.margin.right.resolve(content.size.x);
         const float marginTop = childStyle.margin.top.resolve(content.size.y);
         const float marginBottom = childStyle.margin.bottom.resolve(content.size.y);
-
-        const float availableWidth =
-            std::max(0.f, content.size.x - marginLeft - marginRight);
-
-        const float childWidth = resolveBlockWidth(
-            childStyle, availableWidth, content.size.x, intrinsic);
         const float childHeight = resolveBlockHeight(
             ui, childId, childStyle, content.size, intrinsic);
 
-        cursorTop -= marginTop;
-        const float childTop = cursorTop;
-        const float childBottom = childTop - childHeight;
-
-        child.transform.position = {content.pos.x + marginLeft, childBottom};
-        child.transform.size = {childWidth, childHeight};
-
-        cursorTop = childBottom - marginBottom;
-        placedFlowChild = true;
-
-        const LayoutRect childBorder = {child.transform.position, child.transform.size};
-        const LayoutRect childContent = contentBox(childBorder, childStyle);
-        layoutChildren(ui, childId, childContent, childStyle);
+        items.push_back({
+            childId,
+            marginTop,
+            childHeight,
+            marginBottom,
+        });
     }
-}
 
-void layoutRowFlow(UI& ui, UIElementID parentId, LayoutRect content) {
-    const float gap = ui.resolvedStyle(parentId).gap.resolve(content.size.x);
-    float cursorLeft = content.pos.x;
+    const FlowMainAxisLayout mainAxis = computeMainAxisLayout(
+        content.size.y, items, gap, parentStyle.justifyContent);
+
+    float cursorTop = content.pos.y + content.size.y - mainAxis.startOffset;
     bool placedFlowChild = false;
 
-    layoutFlowAbsoluteChildren(ui, parentId, content);
-
-    for (UIElementID childId : ui.get(parentId).children) {
-        UIElement& child = ui.get(childId);
-        const Style& childStyle = ui.resolvedStyle(childId);
-
-        if (childStyle.position != PositionMode::Relative)
-            continue;
+    for (const FlowMetrics& item : items) {
+        UIElement& child = ui.get(item.id);
+        const Style& childStyle = ui.resolvedStyle(item.id);
 
         if (placedFlowChild)
-            cursorLeft += gap;
+            cursorTop -= mainAxis.gap;
 
         glm::vec2 intrinsic = {0.f, 0.f};
         if (child.widget)
@@ -283,39 +346,95 @@ void layoutRowFlow(UI& ui, UIElementID parentId, LayoutRect content) {
 
         const float marginLeft = childStyle.margin.left.resolve(content.size.x);
         const float marginRight = childStyle.margin.right.resolve(content.size.x);
-        const float marginTop = childStyle.margin.top.resolve(content.size.y);
-        const float marginBottom = childStyle.margin.bottom.resolve(content.size.y);
-
-        const float availableHeight =
-            std::max(0.f, content.size.y - marginTop - marginBottom);
-
+        const float availableWidth =
+            std::max(0.f, content.size.x - marginLeft - marginRight);
         const float childWidth = resolveBlockWidth(
-            childStyle, content.size.x, content.size.x, intrinsic);
+            childStyle, availableWidth, content.size.x, intrinsic);
 
-        float childHeight;
-        if (!childStyle.height.isAuto())
-            childHeight = childStyle.height.resolve(content.size.y);
-        else if (intrinsic.y > 0.f)
-            childHeight = intrinsic.y;
-        else
-            childHeight = availableHeight;
-        childHeight = clampMinMax(
-            childHeight, childStyle.minHeight, childStyle.maxHeight, content.size.y);
-        childHeight = std::min(childHeight, availableHeight);
+        cursorTop -= item.mainBefore;
+        const float childBottom = cursorTop - item.mainSize;
 
-        cursorLeft += marginLeft;
-        const float childLeft = cursorLeft;
-        const float childBottom = content.pos.y + marginBottom;
+        child.transform.position = {content.pos.x + marginLeft, childBottom};
+        child.transform.size = {childWidth, item.mainSize};
 
-        child.transform.position = {childLeft, childBottom};
-        child.transform.size = {childWidth, childHeight};
-
-        cursorLeft = childLeft + childWidth + marginRight;
+        cursorTop = childBottom - item.mainAfter;
         placedFlowChild = true;
 
         const LayoutRect childBorder = {child.transform.position, child.transform.size};
-        const LayoutRect childContent = contentBox(childBorder, childStyle);
-        layoutChildren(ui, childId, childContent, childStyle);
+        layoutChildren(ui, item.id, contentBox(childBorder, childStyle), childStyle);
+    }
+}
+
+void layoutRowFlow(
+    UI& ui,
+    UIElementID parentId,
+    LayoutRect content,
+    const Style& parentStyle)
+{
+    layoutFlowAbsoluteChildren(ui, parentId, content);
+
+    const float gap = parentStyle.gap.resolve(content.size.x);
+    std::vector<FlowMetrics> items;
+    items.reserve(ui.get(parentId).children.size());
+
+    for (UIElementID childId : ui.get(parentId).children) {
+        const Style& childStyle = ui.resolvedStyle(childId);
+        if (childStyle.position != PositionMode::Relative)
+            continue;
+
+        UIElement& child = ui.get(childId);
+        glm::vec2 intrinsic = {0.f, 0.f};
+        if (child.widget)
+            intrinsic = child.widget->measureContent(child, content.size);
+
+        const float marginLeft = childStyle.margin.left.resolve(content.size.x);
+        const float marginRight = childStyle.margin.right.resolve(content.size.x);
+        const float childWidth = resolveBlockWidth(
+            childStyle, content.size.x, content.size.x, intrinsic);
+
+        items.push_back({
+            childId,
+            marginLeft,
+            childWidth,
+            marginRight,
+        });
+    }
+
+    const FlowMainAxisLayout mainAxis = computeMainAxisLayout(
+        content.size.x, items, gap, parentStyle.justifyContent);
+
+    float cursorLeft = content.pos.x + mainAxis.startOffset;
+    bool placedFlowChild = false;
+
+    for (const FlowMetrics& item : items) {
+        UIElement& child = ui.get(item.id);
+        const Style& childStyle = ui.resolvedStyle(item.id);
+
+        if (placedFlowChild)
+            cursorLeft += mainAxis.gap;
+
+        glm::vec2 intrinsic = {0.f, 0.f};
+        if (child.widget)
+            intrinsic = child.widget->measureContent(child, content.size);
+
+        const float marginTop = childStyle.margin.top.resolve(content.size.y);
+        const float marginBottom = childStyle.margin.bottom.resolve(content.size.y);
+        const float availableHeight =
+            std::max(0.f, content.size.y - marginTop - marginBottom);
+        const float childHeight = resolveFlowCrossHeight(
+            ui, item.id, childStyle, content.size, intrinsic, availableHeight);
+
+        cursorLeft += item.mainBefore;
+        const float childBottom = content.pos.y + marginBottom;
+
+        child.transform.position = {cursorLeft, childBottom};
+        child.transform.size = {item.mainSize, childHeight};
+
+        cursorLeft += item.mainSize + item.mainAfter;
+        placedFlowChild = true;
+
+        const LayoutRect childBorder = {child.transform.position, child.transform.size};
+        layoutChildren(ui, item.id, contentBox(childBorder, childStyle), childStyle);
     }
 }
 
@@ -327,13 +446,13 @@ void layoutChildren(
 {
     switch (parentStyle.display) {
         case Display::Block:
-            layoutColumnFlow(ui, parentId, content);
+            layoutColumnFlow(ui, parentId, content, parentStyle);
             return;
         case Display::Flex:
             if (parentStyle.flexDirection == FlexDirection::Row)
-                layoutRowFlow(ui, parentId, content);
+                layoutRowFlow(ui, parentId, content, parentStyle);
             else
-                layoutColumnFlow(ui, parentId, content);
+                layoutColumnFlow(ui, parentId, content, parentStyle);
             return;
         default:
             break;

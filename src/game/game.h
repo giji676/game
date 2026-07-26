@@ -45,7 +45,11 @@ private:
     UIElementID pausePanelId = INVALID_UI_ELEMENT;
     UIElementID pauseButtonId = INVALID_UI_ELEMENT;
     UIElementID pauseInputId = INVALID_UI_ELEMENT;
+    UIElementID blockLabelId = INVALID_UI_ELEMENT;
     UIElementID toolbarId = INVALID_UI_ELEMENT;
+    UIElementID flexRowDemoId = INVALID_UI_ELEMENT;
+    UIElementID flexColDemoId = INVALID_UI_ELEMENT;
+    UIElementID absoluteDemoId = INVALID_UI_ELEMENT;
 
     bool playToggled = false;
 

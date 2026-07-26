@@ -12,6 +12,40 @@
 #include "engine/asset_manager/widgets.h"
 #include "engine/ui.h"
 
+namespace {
+
+void styleDemoButton(Button* btn) {
+    btn->normal.bgColor = {0.28f, 0.28f, 0.28f, 1.f};
+    btn->hoveredStyle.bgColor = {0.36f, 0.36f, 0.36f, 1.f};
+    btn->normal.textColor = {0.95f, 0.95f, 0.95f, 1.f};
+    btn->hoveredStyle.textColor = {0.95f, 0.95f, 0.95f, 1.f};
+}
+
+UIElementID addFlowButton(
+    UI& ui,
+    UIElementID parent,
+    float fontSize,
+    const char* text,
+    Length height = Length::percent(100.f))
+{
+    UIElementID id = ui.button({0.f, 0.f}, fontSize, text, nullptr);
+    ui.reparent(id, parent);
+    ui.get(id).style.position = PositionMode::Relative;
+    if (!height.isAuto())
+        ui.get(id).style.height = height;
+    styleDemoButton(dynamic_cast<Button*>(ui.get(id).widget.get()));
+    return id;
+}
+
+void setPanelBackground(UI& ui, UIElementID id, glm::vec4 color,
+                        glm::vec4 cornerRadii = {0.f, 0.f, 0.f, 0.f}) {
+    auto& bg = ui.get(id).addWidget<Rect>();
+    bg.color = color;
+    bg.cornerRadii = cornerRadii;
+}
+
+} // namespace
+
 Terrain generateTerrain(int width, int height, float scale, float heightScale);
 
 void clearDebug(ObjectID id) {
@@ -74,103 +108,28 @@ void Game::init() {
     texturedMatShader.setVec3("lightPos", light.pos);
     texturedMatShader.setVec3("lightColor", light.color);
 
+    // --- Absolute positioning (always visible) ---
     fpsLabelId = ui.label(
             {50.f, engine.app.height() - 60.f},
             {0.f, 48.f},
             {1.f, 0.f, 0.f, 1.f},
             "hello");
-
-    auto& fpsElem = ui.get(fpsLabelId);
-    fpsElem.style.inset.left = Length::px(50.f);
-    fpsElem.style.inset.top = Length::px(12.f);
+    ui.get(fpsLabelId).style.inset.left = Length::px(50.f);
+    ui.get(fpsLabelId).style.inset.top = Length::px(12.f);
 
     auto crosshairId = ui.rect(
             {0.f, 0.f},
             {10.f, 10.f},
             {1.f, 1.f, 1.f, 1.f},
             {5.f, 5.f, 5.f, 5.f});
+    ui.get(crosshairId).transform.anchor = {0.5f, 0.5f};
+    ui.get(crosshairId).style.inset.left = Length::percent(50.f);
+    ui.get(crosshairId).style.inset.top = Length::percent(50.f);
 
-    auto& crosshair = ui.get(crosshairId);
-    crosshair.transform.anchor = {0.5f, 0.5f};
-    crosshair.style.inset.left = Length::percent(50.f);
-    crosshair.style.inset.top = Length::percent(50.f);
-
-    pausePanelId = ui.createElement();
-    auto& pausePanel = ui.get(pausePanelId);
-    pausePanel.visible = false;
-    pausePanel.style.inset.left = Length::percent(5.f);
-    pausePanel.style.inset.right = Length::percent(5.f);
-    pausePanel.style.inset.top = Length::percent(20.f);
-    pausePanel.style.height = Length::percent(55.f);
-    pausePanel.style.display = Display::Block;
-    pausePanel.style.gap = Length::px(12.f);
-    pausePanel.style.padding.left = Length::px(16.f);
-    pausePanel.style.padding.right = Length::px(16.f);
-    pausePanel.style.padding.top = Length::px(16.f);
-    pausePanel.style.padding.bottom = Length::px(16.f);
-
-    auto& panelBg = pausePanel.addWidget<Rect>();
-    panelBg.color = {0.12f, 0.12f, 0.12f, 0.92f};
-    panelBg.cornerRadii = {8.f, 8.f, 8.f, 8.f};
-
-    pauseButtonId = ui.button(
-            {0.f, 0.f},
-            64.f,
-            "abcdefghijklmnopqABCDEFGHIJKLMNOPQ",
-            nullptr);
-
-    ui.reparent(pauseButtonId, pausePanelId);
-
-    auto& elem = ui.get(pauseButtonId);
-    elem.style.position = PositionMode::Relative;
-    elem.style.width = Length::percent(90.f);
-    elem.style.height = Length::percent(35.f);
-
-    auto* btn = dynamic_cast<Button*>(elem.widget.get());
-    btn->normal.bgColor = {1, 1, 1, 1};
-    btn->hoveredStyle.bgColor = {0, 1, 0, 0.2};
-    btn->normal.borderColor = {1, 0, 0, 1};
-    btn->normal.borderWidth = 10.f;
-    btn->cornerRadii = {10.f, 10.f, 10.f, 10.f};
-
-    btn->onClick = []() {
-        std::cout << "Button clicked\n";
-    };
-
-    pauseInputId = ui.createElement();
-    auto& inputElem = ui.get(pauseInputId);
-    inputElem.transform.fontSize = 32.f;
-    inputElem.style.position = PositionMode::Relative;
-    inputElem.style.width = Length::percent(100.f);
-    inputElem.style.height = Length::px(64.f);
-
-    ui.reparent(pauseInputId, pausePanelId);
-
-    auto& field = inputElem.addWidget<InputField>();
-    field.selfId = pauseInputId;              // required — used in updateInput to call requestFocus(selfId)
-    field.font = &engine.assets.getFont("InterVariable");
-    field.placeholder = "Enter text...";
-
-    field.normal.bgColor = {1, 1, 1, 1};
-    field.normal.textColor = {0, 0, 0, 1};
-    field.normal.borderColor = {0.7f, 0.7f, 0.7f, 1};
-    field.normal.borderWidth = 2.f;
-
-    field.focusedStyle.borderColor = {0.2f, 0.5f, 1.f, 1}; // blue border when focused
-    field.focusedStyle.borderWidth = 2.f;
-
-    field.cornerRadii = {6.f, 6.f, 6.f, 6.f};
-
-    field.onChange = [](const std::string& text) {
-        // std::cout << "Input changed: " << text << "\n";
-    };
-    field.onSubmit = [](const std::string& text) {
-        // std::cout << "Submitted: " << text << "\n";
-    };
-
+    constexpr float demoFont = 18.f;
     constexpr float toolbarH = 40.f;
-    constexpr float toolbarFont = 18.f;
 
+    // --- Flex row + justify-content: space-between (toolbar, paused) ---
     toolbarId = ui.createElement();
     ui.get(toolbarId).visible = false;
     ui.get(toolbarId).style.inset.left = Length::px(0.f);
@@ -179,41 +138,179 @@ void Game::init() {
     ui.get(toolbarId).style.height = Length::px(toolbarH);
     ui.get(toolbarId).style.display = Display::Flex;
     ui.get(toolbarId).style.flexDirection = FlexDirection::Row;
+    ui.get(toolbarId).style.justifyContent = JustifyContent::SpaceBetween;
     ui.get(toolbarId).style.gap = Length::px(4.f);
     ui.get(toolbarId).style.padding.left = Length::px(8.f);
     ui.get(toolbarId).style.padding.right = Length::px(8.f);
     ui.get(toolbarId).style.padding.top = Length::px(4.f);
     ui.get(toolbarId).style.padding.bottom = Length::px(4.f);
+    setPanelBackground(ui, toolbarId, {0.18f, 0.18f, 0.18f, 1.f});
 
     {
-        auto& toolbarBg = ui.get(toolbarId).addWidget<Rect>();
-        toolbarBg.color = {0.18f, 0.18f, 0.18f, 1.f};
+        UIElementID id = addFlowButton(ui, toolbarId, demoFont, "New");
+        dynamic_cast<Button*>(ui.get(id).widget.get())->onClick = []() {
+            std::cout << "Toolbar: New\n";
+        };
+    }
+    {
+        UIElementID id = addFlowButton(ui, toolbarId, demoFont, "Play");
+        dynamic_cast<Button*>(ui.get(id).widget.get())->onClick = [this]() {
+            playToggled = !playToggled;
+            std::cout << "Toolbar: Play " << (playToggled ? "on" : "off") << "\n";
+        };
+    }
+    addFlowButton(ui, toolbarId, demoFont, "Save");
+
+    // --- Block layout: vertical stack + gap + padding (paused) ---
+    pausePanelId = ui.createElement();
+    ui.get(pausePanelId).visible = false;
+    ui.get(pausePanelId).style.inset.left = Length::percent(3.f);
+    ui.get(pausePanelId).style.inset.top = Length::px(toolbarH + 8.f);
+    ui.get(pausePanelId).style.width = Length::percent(42.f);
+    ui.get(pausePanelId).style.height = Length::percent(70.f);
+    ui.get(pausePanelId).style.display = Display::Block;
+    ui.get(pausePanelId).style.justifyContent = JustifyContent::Start;
+    ui.get(pausePanelId).style.gap = Length::px(12.f);
+    ui.get(pausePanelId).style.padding.left = Length::px(16.f);
+    ui.get(pausePanelId).style.padding.right = Length::px(16.f);
+    ui.get(pausePanelId).style.padding.top = Length::px(16.f);
+    ui.get(pausePanelId).style.padding.bottom = Length::px(16.f);
+    setPanelBackground(ui, pausePanelId, {0.12f, 0.12f, 0.12f, 0.92f},
+                       {8.f, 8.f, 8.f, 8.f});
+
+    blockLabelId = ui.label(
+            {0.f, 0.f},
+            {0.f, demoFont},
+            {0.7f, 0.7f, 0.7f, 1.f},
+            "Block: gap + padding");
+    ui.reparent(blockLabelId, pausePanelId);
+    ui.get(blockLabelId).style.position = PositionMode::Relative;
+    ui.get(blockLabelId).style.height = Length::px(24.f);
+
+    pauseButtonId = ui.button(
+            {0.f, 0.f},
+            64.f,
+            "abcdefghijklmnopqABCDEFGHIJKLMNOPQ",
+            nullptr);
+    ui.reparent(pauseButtonId, pausePanelId);
+    ui.get(pauseButtonId).style.position = PositionMode::Relative;
+    ui.get(pauseButtonId).style.width = Length::percent(90.f);
+    ui.get(pauseButtonId).style.height = Length::percent(35.f);
+
+    auto* btn = dynamic_cast<Button*>(ui.get(pauseButtonId).widget.get());
+    btn->normal.bgColor = {1, 1, 1, 1};
+    btn->hoveredStyle.bgColor = {0, 1, 0, 0.2};
+    btn->normal.borderColor = {1, 0, 0, 1};
+    btn->normal.borderWidth = 10.f;
+    btn->cornerRadii = {10.f, 10.f, 10.f, 10.f};
+    btn->onClick = []() { std::cout << "Button clicked\n"; };
+
+    pauseInputId = ui.createElement();
+    ui.get(pauseInputId).transform.fontSize = 32.f;
+    ui.get(pauseInputId).style.position = PositionMode::Relative;
+    ui.get(pauseInputId).style.width = Length::percent(100.f);
+    ui.get(pauseInputId).style.height = Length::px(64.f);
+    ui.reparent(pauseInputId, pausePanelId);
+
+    auto& field = ui.get(pauseInputId).addWidget<InputField>();
+    field.selfId = pauseInputId;
+    field.font = &engine.assets.getFont("InterVariable");
+    field.placeholder = "Enter text...";
+    field.normal.bgColor = {1, 1, 1, 1};
+    field.normal.textColor = {0, 0, 0, 1};
+    field.normal.borderColor = {0.7f, 0.7f, 0.7f, 1};
+    field.normal.borderWidth = 2.f;
+    field.focusedStyle.borderColor = {0.2f, 0.5f, 1.f, 1};
+    field.focusedStyle.borderWidth = 2.f;
+    field.cornerRadii = {6.f, 6.f, 6.f, 6.f};
+
+    // --- Flex row + justify-content: center (paused) ---
+    flexRowDemoId = ui.createElement();
+    ui.get(flexRowDemoId).visible = false;
+    ui.get(flexRowDemoId).style.inset.right = Length::percent(3.f);
+    ui.get(flexRowDemoId).style.inset.top = Length::px(toolbarH + 8.f);
+    ui.get(flexRowDemoId).style.width = Length::percent(48.f);
+    ui.get(flexRowDemoId).style.height = Length::px(80.f);
+    ui.get(flexRowDemoId).style.display = Display::Flex;
+    ui.get(flexRowDemoId).style.flexDirection = FlexDirection::Row;
+    ui.get(flexRowDemoId).style.justifyContent = JustifyContent::Center;
+    ui.get(flexRowDemoId).style.gap = Length::px(8.f);
+    ui.get(flexRowDemoId).style.padding.left = Length::px(12.f);
+    ui.get(flexRowDemoId).style.padding.right = Length::px(12.f);
+    ui.get(flexRowDemoId).style.padding.top = Length::px(8.f);
+    ui.get(flexRowDemoId).style.padding.bottom = Length::px(8.f);
+    setPanelBackground(ui, flexRowDemoId, {0.15f, 0.8f, 0.15f, 0.9f});
+
+    {
+        UIElementID labelId = ui.label(
+                {0.f, 0.f}, {0.f, demoFont}, {0.6f, 0.8f, 0.6f, 1.f},
+                "Flex row / center");
+        ui.reparent(labelId, flexRowDemoId);
+        ui.get(labelId).style.position = PositionMode::Relative;
+        ui.get(labelId).style.height = Length::percent(100.f);
+    }
+    addFlowButton(ui, flexRowDemoId, demoFont, "A");
+    addFlowButton(ui, flexRowDemoId, demoFont, "B");
+    addFlowButton(ui, flexRowDemoId, demoFont, "C");
+
+    // --- Flex column + justify-content: end (paused) ---
+    flexColDemoId = ui.createElement();
+    ui.get(flexColDemoId).visible = false;
+    ui.get(flexColDemoId).style.inset.right = Length::percent(3.f);
+    ui.get(flexColDemoId).style.inset.top = Length::px(toolbarH + 96.f);
+    ui.get(flexColDemoId).style.width = Length::percent(30.f);
+    ui.get(flexColDemoId).style.height = Length::px(140.f);
+    ui.get(flexColDemoId).style.display = Display::Flex;
+    ui.get(flexColDemoId).style.flexDirection = FlexDirection::Column;
+    ui.get(flexColDemoId).style.justifyContent = JustifyContent::End;
+    ui.get(flexColDemoId).style.gap = Length::px(6.f);
+    ui.get(flexColDemoId).style.padding.left = Length::px(12.f);
+    ui.get(flexColDemoId).style.padding.right = Length::px(12.f);
+    ui.get(flexColDemoId).style.padding.top = Length::px(8.f);
+    ui.get(flexColDemoId).style.padding.bottom = Length::px(8.f);
+    setPanelBackground(ui, flexColDemoId, {0.2f, 0.15f, 0.25f, 0.9f});
+
+    {
+        UIElementID labelId = ui.label(
+                {0.f, 0.f}, {0.f, demoFont}, {0.8f, 0.6f, 0.9f, 1.f},
+                "Flex col / end");
+        ui.reparent(labelId, flexColDemoId);
+        ui.get(labelId).style.position = PositionMode::Relative;
+        ui.get(labelId).style.height = Length::px(24.f);
+    }
+    addFlowButton(ui, flexColDemoId, demoFont, "Top", Length::automatic());
+    addFlowButton(ui, flexColDemoId, demoFont, "Mid", Length::automatic());
+    addFlowButton(ui, flexColDemoId, demoFont, "Bot", Length::automatic());
+
+    // --- Nested absolute positioning inside a flow container (paused) ---
+    absoluteDemoId = ui.createElement();
+    ui.get(absoluteDemoId).visible = false;
+    ui.get(absoluteDemoId).style.inset.right = Length::percent(3.f);
+    ui.get(absoluteDemoId).style.inset.bottom = Length::percent(5.f);
+    ui.get(absoluteDemoId).style.width = Length::percent(48.f);
+    ui.get(absoluteDemoId).style.height = Length::px(100.f);
+    ui.get(absoluteDemoId).style.display = Display::Block;
+    ui.get(absoluteDemoId).style.padding.left = Length::px(12.f);
+    ui.get(absoluteDemoId).style.padding.right = Length::px(12.f);
+    ui.get(absoluteDemoId).style.padding.top = Length::px(12.f);
+    ui.get(absoluteDemoId).style.padding.bottom = Length::px(12.f);
+    setPanelBackground(ui, absoluteDemoId, {0.14f, 0.14f, 0.22f, 0.9f});
+
+    {
+        UIElementID labelId = ui.label(
+                {0.f, 0.f}, {0.f, demoFont}, {0.65f, 0.65f, 0.85f, 1.f},
+                "Absolute inset + anchor");
+        ui.reparent(labelId, absoluteDemoId);
+        ui.get(labelId).style.position = PositionMode::Relative;
+        ui.get(labelId).style.height = Length::px(24.f);
     }
 
-    UIElementID newBtnId = ui.button({0.f, 0.f}, toolbarFont, "New", nullptr);
-    ui.reparent(newBtnId, toolbarId);
-    ui.get(newBtnId).style.position = PositionMode::Relative;
-    ui.get(newBtnId).style.height = Length::percent(100.f);
-    dynamic_cast<Button*>(ui.get(newBtnId).widget.get())->onClick = []() {
-        std::cout << "Toolbar: New\n";
-    };
-
-    UIElementID playBtnId = ui.button({0.f, 0.f}, toolbarFont, "Play", nullptr);
-    ui.reparent(playBtnId, toolbarId);
-    ui.get(playBtnId).style.position = PositionMode::Relative;
-    ui.get(playBtnId).style.height = Length::percent(100.f);
-    dynamic_cast<Button*>(ui.get(playBtnId).widget.get())->onClick = [this]() {
-        playToggled = !playToggled;
-        std::cout << "Toolbar: Play " << (playToggled ? "on" : "off") << "\n";
-    };
-
-    UIElementID saveBtnId = ui.button({0.f, 0.f}, toolbarFont, "Save", nullptr);
-    ui.reparent(saveBtnId, toolbarId);
-    ui.get(saveBtnId).style.position = PositionMode::Relative;
-    ui.get(saveBtnId).style.height = Length::percent(100.f);
-    dynamic_cast<Button*>(ui.get(saveBtnId).widget.get())->onClick = []() {
-        std::cout << "Toolbar: Save\n";
-    };
+    UIElementID badgeId = ui.rect(
+            {0.f, 0.f}, {24.f, 24.f}, {1.f, 0.4f, 0.2f, 1.f}, {4.f, 4.f, 4.f, 4.f});
+    ui.reparent(badgeId, absoluteDemoId);
+    ui.get(badgeId).transform.anchor = {1.f, 1.f};
+    ui.get(badgeId).style.inset.right = Length::px(0.f);
+    ui.get(badgeId).style.inset.bottom = Length::px(0.f);
 }
 
 void Game::setupTerrain() {
@@ -349,6 +446,9 @@ void Game::update() {
         engine.setPaused(nowPaused);
         engine.ui.get(pausePanelId).visible = nowPaused;
         engine.ui.get(toolbarId).visible = nowPaused;
+        engine.ui.get(flexRowDemoId).visible = nowPaused;
+        engine.ui.get(flexColDemoId).visible = nowPaused;
+        engine.ui.get(absoluteDemoId).visible = nowPaused;
     }
 
     if (input.pressed(Action::ToggleScreen))
