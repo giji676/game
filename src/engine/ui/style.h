@@ -32,18 +32,46 @@ struct Insets {
     Length top;
     Length right;
     Length bottom;
+
+    constexpr bool isZero() const {
+        return left.isAuto() && top.isAuto() &&
+               right.isAuto() && bottom.isAuto();
+    }
+};
+
+enum class Display {
+    None,  // children use absolute inset layout (default)
+    Block, // relative children stack vertically
+};
+
+enum class PositionMode {
+    Absolute,
+    Relative,
 };
 
 struct Style {
+    Display display = Display::None;
+    PositionMode position = PositionMode::Absolute;
+
     Insets inset;
+    Insets margin;
+    Insets padding;
+
     Length width;
     Length height;
+    Length minWidth;
+    Length minHeight;
+    Length maxWidth;
+    Length maxHeight;
 
-    // Elements that specify nothing keep the transform they were given, so
-    // manually placed UI keeps working alongside styled UI.
-    bool specifiesLayout() const {
-        return !inset.left.isAuto() || !inset.top.isAuto() ||
+    // Absolute placement via inset and/or explicit size. Position mode alone
+    // does not opt in — relative children are placed by block flow instead.
+    bool hasAbsolutePlacement() const {
+        return display != Display::None ||
+               !inset.left.isAuto() || !inset.top.isAuto() ||
                !inset.right.isAuto() || !inset.bottom.isAuto() ||
-               !width.isAuto() || !height.isAuto();
+               !width.isAuto() || !height.isAuto() ||
+               !minWidth.isAuto() || !minHeight.isAuto() ||
+               !maxWidth.isAuto() || !maxHeight.isAuto();
     }
 };

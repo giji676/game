@@ -95,17 +95,35 @@ void Game::init() {
     crosshair.style.inset.left = Length::percent(50.f);
     crosshair.style.inset.top = Length::percent(50.f);
 
+    pausePanelId = ui.createElement();
+    auto& pausePanel = ui.get(pausePanelId);
+    pausePanel.visible = false;
+    pausePanel.style.inset.left = Length::percent(5.f);
+    pausePanel.style.inset.right = Length::percent(5.f);
+    pausePanel.style.inset.top = Length::percent(20.f);
+    pausePanel.style.height = Length::percent(55.f);
+    pausePanel.style.display = Display::Block;
+    pausePanel.style.padding.left = Length::px(16.f);
+    pausePanel.style.padding.right = Length::px(16.f);
+    pausePanel.style.padding.top = Length::px(16.f);
+    pausePanel.style.padding.bottom = Length::px(16.f);
+
+    auto& panelBg = pausePanel.addWidget<Rect>();
+    panelBg.color = {0.12f, 0.12f, 0.12f, 0.92f};
+    panelBg.cornerRadii = {8.f, 8.f, 8.f, 8.f};
+
     pauseButtonId = ui.button(
-            {10.f, 100.f},
+            {0.f, 0.f},
             64.f,
             "abcdefghijklmnopqABCDEFGHIJKLMNOPQ",
             nullptr);
 
+    ui.reparent(pauseButtonId, pausePanelId);
+
     auto& elem = ui.get(pauseButtonId);
-    elem.visible = false;
-    elem.style.inset.left = Length::px(10.f);
-    elem.style.inset.top = Length::percent(30.f);
-    elem.style.height = Length::percent(10.f);
+    elem.style.position = PositionMode::Relative;
+    elem.style.width = Length::percent(90.f);
+    elem.style.height = Length::percent(35.f);
 
     auto* btn = dynamic_cast<Button*>(elem.widget.get());
     btn->normal.bgColor = {1, 1, 1, 1};
@@ -120,10 +138,13 @@ void Game::init() {
 
     pauseInputId = ui.createElement();
     auto& inputElem = ui.get(pauseInputId);
-    inputElem.visible = false;
-    inputElem.transform.position = {10.f, 200.f};
-    inputElem.transform.size = {400.f, 64.f};
     inputElem.transform.fontSize = 32.f;
+    inputElem.style.position = PositionMode::Relative;
+    inputElem.style.width = Length::percent(100.f);
+    inputElem.style.height = Length::px(64.f);
+    inputElem.style.margin.top = Length::px(12.f);
+
+    ui.reparent(pauseInputId, pausePanelId);
 
     auto& field = inputElem.addWidget<InputField>();
     field.selfId = pauseInputId;              // required — used in updateInput to call requestFocus(selfId)
@@ -304,8 +325,7 @@ void Game::update() {
     if (input.pressed(Action::Pause)) {
         bool nowPaused = !engine.isPaused();
         engine.setPaused(nowPaused);
-        engine.ui.get(pauseButtonId).visible = nowPaused;
-        engine.ui.get(pauseInputId).visible = nowPaused;
+        engine.ui.get(pausePanelId).visible = nowPaused;
         engine.ui.get(toolbarId).visible = nowPaused;
     }
 

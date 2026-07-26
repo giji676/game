@@ -10,8 +10,10 @@
 struct Transform2D {
     glm::vec2 position;
     glm::vec2 size;
-    // Normalized point on the element (0 = bottom-left, 0.5 = center) that
-    // inset positioning aligns to the parent's inset target.
+    // Normalized point on the element (0 = bottom-left, 1 = top-right) used with
+    // inset positioning. For top/right insets, anchor 0 means the far edge sits
+    // on the inset line (CSS default); for bottom/left, anchor 0 means the
+    // near edge sits on the inset line. Use 0.5 to center on both axes.
     glm::vec2 anchor = {0.f, 0.f};
     float fontSize = 0.f;
 };

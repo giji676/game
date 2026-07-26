@@ -6,6 +6,8 @@
 #include "asset_manager/ui_element.h"
 #include "engine/ui/layout.h"
 
+#include <algorithm>
+
 void UI::dispatchTextInput(const std::string& text) {
     if (Engine::instance().app.cursorCaptured)
         return;
@@ -115,6 +117,25 @@ UIElementID UI::createElement() {
     elements[id].parent = rootId;
     elements[rootId].children.push_back(id);
     return id;
+}
+
+void UI::reparent(UIElementID childId, UIElementID newParentId) {
+    UIElement& child = get(childId);
+    UIElement& newParent = get(newParentId);
+
+    if (child.parent != INVALID_UI_ELEMENT && child.parent != newParentId) {
+        UIElement& oldParent = get(child.parent);
+        auto& siblings = oldParent.children;
+        siblings.erase(
+            std::remove(siblings.begin(), siblings.end(), childId),
+            siblings.end());
+    }
+
+    child.parent = newParentId;
+    if (std::find(newParent.children.begin(), newParent.children.end(), childId)
+            == newParent.children.end()) {
+        newParent.children.push_back(childId);
+    }
 }
 
 UIElementID UI::createElementInternal() {

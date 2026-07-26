@@ -42,6 +42,7 @@ private:
     Light light;
 
     UIElementID fpsLabelId = INVALID_UI_ELEMENT;
+    UIElementID pausePanelId = INVALID_UI_ELEMENT;
     UIElementID pauseButtonId = INVALID_UI_ELEMENT;
     UIElementID pauseInputId = INVALID_UI_ELEMENT;
     UIElementID toolbarId = INVALID_UI_ELEMENT;
