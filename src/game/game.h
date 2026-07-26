@@ -50,6 +50,8 @@ private:
     UIElementID flexRowDemoId = INVALID_UI_ELEMENT;
     UIElementID flexColDemoId = INVALID_UI_ELEMENT;
     UIElementID absoluteDemoId = INVALID_UI_ELEMENT;
+    UIElementID flexGrowDemoId = INVALID_UI_ELEMENT;
+    UIElementID flexGrowRatioDemoId = INVALID_UI_ELEMENT;
 
     bool playToggled = false;
 

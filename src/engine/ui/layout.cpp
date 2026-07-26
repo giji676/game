@@ -173,6 +173,73 @@ struct FlowMetrics {
     float mainAfter = 0.f;
 };
 
+float resolveFlexMainSize(
+    UI& ui,
+    UIElementID id,
+    const Style& style,
+    glm::vec2 contentSize,
+    glm::vec2 intrinsic,
+    bool mainIsWidth)
+{
+    const float containerMain = mainIsWidth ? contentSize.x : contentSize.y;
+    const float intrinsicMain = mainIsWidth ? intrinsic.x : intrinsic.y;
+    const Length& minLen = mainIsWidth ? style.minWidth : style.minHeight;
+    const Length& maxLen = mainIsWidth ? style.maxWidth : style.maxHeight;
+    const Length& explicitSize = mainIsWidth ? style.width : style.height;
+
+    float size;
+    if (!style.flexBasis.isAuto())
+        size = style.flexBasis.resolve(containerMain);
+    else if (!explicitSize.isAuto())
+        size = explicitSize.resolve(containerMain);
+    else if (intrinsicMain > 0.f)
+        size = intrinsicMain;
+    else
+        size = mainIsWidth ? ui.get(id).transform.size.x : ui.get(id).transform.size.y;
+
+    return clampMinMax(size, minLen, maxLen, containerMain);
+}
+
+void applyFlexGrow(
+    UI& ui,
+    float containerMain,
+    float gap,
+    bool mainIsWidth,
+    glm::vec2 contentSize,
+    std::vector<FlowMetrics>& items)
+{
+    if (items.empty())
+        return;
+
+    float total = 0.f;
+    float growSum = 0.f;
+    for (const FlowMetrics& item : items) {
+        total += item.mainBefore + item.mainSize + item.mainAfter;
+        growSum += ui.resolvedStyle(item.id).flexGrow;
+    }
+    if (items.size() > 1)
+        total += gap * static_cast<float>(items.size() - 1);
+
+    const float free = containerMain - total;
+    if (free <= 0.f || growSum <= 0.f)
+        return;
+
+    const float basis = mainIsWidth ? contentSize.x : contentSize.y;
+    for (FlowMetrics& item : items) {
+        const Style& style = ui.resolvedStyle(item.id);
+        if (style.flexGrow <= 0.f)
+            continue;
+
+        item.mainSize += free * (style.flexGrow / growSum);
+        if (mainIsWidth)
+            item.mainSize = clampMinMax(
+                item.mainSize, style.minWidth, style.maxWidth, basis);
+        else
+            item.mainSize = clampMinMax(
+                item.mainSize, style.minHeight, style.maxHeight, basis);
+    }
+}
+
 struct FlowMainAxisLayout {
     float startOffset = 0.f;
     float gap = 0.f;
@@ -370,8 +437,11 @@ void layoutColumnFlow(
 
         const float marginTop = childStyle.margin.top.resolve(content.size.y);
         const float marginBottom = childStyle.margin.bottom.resolve(content.size.y);
-        const float childHeight = resolveBlockHeight(
-            ui, childId, childStyle, content.size, intrinsic);
+        const float childHeight = parentStyle.display == Display::Flex
+            ? resolveFlexMainSize(
+                ui, childId, childStyle, content.size, intrinsic, false)
+            : resolveBlockHeight(
+                ui, childId, childStyle, content.size, intrinsic);
 
         items.push_back({
             childId,
@@ -380,6 +450,9 @@ void layoutColumnFlow(
             marginBottom,
         });
     }
+
+    if (parentStyle.display == Display::Flex)
+        applyFlexGrow(ui, content.size.y, gap, false, content.size, items);
 
     const FlowMainAxisLayout mainAxis = computeMainAxisLayout(
         content.size.y, items, gap, parentStyle.justifyContent);
@@ -458,8 +531,8 @@ void layoutRowFlow(
 
         const float marginLeft = childStyle.margin.left.resolve(content.size.x);
         const float marginRight = childStyle.margin.right.resolve(content.size.x);
-        const float childWidth = resolveBlockWidth(
-            childStyle, content.size.x, content.size.x, intrinsic);
+        const float childWidth = resolveFlexMainSize(
+            ui, childId, childStyle, content.size, intrinsic, true);
 
         items.push_back({
             childId,
@@ -468,6 +541,8 @@ void layoutRowFlow(
             marginRight,
         });
     }
+
+    applyFlexGrow(ui, content.size.x, gap, true, content.size, items);
 
     const FlowMainAxisLayout mainAxis = computeMainAxisLayout(
         content.size.x, items, gap, parentStyle.justifyContent);

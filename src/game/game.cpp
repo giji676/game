@@ -312,6 +312,93 @@ void Game::init() {
     ui.get(badgeId).transform.anchor = {1.f, 1.f};
     ui.get(badgeId).style.inset.right = Length::px(0.f);
     ui.get(badgeId).style.inset.bottom = Length::px(0.f);
+
+    // --- Flex row + flex-grow: 1 (paused) ---
+    flexGrowDemoId = ui.createElement();
+    ui.get(flexGrowDemoId).visible = false;
+    ui.get(flexGrowDemoId).style.inset.left = Length::percent(3.f);
+    ui.get(flexGrowDemoId).style.inset.bottom = Length::percent(5.f);
+    ui.get(flexGrowDemoId).style.width = Length::percent(42.f);
+    ui.get(flexGrowDemoId).style.height = Length::px(48.f);
+    ui.get(flexGrowDemoId).style.display = Display::Flex;
+    ui.get(flexGrowDemoId).style.flexDirection = FlexDirection::Row;
+    ui.get(flexGrowDemoId).style.alignItems = AlignItems::Stretch;
+    ui.get(flexGrowDemoId).style.gap = Length::px(8.f);
+    ui.get(flexGrowDemoId).style.padding.left = Length::px(12.f);
+    ui.get(flexGrowDemoId).style.padding.right = Length::px(12.f);
+    ui.get(flexGrowDemoId).style.padding.top = Length::px(8.f);
+    ui.get(flexGrowDemoId).style.padding.bottom = Length::px(8.f);
+    setPanelBackground(ui, flexGrowDemoId, {0.16f, 0.16f, 0.2f, 0.92f});
+
+    {
+        UIElementID labelId = ui.label(
+                {0.f, 0.f}, {0.f, demoFont}, {0.75f, 0.75f, 0.8f, 1.f},
+                "Filter:");
+        ui.reparent(labelId, flexGrowDemoId);
+        ui.get(labelId).style.position = PositionMode::Relative;
+        ui.get(labelId).style.height = Length::percent(100.f);
+    }
+
+    {
+        UIElementID inputId = ui.createElement();
+        ui.reparent(inputId, flexGrowDemoId);
+        ui.get(inputId).transform.fontSize = 20.f;
+        ui.get(inputId).style.position = PositionMode::Relative;
+        ui.get(inputId).style.flexGrow = 1.f;
+        ui.get(inputId).style.flexBasis = Length::px(0.f);
+        ui.get(inputId).style.height = Length::percent(100.f);
+
+        auto& filterField = ui.get(inputId).addWidget<InputField>();
+        filterField.selfId = inputId;
+        filterField.font = &engine.assets.getFont("InterVariable");
+        filterField.placeholder = "flex: 1";
+        filterField.normal.bgColor = {1, 1, 1, 1};
+        filterField.normal.textColor = {0, 0, 0, 1};
+        filterField.normal.borderColor = {0.7f, 0.7f, 0.7f, 1};
+        filterField.normal.borderWidth = 2.f;
+        filterField.cornerRadii = {4.f, 4.f, 4.f, 4.f};
+    }
+
+    addFlowButton(ui, flexGrowDemoId, demoFont, "Go");
+
+    // --- Flex row: grow 3 / grow 2 / auto (paused) ---
+    flexGrowRatioDemoId = ui.createElement();
+    ui.get(flexGrowRatioDemoId).visible = false;
+    ui.get(flexGrowRatioDemoId).style.inset.left = Length::percent(3.f);
+    ui.get(flexGrowRatioDemoId).style.inset.bottom = Length::percent(10.f);
+    ui.get(flexGrowRatioDemoId).style.width = Length::percent(42.f);
+    ui.get(flexGrowRatioDemoId).style.height = Length::px(40.f);
+    ui.get(flexGrowRatioDemoId).style.display = Display::Flex;
+    ui.get(flexGrowRatioDemoId).style.flexDirection = FlexDirection::Row;
+    ui.get(flexGrowRatioDemoId).style.alignItems = AlignItems::Stretch;
+    ui.get(flexGrowRatioDemoId).style.gap = Length::px(4.f);
+    ui.get(flexGrowRatioDemoId).style.padding.left = Length::px(8.f);
+    ui.get(flexGrowRatioDemoId).style.padding.right = Length::px(8.f);
+    ui.get(flexGrowRatioDemoId).style.padding.top = Length::px(4.f);
+    ui.get(flexGrowRatioDemoId).style.padding.bottom = Length::px(4.f);
+    setPanelBackground(ui, flexGrowRatioDemoId, {0.2f, 0.18f, 0.14f, 0.92f});
+
+    {
+        UIElementID id = addFlowButton(ui, flexGrowRatioDemoId, demoFont, "grow 3");
+        ui.get(id).style.flexGrow = 3.f;
+        ui.get(id).style.flexBasis = Length::px(0.f);
+        dynamic_cast<Button*>(ui.get(id).widget.get())->normal.bgColor =
+                {0.55f, 0.22f, 0.22f, 1.f};
+    }
+    {
+        UIElementID id = addFlowButton(ui, flexGrowRatioDemoId, demoFont, "grow 2");
+        ui.get(id).style.flexGrow = 2.f;
+        ui.get(id).style.flexBasis = Length::px(0.f);
+        dynamic_cast<Button*>(ui.get(id).widget.get())->normal.bgColor =
+                {0.22f, 0.45f, 0.22f, 1.f};
+    }
+    {
+        UIElementID id = addFlowButton(ui, flexGrowRatioDemoId, demoFont, "grow 1");
+        ui.get(id).style.flexGrow = 1.f;
+        ui.get(id).style.flexBasis = Length::px(0.f);
+        dynamic_cast<Button*>(ui.get(id).widget.get())->normal.bgColor =
+                {0.22f, 0.28f, 0.55f, 1.f};
+    }
 }
 
 void Game::setupTerrain() {
@@ -450,6 +537,8 @@ void Game::update() {
         engine.ui.get(flexRowDemoId).visible = nowPaused;
         engine.ui.get(flexColDemoId).visible = nowPaused;
         engine.ui.get(absoluteDemoId).visible = nowPaused;
+        engine.ui.get(flexGrowDemoId).visible = nowPaused;
+        engine.ui.get(flexGrowRatioDemoId).visible = nowPaused;
     }
 
     if (input.pressed(Action::ToggleScreen))

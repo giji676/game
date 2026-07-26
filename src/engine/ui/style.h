@@ -90,6 +90,10 @@ struct Style {
     // Space between consecutive flow children along the main axis.
     Length gap;
 
+    // Flex item growth on the main axis (flex containers only).
+    float flexGrow = 0.f;
+    Length flexBasis;
+
     // Absolute placement via inset and/or explicit size. Position mode alone
     // does not opt in — relative children are placed by block flow instead.
     bool hasAbsolutePlacement() const {
