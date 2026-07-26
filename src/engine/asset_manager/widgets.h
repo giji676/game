@@ -269,8 +269,21 @@ public:
         hovered = hitRect(pos, e.transform.position, e.transform.size);
 
         if (hovered && Engine::instance().input.pressed(MouseAction::Left)) {
-            Engine::instance().ui.requestFocus(selfId);
+            if (!focused)
+                Engine::instance().ui.requestFocus(selfId);
+            setCaretFromClick(e, pos);
         }
+    }
+
+    void setCaretFromClick(const UIElement& e, glm::vec2 clickPos) {
+        glm::vec2 textPos = font->baselineInRect(
+            e.transform.position, e.transform.size, padding, e.transform.fontSize);
+        textPos.x -= scrollOffset;
+
+        float textX = clickPos.x - textPos.x;
+        caretPos = font->caretIndexAt(text, textX, e.transform.fontSize);
+        caretVisible = true;
+        caretBlinkTimer = 0.f;
     }
 
     void tick(const UIElement& e, float dt) override {

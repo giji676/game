@@ -47,6 +47,8 @@ public:
 
     glm::vec2 measure(const std::string& text, float size) const;
 
+    size_t caretIndexAt(const std::string& text, float x, float size) const;
+
     float scaleFor(float size) const { return size / referenceSize; }
     float lineHeightAt(float size) const { return metrics.lineHeight * scaleFor(size); }
     float descenderAt(float size) const { return metrics.descender * scaleFor(size); }

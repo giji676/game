@@ -15,6 +15,24 @@ glm::vec2 Font::measure(const std::string& text, float size) const {
     return { width, size };
 }
 
+size_t Font::caretIndexAt(const std::string& text, float x, float size) const {
+    if (text.empty())
+        return 0;
+
+    float scale = scaleFor(size);
+    float width = 0.f;
+
+    for (size_t i = 0; i < text.size(); ++i) {
+        const Character& ch = characters.at(text[i]);
+        float advance = (ch.advance >> 6) * scale;
+        if (x < width + advance * 0.5f)
+            return i;
+        width += advance;
+    }
+
+    return text.size();
+}
+
 glm::vec2 Font::baselineInRect(
     glm::vec2 rectPos,
     glm::vec2 rectSize,
