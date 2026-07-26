@@ -10,6 +10,8 @@
 struct Transform2D {
     glm::vec2 position;
     glm::vec2 size;
+    // Normalized point on the element (0 = bottom-left, 0.5 = center) that
+    // inset positioning aligns to the parent's inset target.
     glm::vec2 anchor = {0.f, 0.f};
     float fontSize = 0.f;
 };

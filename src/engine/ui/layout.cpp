@@ -15,10 +15,13 @@ struct Extent {
 // Resolves one axis in the renderer's coordinate space, so `startInset` is the
 // edge the axis grows away from (left for x, bottom for y) and `endInset` is
 // the opposite edge (right for x, top for y).
+// When a single inset pins the element on this axis, `anchor` (0–1) chooses
+// which point on the element aligns to that inset — e.g. 0.5 centers it.
 Extent resolveAxis(
     const Length& size,
     const Length& startInset,
     const Length& endInset,
+    float anchor,
     float containerStart,
     float containerSize,
     float intrinsicSize,
@@ -42,12 +45,15 @@ Extent resolveAxis(
     resolvedSize = std::max(resolvedSize, 0.f);
 
     float position = manual.position;
-    if (hasStart)
+    if (hasStart && !hasEnd) {
+        const float target = containerStart + startInset.resolve(containerSize);
+        position = target - anchor * resolvedSize;
+    } else if (hasEnd && !hasStart) {
+        const float target = containerStart + containerSize
+            - endInset.resolve(containerSize);
+        position = target - anchor * resolvedSize;
+    } else if (hasStart && hasEnd)
         position = containerStart + startInset.resolve(containerSize);
-    else if (hasEnd)
-        position = containerStart + containerSize
-            - endInset.resolve(containerSize)
-            - resolvedSize;
 
     return {position, resolvedSize};
 }
@@ -68,11 +74,13 @@ void layoutElement(
 
         const Extent x = resolveAxis(
             style.width, style.inset.left, style.inset.right,
+            e.transform.anchor.x,
             containerPosition.x, containerSize.x, intrinsic.x,
             {e.transform.position.x, e.transform.size.x});
 
         const Extent y = resolveAxis(
             style.height, style.inset.bottom, style.inset.top,
+            e.transform.anchor.y,
             containerPosition.y, containerSize.y, intrinsic.y,
             {e.transform.position.y, e.transform.size.y});
 

@@ -84,11 +84,16 @@ void Game::init() {
     fpsElem.style.inset.left = Length::px(50.f);
     fpsElem.style.inset.top = Length::px(12.f);
 
-    ui.rect(
-            {engine.app.width()/2-5, engine.app.height()/2-5},
+    auto crosshairId = ui.rect(
+            {0.f, 0.f},
             {10.f, 10.f},
             {1.f, 1.f, 1.f, 1.f},
             {5.f, 5.f, 5.f, 5.f});
+
+    auto& crosshair = ui.get(crosshairId);
+    crosshair.transform.anchor = {0.5f, 0.5f};
+    crosshair.style.inset.left = Length::percent(50.f);
+    crosshair.style.inset.top = Length::percent(50.f);
 
     pauseButtonId = ui.button(
             {10.f, 100.f},
