@@ -234,6 +234,7 @@ void Game::init() {
     ui.get(flexRowDemoId).style.display = Display::Flex;
     ui.get(flexRowDemoId).style.flexDirection = FlexDirection::Row;
     ui.get(flexRowDemoId).style.justifyContent = JustifyContent::Center;
+    ui.get(flexRowDemoId).style.alignItems = AlignItems::Center;
     ui.get(flexRowDemoId).style.gap = Length::px(8.f);
     ui.get(flexRowDemoId).style.padding.left = Length::px(12.f);
     ui.get(flexRowDemoId).style.padding.right = Length::px(12.f);
@@ -244,14 +245,13 @@ void Game::init() {
     {
         UIElementID labelId = ui.label(
                 {0.f, 0.f}, {0.f, demoFont}, {0.6f, 0.8f, 0.6f, 1.f},
-                "Flex row / center");
+                "Row: center / center");
         ui.reparent(labelId, flexRowDemoId);
         ui.get(labelId).style.position = PositionMode::Relative;
-        ui.get(labelId).style.height = Length::percent(100.f);
     }
-    addFlowButton(ui, flexRowDemoId, demoFont, "A");
-    addFlowButton(ui, flexRowDemoId, demoFont, "B");
-    addFlowButton(ui, flexRowDemoId, demoFont, "C");
+    addFlowButton(ui, flexRowDemoId, demoFont, "A", Length::automatic());
+    addFlowButton(ui, flexRowDemoId, demoFont, "B", Length::automatic());
+    addFlowButton(ui, flexRowDemoId, demoFont, "C", Length::automatic());
 
     // --- Flex column + justify-content: end (paused) ---
     flexColDemoId = ui.createElement();
@@ -263,6 +263,7 @@ void Game::init() {
     ui.get(flexColDemoId).style.display = Display::Flex;
     ui.get(flexColDemoId).style.flexDirection = FlexDirection::Column;
     ui.get(flexColDemoId).style.justifyContent = JustifyContent::End;
+    ui.get(flexColDemoId).style.alignItems = AlignItems::Center;
     ui.get(flexColDemoId).style.gap = Length::px(6.f);
     ui.get(flexColDemoId).style.padding.left = Length::px(12.f);
     ui.get(flexColDemoId).style.padding.right = Length::px(12.f);
@@ -273,7 +274,7 @@ void Game::init() {
     {
         UIElementID labelId = ui.label(
                 {0.f, 0.f}, {0.f, demoFont}, {0.8f, 0.6f, 0.9f, 1.f},
-                "Flex col / end");
+                "Col: end / center");
         ui.reparent(labelId, flexColDemoId);
         ui.get(labelId).style.position = PositionMode::Relative;
         ui.get(labelId).style.height = Length::px(24.f);

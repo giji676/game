@@ -57,6 +57,13 @@ enum class JustifyContent {
     SpaceBetween,
 };
 
+enum class AlignItems {
+    Start,
+    Center,
+    End,
+    Stretch,
+};
+
 enum class PositionMode {
     Absolute,
     Relative,
@@ -67,6 +74,7 @@ struct Style {
     PositionMode position = PositionMode::Absolute;
     FlexDirection flexDirection = FlexDirection::Row;
     JustifyContent justifyContent = JustifyContent::Start;
+    AlignItems alignItems = AlignItems::Stretch;
 
     Insets inset;
     Insets margin;

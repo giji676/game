@@ -227,24 +227,78 @@ FlowMainAxisLayout computeMainAxisLayout(
     return result;
 }
 
+float crossAxisPosition(
+    AlignItems align,
+    float contentOrigin,
+    float contentSize,
+    float marginStart,
+    float marginEnd,
+    float itemSize,
+    bool axisIsVertical)
+{
+    const float inner = contentSize - marginStart - marginEnd;
+    switch (align) {
+        case AlignItems::End:
+            if (axisIsVertical)
+                return contentOrigin + marginEnd;
+            return contentOrigin + contentSize - marginEnd - itemSize;
+        case AlignItems::Center: {
+            const float free = std::max(0.f, inner - itemSize) * 0.5f;
+            if (axisIsVertical)
+                return contentOrigin + marginEnd + free;
+            return contentOrigin + marginStart + free;
+        }
+        case AlignItems::Stretch:
+        case AlignItems::Start:
+        default:
+            if (axisIsVertical)
+                return contentOrigin + contentSize - marginStart - itemSize;
+            return contentOrigin + marginStart;
+    }
+}
+
 float resolveFlowCrossHeight(
     UI& ui,
     UIElementID id,
     const Style& style,
     glm::vec2 contentSize,
     glm::vec2 intrinsic,
-    float availableHeight)
+    float availableHeight,
+    AlignItems align)
 {
     float height;
     if (!style.height.isAuto())
         height = style.height.resolve(contentSize.y);
+    else if (align == AlignItems::Stretch)
+        height = availableHeight;
     else if (intrinsic.y > 0.f)
         height = intrinsic.y;
     else
-        height = availableHeight;
+        height = ui.get(id).transform.size.y;
 
     height = clampMinMax(height, style.minHeight, style.maxHeight, contentSize.y);
     return std::min(height, availableHeight);
+}
+
+float resolveFlexCrossWidth(
+    const Style& style,
+    float availableWidth,
+    float basisX,
+    glm::vec2 intrinsic,
+    AlignItems align)
+{
+    float width;
+    if (!style.width.isAuto())
+        width = style.width.resolve(basisX);
+    else if (align == AlignItems::Stretch)
+        width = availableWidth;
+    else if (intrinsic.x > 0.f)
+        width = intrinsic.x;
+    else
+        width = availableWidth;
+
+    width = clampMinMax(width, style.minWidth, style.maxWidth, basisX);
+    return std::min(width, availableWidth);
 }
 
 void layoutChildren(
@@ -330,6 +384,10 @@ void layoutColumnFlow(
     const FlowMainAxisLayout mainAxis = computeMainAxisLayout(
         content.size.y, items, gap, parentStyle.justifyContent);
 
+    const AlignItems crossAlign = parentStyle.display == Display::Flex
+        ? parentStyle.alignItems
+        : AlignItems::Stretch;
+
     float cursorTop = content.pos.y + content.size.y - mainAxis.startOffset;
     bool placedFlowChild = false;
 
@@ -348,13 +406,24 @@ void layoutColumnFlow(
         const float marginRight = childStyle.margin.right.resolve(content.size.x);
         const float availableWidth =
             std::max(0.f, content.size.x - marginLeft - marginRight);
-        const float childWidth = resolveBlockWidth(
-            childStyle, availableWidth, content.size.x, intrinsic);
+        const float childWidth = parentStyle.display == Display::Flex
+            ? resolveFlexCrossWidth(
+                childStyle, availableWidth, content.size.x, intrinsic, crossAlign)
+            : resolveBlockWidth(
+                childStyle, availableWidth, content.size.x, intrinsic);
 
         cursorTop -= item.mainBefore;
         const float childBottom = cursorTop - item.mainSize;
+        const float childLeft = crossAxisPosition(
+            crossAlign,
+            content.pos.x,
+            content.size.x,
+            marginLeft,
+            marginRight,
+            childWidth,
+            false);
 
-        child.transform.position = {content.pos.x + marginLeft, childBottom};
+        child.transform.position = {childLeft, childBottom};
         child.transform.size = {childWidth, item.mainSize};
 
         cursorTop = childBottom - item.mainAfter;
@@ -403,6 +472,8 @@ void layoutRowFlow(
     const FlowMainAxisLayout mainAxis = computeMainAxisLayout(
         content.size.x, items, gap, parentStyle.justifyContent);
 
+    const AlignItems crossAlign = parentStyle.alignItems;
+
     float cursorLeft = content.pos.x + mainAxis.startOffset;
     bool placedFlowChild = false;
 
@@ -422,10 +493,18 @@ void layoutRowFlow(
         const float availableHeight =
             std::max(0.f, content.size.y - marginTop - marginBottom);
         const float childHeight = resolveFlowCrossHeight(
-            ui, item.id, childStyle, content.size, intrinsic, availableHeight);
+            ui, item.id, childStyle, content.size, intrinsic, availableHeight,
+            crossAlign);
 
         cursorLeft += item.mainBefore;
-        const float childBottom = content.pos.y + marginBottom;
+        const float childBottom = crossAxisPosition(
+            crossAlign,
+            content.pos.y,
+            content.size.y,
+            marginTop,
+            marginBottom,
+            childHeight,
+            true);
 
         child.transform.position = {cursorLeft, childBottom};
         child.transform.size = {item.mainSize, childHeight};
