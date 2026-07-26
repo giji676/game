@@ -169,7 +169,7 @@ void layoutChildren(
     UI& ui,
     UIElementID parentId,
     LayoutRect content,
-    Display display);
+    const Style& parentStyle);
 
 void layoutElement(
     UI& ui,
@@ -181,11 +181,11 @@ void layoutElement(
     UIElement& e = ui.get(id);
     const Style& style = ui.resolvedStyle(id);
 
-    const bool inBlockFlow =
-        parentDisplay == Display::Block &&
+    const bool inFlow =
+        (parentDisplay == Display::Block || parentDisplay == Display::Flex) &&
         style.position == PositionMode::Relative;
 
-    if (!inBlockFlow &&
+    if (!inFlow &&
         style.position == PositionMode::Absolute &&
         style.hasAbsolutePlacement()) {
         layoutAbsolute(e, style, containerPosition, containerSize);
@@ -193,24 +193,33 @@ void layoutElement(
 
     const LayoutRect border = {e.transform.position, e.transform.size};
     const LayoutRect content = contentBox(border, style);
-    layoutChildren(ui, id, content, style.display);
+    layoutChildren(ui, id, content, style);
 }
 
-void layoutBlockFlow(UI& ui, UIElementID parentId, LayoutRect content) {
+void layoutFlowAbsoluteChildren(
+    UI& ui,
+    UIElementID parentId,
+    LayoutRect content)
+{
+    for (UIElementID childId : ui.get(parentId).children) {
+        const Style& childStyle = ui.resolvedStyle(childId);
+        if (childStyle.position != PositionMode::Absolute)
+            continue;
+
+        layoutElement(ui, childId, content.pos, content.size, Display::None);
+    }
+}
+
+void layoutColumnFlow(UI& ui, UIElementID parentId, LayoutRect content) {
     const float gap = ui.resolvedStyle(parentId).gap.resolve(content.size.y);
     float cursorTop = content.pos.y + content.size.y;
     bool placedFlowChild = false;
 
+    layoutFlowAbsoluteChildren(ui, parentId, content);
+
     for (UIElementID childId : ui.get(parentId).children) {
         UIElement& child = ui.get(childId);
         const Style& childStyle = ui.resolvedStyle(childId);
-
-        if (childStyle.position == PositionMode::Absolute) {
-            layoutElement(
-                ui, childId, content.pos, content.size,
-                Display::None);
-            continue;
-        }
 
         if (childStyle.position != PositionMode::Relative)
             continue;
@@ -247,7 +256,66 @@ void layoutBlockFlow(UI& ui, UIElementID parentId, LayoutRect content) {
 
         const LayoutRect childBorder = {child.transform.position, child.transform.size};
         const LayoutRect childContent = contentBox(childBorder, childStyle);
-        layoutChildren(ui, childId, childContent, childStyle.display);
+        layoutChildren(ui, childId, childContent, childStyle);
+    }
+}
+
+void layoutRowFlow(UI& ui, UIElementID parentId, LayoutRect content) {
+    const float gap = ui.resolvedStyle(parentId).gap.resolve(content.size.x);
+    float cursorLeft = content.pos.x;
+    bool placedFlowChild = false;
+
+    layoutFlowAbsoluteChildren(ui, parentId, content);
+
+    for (UIElementID childId : ui.get(parentId).children) {
+        UIElement& child = ui.get(childId);
+        const Style& childStyle = ui.resolvedStyle(childId);
+
+        if (childStyle.position != PositionMode::Relative)
+            continue;
+
+        if (placedFlowChild)
+            cursorLeft += gap;
+
+        glm::vec2 intrinsic = {0.f, 0.f};
+        if (child.widget)
+            intrinsic = child.widget->measureContent(child, content.size);
+
+        const float marginLeft = childStyle.margin.left.resolve(content.size.x);
+        const float marginRight = childStyle.margin.right.resolve(content.size.x);
+        const float marginTop = childStyle.margin.top.resolve(content.size.y);
+        const float marginBottom = childStyle.margin.bottom.resolve(content.size.y);
+
+        const float availableHeight =
+            std::max(0.f, content.size.y - marginTop - marginBottom);
+
+        const float childWidth = resolveBlockWidth(
+            childStyle, content.size.x, content.size.x, intrinsic);
+
+        float childHeight;
+        if (!childStyle.height.isAuto())
+            childHeight = childStyle.height.resolve(content.size.y);
+        else if (intrinsic.y > 0.f)
+            childHeight = intrinsic.y;
+        else
+            childHeight = availableHeight;
+        childHeight = clampMinMax(
+            childHeight, childStyle.minHeight, childStyle.maxHeight, content.size.y);
+        childHeight = std::min(childHeight, availableHeight);
+
+        cursorLeft += marginLeft;
+        const float childLeft = cursorLeft;
+        const float childBottom = content.pos.y + marginBottom;
+
+        child.transform.position = {childLeft, childBottom};
+        child.transform.size = {childWidth, childHeight};
+
+        cursorLeft = childLeft + childWidth + marginRight;
+        placedFlowChild = true;
+
+        const LayoutRect childBorder = {child.transform.position, child.transform.size};
+        const LayoutRect childContent = contentBox(childBorder, childStyle);
+        layoutChildren(ui, childId, childContent, childStyle);
     }
 }
 
@@ -255,11 +323,20 @@ void layoutChildren(
     UI& ui,
     UIElementID parentId,
     LayoutRect content,
-    Display display)
+    const Style& parentStyle)
 {
-    if (display == Display::Block) {
-        layoutBlockFlow(ui, parentId, content);
-        return;
+    switch (parentStyle.display) {
+        case Display::Block:
+            layoutColumnFlow(ui, parentId, content);
+            return;
+        case Display::Flex:
+            if (parentStyle.flexDirection == FlexDirection::Row)
+                layoutRowFlow(ui, parentId, content);
+            else
+                layoutColumnFlow(ui, parentId, content);
+            return;
+        default:
+            break;
     }
 
     for (UIElementID childId : ui.get(parentId).children) {

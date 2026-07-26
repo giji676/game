@@ -42,6 +42,12 @@ struct Insets {
 enum class Display {
     None,  // children use absolute inset layout (default)
     Block, // relative children stack vertically
+    Flex,  // relative children flow along flexDirection
+};
+
+enum class FlexDirection {
+    Row,
+    Column,
 };
 
 enum class PositionMode {
@@ -52,6 +58,7 @@ enum class PositionMode {
 struct Style {
     Display display = Display::None;
     PositionMode position = PositionMode::Absolute;
+    FlexDirection flexDirection = FlexDirection::Row;
 
     Insets inset;
     Insets margin;
@@ -64,7 +71,7 @@ struct Style {
     Length maxWidth;
     Length maxHeight;
 
-    // Space inserted between consecutive block-flow children.
+    // Space between consecutive flow children along the main axis.
     Length gap;
 
     // Absolute placement via inset and/or explicit size. Position mode alone

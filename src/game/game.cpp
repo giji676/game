@@ -169,29 +169,51 @@ void Game::init() {
     };
 
     constexpr float toolbarH = 40.f;
-    toolbarId = ui.toolbar(
-            {0.f, static_cast<float>(engine.app.height()) - toolbarH},
-            {static_cast<float>(engine.app.width()), toolbarH},
-            18.f);
+    constexpr float toolbarFont = 18.f;
 
-    auto& toolbarElem = ui.get(toolbarId);
-    toolbarElem.visible = false;
-    toolbarElem.style.inset.left = Length::px(0.f);
-    toolbarElem.style.inset.right = Length::px(0.f);
-    toolbarElem.style.inset.top = Length::px(0.f);
-    toolbarElem.style.height = Length::px(toolbarH);
+    toolbarId = ui.createElement();
+    ui.get(toolbarId).visible = false;
+    ui.get(toolbarId).style.inset.left = Length::px(0.f);
+    ui.get(toolbarId).style.inset.right = Length::px(0.f);
+    ui.get(toolbarId).style.inset.top = Length::px(0.f);
+    ui.get(toolbarId).style.height = Length::px(toolbarH);
+    ui.get(toolbarId).style.display = Display::Flex;
+    ui.get(toolbarId).style.flexDirection = FlexDirection::Row;
+    ui.get(toolbarId).style.gap = Length::px(4.f);
+    ui.get(toolbarId).style.padding.left = Length::px(8.f);
+    ui.get(toolbarId).style.padding.right = Length::px(8.f);
+    ui.get(toolbarId).style.padding.top = Length::px(4.f);
+    ui.get(toolbarId).style.padding.bottom = Length::px(4.f);
 
-    auto* toolbar = dynamic_cast<Toolbar*>(toolbarElem.widget.get());
-    toolbar->addItem("New", []() {
+    {
+        auto& toolbarBg = ui.get(toolbarId).addWidget<Rect>();
+        toolbarBg.color = {0.18f, 0.18f, 0.18f, 1.f};
+    }
+
+    UIElementID newBtnId = ui.button({0.f, 0.f}, toolbarFont, "New", nullptr);
+    ui.reparent(newBtnId, toolbarId);
+    ui.get(newBtnId).style.position = PositionMode::Relative;
+    ui.get(newBtnId).style.height = Length::percent(100.f);
+    dynamic_cast<Button*>(ui.get(newBtnId).widget.get())->onClick = []() {
         std::cout << "Toolbar: New\n";
-    });
-    toolbar->addToggle("Play", playToggled, [this](bool toggled) {
-        playToggled = toggled;
-        std::cout << "Toolbar: Play " << (toggled ? "on" : "off") << "\n";
-    });
-    toolbar->addItem("Save", []() {
+    };
+
+    UIElementID playBtnId = ui.button({0.f, 0.f}, toolbarFont, "Play", nullptr);
+    ui.reparent(playBtnId, toolbarId);
+    ui.get(playBtnId).style.position = PositionMode::Relative;
+    ui.get(playBtnId).style.height = Length::percent(100.f);
+    dynamic_cast<Button*>(ui.get(playBtnId).widget.get())->onClick = [this]() {
+        playToggled = !playToggled;
+        std::cout << "Toolbar: Play " << (playToggled ? "on" : "off") << "\n";
+    };
+
+    UIElementID saveBtnId = ui.button({0.f, 0.f}, toolbarFont, "Save", nullptr);
+    ui.reparent(saveBtnId, toolbarId);
+    ui.get(saveBtnId).style.position = PositionMode::Relative;
+    ui.get(saveBtnId).style.height = Length::percent(100.f);
+    dynamic_cast<Button*>(ui.get(saveBtnId).widget.get())->onClick = []() {
         std::cout << "Toolbar: Save\n";
-    });
+    };
 }
 
 void Game::setupTerrain() {
