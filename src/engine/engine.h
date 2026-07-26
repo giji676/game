@@ -13,6 +13,7 @@
 #include "renderer/renderer.h"
 #include "renderer/ui_renderer.h"
 #include "renderer/debug.h"
+#include "editor/editor.h"
 
 class Game;
 
@@ -30,6 +31,7 @@ public:
     UI ui;
     Raycasting raycasting;
     MeshRegistry meshRegistry;
+    Editor editor;
 
     unsigned int activeCamera = 0;
     std::vector<Camera> cameras;
@@ -66,7 +68,7 @@ private:
     void beginFrame();
     void endFrame();
 
-    Engine() = default;
+    Engine() : editor(*this) {}
     ~Engine() = default;
 
     Engine(const Engine&) = delete;

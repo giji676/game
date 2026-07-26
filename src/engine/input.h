@@ -20,6 +20,7 @@ enum class Action : uint16_t {
     ToggleScreen,
     Jump,
     Pause,
+    ToggleEditor,
 
     Count
 };

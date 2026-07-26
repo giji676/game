@@ -33,6 +33,7 @@ void Engine::init(Game *g) {
     
     game = g;
     game->init();
+    editor.init();
     renderer.init(&meshRegistry);
     uiRenderer.init();
     debugRenderer.init();
@@ -49,6 +50,7 @@ void Engine::run() {
             beginFrame();
 
             getInput(event);
+            editor.update();
             game->update();
             if (!paused)
                 scene.update();
@@ -197,6 +199,7 @@ void Engine::setupKeyBindings() {
     input.bind(Action::Jump, SDL_SCANCODE_SPACE);
     input.bind(Action::ToggleScreen, SDL_SCANCODE_F11);
     input.bind(Action::Pause, SDL_SCANCODE_ESCAPE);
+    input.bind(Action::ToggleEditor, SDL_SCANCODE_F3);
 
     input.bind(MouseAction::Left, SDL_BUTTON_LEFT);
     input.bind(MouseAction::Middle, SDL_BUTTON_MIDDLE);
