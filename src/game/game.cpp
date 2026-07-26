@@ -290,9 +290,9 @@ void Game::init() {
         ui.get(labelId).style.position = PositionMode::Relative;
         ui.get(labelId).style.height = Length::px(24.f);
     }
-    addFlowButton(ui, flexColDemoId, demoFont, "Top", Length::automatic());
-    addFlowButton(ui, flexColDemoId, demoFont, "Mid", Length::automatic());
-    addFlowButton(ui, flexColDemoId, demoFont, "Bot", Length::automatic());
+    addFlowButton(ui, flexColDemoId, demoFont, "Top");
+    addFlowButton(ui, flexColDemoId, demoFont, "Mid");
+    addFlowButton(ui, flexColDemoId, demoFont, "Bot");
 
     // --- Nested absolute positioning inside a flow container (paused) ---
     absoluteDemoId = ui.createElement();

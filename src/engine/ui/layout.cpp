@@ -130,24 +130,6 @@ void layoutAbsolute(
     e.transform.size = {x.size, y.size};
 }
 
-float resolveBlockHeight(
-    UI& ui,
-    UIElementID id,
-    const Style& style,
-    glm::vec2 contentSize,
-    glm::vec2 intrinsic)
-{
-    float height;
-    if (!style.height.isAuto())
-        height = style.height.resolve(contentSize.y);
-    else if (intrinsic.y > 0.f)
-        height = intrinsic.y;
-    else
-        height = ui.get(id).transform.size.y;
-
-    return clampMinMax(height, style.minHeight, style.maxHeight, contentSize.y);
-}
-
 float resolveBlockWidth(
     const Style& style,
     float availableWidth,
@@ -166,20 +148,44 @@ float resolveBlockWidth(
     return std::min(width, availableWidth);
 }
 
-struct FlowMetrics {
-    UIElementID id = INVALID_UI_ELEMENT;
-    float mainBefore = 0.f;
-    float mainSize = 0.f;
-    float mainAfter = 0.f;
-};
+size_t countFlowChildren(UI& ui, UIElementID parentId)
+{
+    size_t count = 0;
+    for (UIElementID childId : ui.get(parentId).children) {
+        if (ui.resolvedStyle(childId).position == PositionMode::Relative)
+            ++count;
+    }
+    return count;
+}
 
-float resolveFlexMainSize(
+bool percentFillsContainerOnMainAxis(
+    const Style& style,
+    bool mainIsWidth,
+    size_t flowSiblingCount)
+{
+    if (flowSiblingCount <= 1 || style.flexGrow > 0.f)
+        return false;
+
+    const Length& explicitSize = mainIsWidth ? style.width : style.height;
+    if (!style.flexBasis.isAuto() &&
+        style.flexBasis.unit == Unit::Percent &&
+        style.flexBasis.value >= 100.f)
+        return true;
+    if (!explicitSize.isAuto() &&
+        explicitSize.unit == Unit::Percent &&
+        explicitSize.value >= 100.f)
+        return true;
+    return false;
+}
+
+float resolveFlowMainSize(
     UI& ui,
     UIElementID id,
     const Style& style,
     glm::vec2 contentSize,
     glm::vec2 intrinsic,
-    bool mainIsWidth)
+    bool mainIsWidth,
+    size_t flowSiblingCount)
 {
     const float containerMain = mainIsWidth ? contentSize.x : contentSize.y;
     const float intrinsicMain = mainIsWidth ? intrinsic.x : intrinsic.y;
@@ -187,10 +193,13 @@ float resolveFlexMainSize(
     const Length& maxLen = mainIsWidth ? style.maxWidth : style.maxHeight;
     const Length& explicitSize = mainIsWidth ? style.width : style.height;
 
+    const bool useIntrinsicForPercent = percentFillsContainerOnMainAxis(
+        style, mainIsWidth, flowSiblingCount);
+
     float size;
-    if (!style.flexBasis.isAuto())
+    if (!style.flexBasis.isAuto() && !useIntrinsicForPercent)
         size = style.flexBasis.resolve(containerMain);
-    else if (!explicitSize.isAuto())
+    else if (!explicitSize.isAuto() && !useIntrinsicForPercent)
         size = explicitSize.resolve(containerMain);
     else if (intrinsicMain > 0.f)
         size = intrinsicMain;
@@ -199,6 +208,13 @@ float resolveFlexMainSize(
 
     return clampMinMax(size, minLen, maxLen, containerMain);
 }
+
+struct FlowMetrics {
+    UIElementID id = INVALID_UI_ELEMENT;
+    float mainBefore = 0.f;
+    float mainSize = 0.f;
+    float mainAfter = 0.f;
+};
 
 void applyFlexGrow(
     UI& ui,
@@ -483,6 +499,7 @@ void layoutColumnFlow(
     layoutFlowAbsoluteChildren(ui, parentId, content);
 
     const float gap = parentStyle.gap.resolve(content.size.y);
+    const size_t flowChildCount = countFlowChildren(ui, parentId);
     std::vector<FlowMetrics> items;
     items.reserve(ui.get(parentId).children.size());
 
@@ -498,11 +515,8 @@ void layoutColumnFlow(
 
         const float marginTop = childStyle.margin.top.resolve(content.size.y);
         const float marginBottom = childStyle.margin.bottom.resolve(content.size.y);
-        const float childHeight = parentStyle.display == Display::Flex
-            ? resolveFlexMainSize(
-                ui, childId, childStyle, content.size, intrinsic, false)
-            : resolveBlockHeight(
-                ui, childId, childStyle, content.size, intrinsic);
+        const float childHeight = resolveFlowMainSize(
+            ui, childId, childStyle, content.size, intrinsic, false, flowChildCount);
 
         items.push_back({
             childId,
@@ -580,6 +594,7 @@ void layoutRowFlow(
     layoutFlowAbsoluteChildren(ui, parentId, content);
 
     const float gap = parentStyle.gap.resolve(content.size.x);
+    const size_t flowChildCount = countFlowChildren(ui, parentId);
     std::vector<FlowMetrics> items;
     items.reserve(ui.get(parentId).children.size());
 
@@ -595,8 +610,8 @@ void layoutRowFlow(
 
         const float marginLeft = childStyle.margin.left.resolve(content.size.x);
         const float marginRight = childStyle.margin.right.resolve(content.size.x);
-        const float childWidth = resolveFlexMainSize(
-            ui, childId, childStyle, content.size, intrinsic, true);
+        const float childWidth = resolveFlowMainSize(
+            ui, childId, childStyle, content.size, intrinsic, true, flowChildCount);
 
         items.push_back({
             childId,
