@@ -1,6 +1,8 @@
 #include "engine/asset_manager/font.h"
+#include "engine/asset_manager/ui_element.h"
 #include "ui_widget.h"
 #include "engine/engine.h"
+#include "engine/ui/style.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -11,6 +13,78 @@ bool hitRect(glm::vec2 pos, glm::vec2 rectPos, glm::vec2 rectSize) {
            pos.x <= rectPos.x + rectSize.x &&
            pos.y >= rectPos.y &&
            pos.y <= rectPos.y + rectSize.y;
+}
+
+glm::vec2 textInnerSize(glm::vec2 rectSize, glm::vec2 padding) {
+    return {
+        std::max(0.f, rectSize.x - padding.x * 2.f),
+        std::max(0.f, rectSize.y - padding.y * 2.f),
+    };
+}
+
+glm::vec2 textClipOrigin(glm::vec2 rectPos, glm::vec2 padding) {
+    return {rectPos.x + padding.x, rectPos.y + padding.y};
+}
+
+void emitTextCommands(
+    const UIElement& e,
+    Font* font,
+    const std::string& text,
+    glm::vec4 color,
+    glm::vec2 padding,
+    bool centerHorizontally,
+    std::vector<UIRenderCommand>& out)
+{
+    const glm::vec2 inner = textInnerSize(e.transform.size, padding);
+    const glm::vec2 clipPos = textClipOrigin(e.transform.position, padding);
+    const bool useClip = e.style.textOverflow == TextOverflow::Clip;
+    const bool useWrap = e.style.textOverflow == TextOverflow::Wrap && inner.x > 0.f;
+
+    auto pushLine = [&](const std::string& line, glm::vec2 baseline) {
+        glm::vec2 textSize = font->measure(line, e.transform.fontSize);
+        if (centerHorizontally) {
+            baseline.x = e.transform.position.x
+                + (e.transform.size.x - textSize.x) * 0.5f;
+        }
+
+        UIRenderCommand cmd{
+            .type = UICmdType::Text,
+            .position = baseline,
+            .size = textSize,
+            .color = color,
+            .font = font,
+            .text = line,
+        };
+        if (useClip || useWrap) {
+            cmd.clip = true;
+            cmd.clipPos = clipPos;
+            cmd.clipSize = inner;
+        }
+        out.push_back(cmd);
+    };
+
+    if (useWrap) {
+        const std::vector<std::string> lines =
+            font->wrapLines(text, inner.x, e.transform.fontSize);
+        const float lineH = font->lineHeightAt(e.transform.fontSize);
+        const float totalH = lineH * static_cast<float>(lines.size());
+        const float blockBottom = e.transform.position.y + padding.y
+            + std::max(0.f, (inner.y - totalH) * 0.5f);
+        const float descender = font->descenderAt(e.transform.fontSize);
+
+        for (size_t i = 0; i < lines.size(); ++i) {
+            glm::vec2 baseline{
+                e.transform.position.x + padding.x,
+                blockBottom + static_cast<float>(i) * lineH + descender,
+            };
+            pushLine(lines[i], baseline);
+        }
+        return;
+    }
+
+    glm::vec2 baseline = font->baselineInRect(
+        e.transform.position, e.transform.size, padding, e.transform.fontSize);
+    pushLine(text, baseline);
 }
 } // namespace
 
@@ -24,28 +98,16 @@ public:
         const UIElement& e,
         std::vector<UIRenderCommand>& out) const override
     {
-        glm::vec2 layoutSize = e.transform.size;
-        if (layoutSize.y <= 0.f)
-            layoutSize.y = e.transform.fontSize;
-
-        glm::vec2 baseline = font->baselineInRect(
-            e.transform.position, layoutSize, {0.f, 0.f}, e.transform.fontSize);
-        glm::vec2 textSize = font->measure(text, e.transform.fontSize);
-
-        out.push_back({
-            .type = UICmdType::Text,
-            .position = baseline,
-            .size = textSize,
-            .color = color,
-            .font = font,
-            .text = text
-        });
+        emitTextCommands(
+            e, font, text, color, {0.f, 0.f}, false, out);
     }
 
     glm::vec2 measureContent(
             const UIElement& e,
             glm::vec2 available) const override
     {
+        if (e.style.textOverflow == TextOverflow::Wrap && available.x > 0.f)
+            return font->measureWrapped(text, available.x, e.transform.fontSize);
         return font->measure(text, e.transform.fontSize);
     }
 };
@@ -167,30 +229,23 @@ public:
             .borderColor = current.borderColor
         });
 
-        glm::vec2 textSize = font->measure(text, e.transform.fontSize);
-        glm::vec2 baseline = font->baselineInRect(
-            e.transform.position, e.transform.size, padding, e.transform.fontSize);
-        baseline.x = e.transform.position.x
-            + (e.transform.size.x - textSize.x) * 0.5f;
-
-        out.push_back({
-            .type = UICmdType::Text,
-            .position = baseline,
-            .size = textSize,
-            .color = current.textColor,
-            .font = font,
-            .text = text
-        });
+        emitTextCommands(
+            e, font, text, current.textColor, padding, true, out);
     }
 
     glm::vec2 measureContent(
             const UIElement& e,
             glm::vec2 available) const override
     {
-        glm::vec2 textSize = font->measure(text, e.transform.fontSize);
+        const float innerW = std::max(0.f, available.x - padding.x * 2.f);
+        glm::vec2 textSize;
+        if (e.style.textOverflow == TextOverflow::Wrap && innerW > 0.f)
+            textSize = font->measureWrapped(text, innerW, e.transform.fontSize);
+        else
+            textSize = font->measure(text, e.transform.fontSize);
         return {
             textSize.x + padding.x * 2.f,
-            font->lineHeightAt(e.transform.fontSize) + padding.y * 2.f,
+            textSize.y + padding.y * 2.f,
         };
     }
 
@@ -596,18 +651,13 @@ public:
                 .color = bg,
             });
 
-            glm::vec2 textPos = font->baselineInRect(
-                itemPos, itemSize, itemPadding, fontSize);
-            glm::vec2 textSize = font->measure(item.label, fontSize);
-
-            out.push_back({
-                .type = UICmdType::Text,
-                .position = textPos,
-                .size = textSize,
-                .color = itemTextColor,
-                .font = font,
-                .text = item.label,
-            });
+            UIElement itemElem;
+            itemElem.transform.position = itemPos;
+            itemElem.transform.size = itemSize;
+            itemElem.transform.fontSize = fontSize;
+            itemElem.style.textOverflow = e.style.textOverflow;
+            emitTextCommands(
+                itemElem, font, item.label, itemTextColor, itemPadding, false, out);
         }
     }
 

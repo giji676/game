@@ -1,6 +1,7 @@
 #include "font.h"
 #include <algorithm>
 #include <iostream>
+#include <vector>
 #include <glad/glad.h>
 
 glm::vec2 Font::measure(const std::string& text, float size) const {
@@ -13,6 +14,101 @@ glm::vec2 Font::measure(const std::string& text, float size) const {
     }
 
     return { width, size };
+}
+
+std::vector<std::string> Font::wrapLines(
+    const std::string& text,
+    float maxWidth,
+    float size) const
+{
+    std::vector<std::string> lines;
+    if (text.empty())
+        return lines;
+    if (maxWidth <= 0.f) {
+        lines.push_back(text);
+        return lines;
+    }
+
+    auto flush = [&](std::string& line) {
+        if (!line.empty()) {
+            lines.push_back(line);
+            line.clear();
+        }
+    };
+
+    auto breakLongToken = [&](const std::string& token, std::string& current) {
+        std::string chunk;
+        for (char c : token) {
+            chunk.push_back(c);
+            if (measure(chunk, size).x > maxWidth) {
+                chunk.pop_back();
+                flush(current);
+                if (chunk.empty()) {
+                    current = std::string(1, c);
+                    if (measure(current, size).x > maxWidth) {
+                        flush(current);
+                    }
+                } else {
+                    current = chunk;
+                    chunk = std::string(1, c);
+                }
+            }
+        }
+        if (!chunk.empty()) {
+            if (current.empty())
+                current = chunk;
+            else
+                current += chunk;
+        }
+    };
+
+    std::string current;
+    std::string token;
+    for (size_t i = 0; i <= text.size(); ++i) {
+        const char c = i < text.size() ? text[i] : ' ';
+        if (c == ' ' || c == '\n') {
+            if (!token.empty()) {
+                const std::string candidate = current.empty()
+                    ? token
+                    : current + " " + token;
+                if (measure(candidate, size).x <= maxWidth)
+                    current = candidate;
+                else {
+                    flush(current);
+                    if (measure(token, size).x <= maxWidth)
+                        current = token;
+                    else
+                        breakLongToken(token, current);
+                }
+                token.clear();
+            }
+            if (c == '\n')
+                flush(current);
+        } else {
+            token.push_back(c);
+        }
+    }
+    flush(current);
+
+    if (lines.empty())
+        lines.push_back(text);
+    return lines;
+}
+
+glm::vec2 Font::measureWrapped(
+    const std::string& text,
+    float maxWidth,
+    float size) const
+{
+    const std::vector<std::string> lines = wrapLines(text, maxWidth, size);
+    if (lines.empty())
+        return {0.f, 0.f};
+
+    float width = 0.f;
+    for (const std::string& line : lines)
+        width = std::max(width, measure(line, size).x);
+
+    return {width, lineHeightAt(size) * static_cast<float>(lines.size())};
 }
 
 size_t Font::caretIndexAt(const std::string& text, float x, float size) const {

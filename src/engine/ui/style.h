@@ -69,6 +69,12 @@ enum class PositionMode {
     Relative,
 };
 
+enum class TextOverflow {
+    Visible,
+    Clip,
+    Wrap,
+};
+
 struct Style {
     Display display = Display::None;
     PositionMode position = PositionMode::Absolute;
@@ -93,6 +99,8 @@ struct Style {
     // Flex item growth on the main axis (flex containers only).
     float flexGrow = 0.f;
     Length flexBasis;
+
+    TextOverflow textOverflow = TextOverflow::Clip;
 
     // Absolute placement via inset and/or explicit size. Position mode alone
     // does not opt in — relative children are placed by block flow instead.

@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 #include <map>
+#include <vector>
 
 struct Character {
     unsigned int textureID;
@@ -46,6 +47,16 @@ public:
         Shader& shader);
 
     glm::vec2 measure(const std::string& text, float size) const;
+
+    std::vector<std::string> wrapLines(
+        const std::string& text,
+        float maxWidth,
+        float size) const;
+
+    glm::vec2 measureWrapped(
+        const std::string& text,
+        float maxWidth,
+        float size) const;
 
     size_t caretIndexAt(const std::string& text, float x, float size) const;
 

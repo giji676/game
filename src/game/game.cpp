@@ -190,12 +190,13 @@ void Game::init() {
     pauseButtonId = ui.button(
             {0.f, 0.f},
             64.f,
-            "abcdefghijklmnopqABCDEFGHIJKLMNOPQ",
+            "abcdefghijklmnopq ABCDEFGHIJKLMNOPQ",
             nullptr);
     ui.reparent(pauseButtonId, pausePanelId);
     ui.get(pauseButtonId).style.position = PositionMode::Relative;
     ui.get(pauseButtonId).style.width = Length::percent(90.f);
     ui.get(pauseButtonId).style.height = Length::percent(35.f);
+    ui.get(pauseButtonId).style.textOverflow = TextOverflow::Wrap;
 
     auto* btn = dynamic_cast<Button*>(ui.get(pauseButtonId).widget.get());
     btn->normal.bgColor = {1, 1, 1, 1};
