@@ -35,10 +35,13 @@ class Input {
 public:
     float mouseDeltaX = 0.0f;
     float mouseDeltaY = 0.0f;
+    float wheelY = 0.0f;
     float x = 0.0f;
     float y = 0.0f;
 
     glm::vec2 mousePosition() const;
+
+    float mouseWheelY() const { return wheelY; }
 
     void setMousePosition(float _x, float _y) {
         x = _x;
@@ -56,7 +59,10 @@ public:
 
         mouseDeltaX = 0.0f;
         mouseDeltaY = 0.0f;
+        wheelY = 0.0f;
     }
+
+    void addMouseWheel(float y) { wheelY += y; }
 
     void setKey(Key key, bool down) {
         current[key] = down;

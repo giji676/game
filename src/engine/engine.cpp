@@ -177,6 +177,10 @@ void Engine::getInput(SDL_Event &event) {
                 input.setMouseButton(event.button.button, false);
                 break;
 
+            case SDL_MOUSEWHEEL:
+                input.addMouseWheel(static_cast<float>(event.wheel.y));
+                break;
+
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
                     app.updateViewport();

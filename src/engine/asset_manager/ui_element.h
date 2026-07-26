@@ -27,6 +27,11 @@ public:
     std::vector<UIElementID> children;
     std::unique_ptr<UIWidget> widget;
 
+    // Scroll state (containers with overflow: Scroll).
+    glm::vec2 scrollOffset = {0.f, 0.f};
+    glm::vec2 scrollContentSize = {0.f, 0.f};
+    glm::vec2 scrollViewportSize = {0.f, 0.f};
+
     template <typename T, typename... Args>
     T& addWidget(Args&&... args) {
         widget = std::make_unique<T>(std::forward<Args>(args)...);

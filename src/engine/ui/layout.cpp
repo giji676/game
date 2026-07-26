@@ -294,6 +294,67 @@ FlowMainAxisLayout computeMainAxisLayout(
     return result;
 }
 
+float flowMainExtent(
+    const std::vector<FlowMetrics>& items,
+    float gap)
+{
+    if (items.empty())
+        return 0.f;
+
+    float total = 0.f;
+    for (const FlowMetrics& item : items)
+        total += item.mainBefore + item.mainSize + item.mainAfter;
+    if (items.size() > 1)
+        total += gap * static_cast<float>(items.size() - 1);
+    return total;
+}
+
+void offsetElementTree(UI& ui, UIElementID id, glm::vec2 scrollOffset)
+{
+    UIElement& e = ui.get(id);
+    // Y-up: scroll down (offset.y increases) moves content up to reveal lower items.
+    e.transform.position.x -= scrollOffset.x;
+    e.transform.position.y += scrollOffset.y;
+    for (UIElementID child : e.children)
+        offsetElementTree(ui, child, scrollOffset);
+}
+
+void applyOverflowScroll(
+    UI& ui,
+    UIElementID parentId,
+    LayoutRect content,
+    const Style& parentStyle,
+    const std::vector<FlowMetrics>& items,
+    float gap,
+    bool verticalFlow)
+{
+    if (parentStyle.overflow == Overflow::Visible)
+        return;
+
+    UIElement& parent = ui.get(parentId);
+    parent.scrollViewportSize = content.size;
+
+    const float mainExtent = flowMainExtent(items, gap);
+    if (verticalFlow)
+        parent.scrollContentSize = {content.size.x, mainExtent};
+    else
+        parent.scrollContentSize = {mainExtent, content.size.y};
+
+    if (parentStyle.overflow == Overflow::Scroll) {
+        const float maxScrollX = std::max(
+            0.f, parent.scrollContentSize.x - parent.scrollViewportSize.x);
+        const float maxScrollY = std::max(
+            0.f, parent.scrollContentSize.y - parent.scrollViewportSize.y);
+        parent.scrollOffset.x = std::clamp(parent.scrollOffset.x, 0.f, maxScrollX);
+        parent.scrollOffset.y = std::clamp(parent.scrollOffset.y, 0.f, maxScrollY);
+
+        for (const FlowMetrics& item : items)
+            offsetElementTree(ui, item.id, parent.scrollOffset);
+    } else {
+        parent.scrollOffset = {0.f, 0.f};
+    }
+}
+
 float crossAxisPosition(
     AlignItems align,
     float contentOrigin,
@@ -505,6 +566,9 @@ void layoutColumnFlow(
         const LayoutRect childBorder = {child.transform.position, child.transform.size};
         layoutChildren(ui, item.id, contentBox(childBorder, childStyle), childStyle);
     }
+
+    applyOverflowScroll(
+        ui, parentId, content, parentStyle, items, gap, true);
 }
 
 void layoutRowFlow(
@@ -590,6 +654,9 @@ void layoutRowFlow(
         const LayoutRect childBorder = {child.transform.position, child.transform.size};
         layoutChildren(ui, item.id, contentBox(childBorder, childStyle), childStyle);
     }
+
+    applyOverflowScroll(
+        ui, parentId, content, parentStyle, items, gap, false);
 }
 
 void layoutChildren(

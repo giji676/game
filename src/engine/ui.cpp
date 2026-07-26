@@ -8,6 +8,60 @@
 
 #include <algorithm>
 
+namespace {
+
+struct UIClipRect {
+    bool active = false;
+    glm::vec2 pos = {0.f, 0.f};
+    glm::vec2 size = {0.f, 0.f};
+};
+
+UIClipRect elementContentClip(const UIElement& e) {
+    const Style& s = e.style;
+    const float pl = s.padding.left.resolve(e.transform.size.x);
+    const float pr = s.padding.right.resolve(e.transform.size.x);
+    const float pb = s.padding.bottom.resolve(e.transform.size.y);
+    const float pt = s.padding.top.resolve(e.transform.size.y);
+    return {
+        true,
+        {e.transform.position.x + pl, e.transform.position.y + pb},
+        {std::max(0.f, e.transform.size.x - pl - pr),
+         std::max(0.f, e.transform.size.y - pb - pt)},
+    };
+}
+
+UIClipRect intersectClip(const UIClipRect& a, const UIClipRect& b) {
+    if (!a.active)
+        return b;
+    if (!b.active)
+        return a;
+
+    const float x0 = std::max(a.pos.x, b.pos.x);
+    const float y0 = std::max(a.pos.y, b.pos.y);
+    const float x1 = std::min(a.pos.x + a.size.x, b.pos.x + b.size.x);
+    const float y1 = std::min(a.pos.y + a.size.y, b.pos.y + b.size.y);
+    return {true, {x0, y0}, {std::max(0.f, x1 - x0), std::max(0.f, y1 - y0)}};
+}
+
+void applyClip(UIRenderCommand& cmd, const UIClipRect& clip) {
+    if (!clip.active)
+        return;
+
+    if (!cmd.clip) {
+        cmd.clip = true;
+        cmd.clipPos = clip.pos;
+        cmd.clipSize = clip.size;
+        return;
+    }
+
+    const UIClipRect merged = intersectClip(
+        {true, cmd.clipPos, cmd.clipSize}, clip);
+    cmd.clipPos = merged.pos;
+    cmd.clipSize = merged.size;
+}
+
+} // namespace
+
 void UI::dispatchTextInput(const std::string& text) {
     if (Engine::instance().app.cursorCaptured)
         return;
@@ -59,6 +113,13 @@ const UIElement& UI::get(UIElementID id) const {
 void UI::update() {
     Engine& engine = Engine::instance();
 
+    if (!engine.app.cursorCaptured) {
+        const glm::vec2 mouse = engine.input.mousePosition();
+        const float wheelY = engine.input.mouseWheelY();
+        if (wheelY != 0.f)
+            recurseScrollInput(rootId, mouse, wheelY);
+    }
+
     layoutTree(*this, rootId, {
         static_cast<float>(engine.app.width()),
         static_cast<float>(engine.app.height())
@@ -80,6 +141,66 @@ void UI::update() {
                 requestFocus(INVALID_UI_ELEMENT);
         }
     }
+}
+
+std::vector<UIRenderCommand> UI::buildRenderList() {
+    std::vector<UIRenderCommand> out;
+    recurseBuild(rootId, out, false, {0.f, 0.f}, {0.f, 0.f});
+    return out;
+}
+
+void UI::recurseBuild(
+    UIElementID id,
+    std::vector<UIRenderCommand>& out,
+    bool clipActive,
+    glm::vec2 clipPos,
+    glm::vec2 clipSize)
+{
+    UIElement& e = get(id);
+    if (!e.visible)
+        return;
+
+    UIClipRect clip{clipActive, clipPos, clipSize};
+    if (e.style.overflow == Overflow::Hidden ||
+        e.style.overflow == Overflow::Scroll) {
+        clip = intersectClip(clip, elementContentClip(e));
+    }
+
+    if (e.widget) {
+        std::vector<UIRenderCommand> local;
+        e.widget->buildCommands(e, local);
+        for (UIRenderCommand& cmd : local)
+            applyClip(cmd, clip);
+        out.insert(out.end(), local.begin(), local.end());
+    }
+
+    for (UIElementID child : e.children) {
+        recurseBuild(child, out, clip.active, clip.pos, clip.size);
+    }
+}
+
+bool UI::recurseScrollInput(UIElementID id, const glm::vec2& mouse, float wheelY) {
+    UIElement& e = get(id);
+    if (!e.visible)
+        return false;
+
+    for (auto it = e.children.rbegin(); it != e.children.rend(); ++it) {
+        if (recurseScrollInput(*it, mouse, wheelY))
+            return true;
+    }
+
+    if (e.style.overflow != Overflow::Scroll)
+        return false;
+
+    const glm::vec2& pos = e.transform.position;
+    const glm::vec2& size = e.transform.size;
+    if (mouse.x < pos.x || mouse.x > pos.x + size.x ||
+        mouse.y < pos.y || mouse.y > pos.y + size.y)
+        return false;
+
+    constexpr float scrollStep = 24.f;
+    e.scrollOffset.y -= wheelY * scrollStep;
+    return true;
 }
 
 void UI::recurseTick(UIElementID id, float dt) {

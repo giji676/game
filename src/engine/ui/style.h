@@ -75,6 +75,12 @@ enum class TextOverflow {
     Wrap,
 };
 
+enum class Overflow {
+    Visible,
+    Hidden,
+    Scroll,
+};
+
 struct Style {
     Display display = Display::None;
     PositionMode position = PositionMode::Absolute;
@@ -101,6 +107,8 @@ struct Style {
     Length flexBasis;
 
     TextOverflow textOverflow = TextOverflow::Clip;
+
+    Overflow overflow = Overflow::Visible;
 
     // Absolute placement via inset and/or explicit size. Position mode alone
     // does not opt in — relative children are placed by block flow instead.

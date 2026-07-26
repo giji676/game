@@ -11,26 +11,10 @@ public:
     void init();
     void update();
 
-    std::vector<UIRenderCommand> buildRenderList() {
-        std::vector<UIRenderCommand> out;
-        recurseBuild(rootId, out);
-        return out;
-    }
+    std::vector<UIRenderCommand> buildRenderList();
 
     void recurseTick(UIElementID id, float dt);
     void recurseUpdateInput(UIElementID id, const glm::vec2& mouse);
-
-    void recurseBuild(UIElementID id, std::vector<UIRenderCommand>& out) {
-        UIElement& e = get(id);
-        if (!e.visible)
-            return;
-
-        if (e.widget)
-            e.widget->buildCommands(e, out);
-
-        for (auto child : e.children)
-            recurseBuild(child, out);
-    }
 
     UIElementID label(
         glm::vec2 pos,
@@ -91,6 +75,9 @@ private:
     UIElementID focusedId = INVALID_UI_ELEMENT;
 
     UIElementID createElementInternal();
+    void recurseBuild(UIElementID id, std::vector<UIRenderCommand>& out, bool clipActive,
+                      glm::vec2 clipPos, glm::vec2 clipSize);
+    bool recurseScrollInput(UIElementID id, const glm::vec2& mouse, float wheelY);
     void recurseRender(
         const UIElementID elemId,
         const glm::mat4& parentTransfrom);

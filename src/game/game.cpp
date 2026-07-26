@@ -169,6 +169,7 @@ void Game::init() {
     ui.get(pausePanelId).style.width = Length::percent(42.f);
     ui.get(pausePanelId).style.height = Length::percent(70.f);
     ui.get(pausePanelId).style.display = Display::Block;
+    ui.get(pausePanelId).style.overflow = Overflow::Scroll;
     ui.get(pausePanelId).style.justifyContent = JustifyContent::Start;
     ui.get(pausePanelId).style.gap = Length::px(12.f);
     ui.get(pausePanelId).style.padding.left = Length::px(16.f);
@@ -182,7 +183,7 @@ void Game::init() {
             {0.f, 0.f},
             {0.f, demoFont},
             {0.7f, 0.7f, 0.7f, 1.f},
-            "Block: gap + padding");
+            "Block: scroll + gap");
     ui.reparent(blockLabelId, pausePanelId);
     ui.get(blockLabelId).style.position = PositionMode::Relative;
     ui.get(blockLabelId).style.height = Length::px(24.f);
@@ -224,6 +225,15 @@ void Game::init() {
     field.focusedStyle.borderColor = {0.2f, 0.5f, 1.f, 1};
     field.focusedStyle.borderWidth = 2.f;
     field.cornerRadii = {6.f, 6.f, 6.f, 6.f};
+
+    for (int i = 1; i <= 10; ++i) {
+        addFlowButton(
+            ui,
+            pausePanelId,
+            demoFont,
+            ("Scroll item " + std::to_string(i)).c_str(),
+            Length::automatic());
+    }
 
     // --- Flex row + justify-content: center (paused) ---
     flexRowDemoId = ui.createElement();
