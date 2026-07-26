@@ -2,8 +2,8 @@ CXX = g++
 CC  = gcc
 ASM = gcc
 
-CXXFLAGS  = -std=c++17 -Wall -Iinclude -Isrc -Llib -O2 -g
-CFLAGS    = -Wall -Iinclude -Isrc -Llib -O2 -g
+CXXFLAGS  = -std=c++17 -Wall -Iinclude -Isrc -Llib -O2 -g -MMD -MP
+CFLAGS    = -Wall -Iinclude -Isrc -Llib -O2 -g -MMD -MP
 ASMFLAGS  = -x assembler -c
 
 LDFLAGS   = -Llib -lSDL2 -lGL -lgj_image -lgj_model
@@ -26,6 +26,9 @@ OBJ_CPP = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_CPP))
 OBJ_ASM = $(patsubst $(SRC_DIR)/%.asm, $(BUILD_DIR)/%.o, $(SRC_ASM))
 
 OBJ = $(OBJ_C) $(OBJ_CPP) $(OBJ_ASM)
+
+# For tracking header dependencies
+DEPS = $(OBJ:.o=.d)
 
 TARGET = main
 
@@ -54,5 +57,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
 # Clean
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)
+
+-include $(DEPS)
 
 .PHONY: all clean
