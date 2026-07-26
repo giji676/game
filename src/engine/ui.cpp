@@ -4,6 +4,7 @@
 #include "engine/ui.h"
 #include "asset_manager/widgets.h"
 #include "asset_manager/ui_element.h"
+#include "engine/ui/layout.h"
 
 void UI::dispatchTextInput(const std::string& text) {
     if (Engine::instance().app.cursorCaptured)
@@ -55,6 +56,12 @@ const UIElement& UI::get(UIElementID id) const {
 
 void UI::update() {
     Engine& engine = Engine::instance();
+
+    layoutTree(*this, rootId, {
+        static_cast<float>(engine.app.width()),
+        static_cast<float>(engine.app.height())
+    });
+
     recurseTick(rootId, engine.app.deltaTime);
     if (!engine.app.cursorCaptured) {
         const glm::vec2 mouse = engine.input.mousePosition();
@@ -181,8 +188,6 @@ UIElementID UI::button(
         textSize.x + btn.padding.x * 2.f,
         btn.font->lineHeightAt(fontSize) + btn.padding.y * 2.f
     };
-    e.transform.textPosition = btn.font->baselineInRect(
-        pos, e.transform.size, btn.padding, fontSize, TextAlignV::Bottom);
 
     return id;
 }

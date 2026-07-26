@@ -74,6 +74,8 @@ public:
     UIElement& get(UIElementID id);
     const UIElement& get(UIElementID id) const;
 
+    const Style& resolvedStyle(UIElementID id) const { return get(id).style; }
+
     UIElement* getFocusedElement();
 
     UIElementID getRoot() const { return rootId; }

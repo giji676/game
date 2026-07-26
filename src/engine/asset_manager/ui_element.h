@@ -5,18 +5,19 @@
 #include <vector>
 #include "engine/defines.h"
 #include "engine/asset_manager/ui_widget.h"
+#include "engine/ui/style.h"
 
 struct Transform2D {
     glm::vec2 position;
     glm::vec2 size;
     glm::vec2 anchor = {0.f, 0.f};
     float fontSize = 0.f;
-    glm::vec2 textPosition;
 };
 
 class UIElement {
 public:
     Transform2D transform;
+    Style style;
     bool visible = true;
     UIElementID parent = 0;
     std::vector<UIElementID> children;

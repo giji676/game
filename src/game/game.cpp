@@ -80,6 +80,10 @@ void Game::init() {
             {1.f, 0.f, 0.f, 1.f},
             "hello");
 
+    auto& fpsElem = ui.get(fpsLabelId);
+    fpsElem.style.inset.left = Length::px(50.f);
+    fpsElem.style.inset.top = Length::px(12.f);
+
     ui.rect(
             {engine.app.width()/2-5, engine.app.height()/2-5},
             {10.f, 10.f},
@@ -94,6 +98,10 @@ void Game::init() {
 
     auto& elem = ui.get(pauseButtonId);
     elem.visible = false;
+    elem.style.inset.left = Length::px(10.f);
+    elem.style.inset.top = Length::percent(30.f);
+    elem.style.height = Length::percent(10.f);
+
     auto* btn = dynamic_cast<Button*>(elem.widget.get());
     btn->normal.bgColor = {1, 1, 1, 1};
     btn->hoveredStyle.bgColor = {0, 1, 0, 0.2};
@@ -142,6 +150,11 @@ void Game::init() {
 
     auto& toolbarElem = ui.get(toolbarId);
     toolbarElem.visible = false;
+    toolbarElem.style.inset.left = Length::px(0.f);
+    toolbarElem.style.inset.right = Length::px(0.f);
+    toolbarElem.style.inset.top = Length::px(0.f);
+    toolbarElem.style.height = Length::px(toolbarH);
+
     auto* toolbar = dynamic_cast<Toolbar*>(toolbarElem.widget.get());
     toolbar->addItem("New", []() {
         std::cout << "Toolbar: New\n";

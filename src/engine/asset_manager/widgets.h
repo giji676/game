@@ -41,6 +41,13 @@ public:
             .text = text
         });
     }
+
+    glm::vec2 measureContent(
+            const UIElement& e,
+            glm::vec2 available) const override
+    {
+        return font->measure(text, e.transform.fontSize);
+    }
 };
 
 class Rect : public UIWidget {
@@ -161,15 +168,30 @@ public:
         });
 
         glm::vec2 textSize = font->measure(text, e.transform.fontSize);
+        glm::vec2 baseline = font->baselineInRect(
+            e.transform.position, e.transform.size, padding, e.transform.fontSize);
+        baseline.x = e.transform.position.x
+            + (e.transform.size.x - textSize.x) * 0.5f;
 
         out.push_back({
             .type = UICmdType::Text,
-            .position = e.transform.textPosition,
+            .position = baseline,
             .size = textSize,
             .color = current.textColor,
             .font = font,
             .text = text
         });
+    }
+
+    glm::vec2 measureContent(
+            const UIElement& e,
+            glm::vec2 available) const override
+    {
+        glm::vec2 textSize = font->measure(text, e.transform.fontSize);
+        return {
+            textSize.x + padding.x * 2.f,
+            font->lineHeightAt(e.transform.fontSize) + padding.y * 2.f,
+        };
     }
 
     ButtonState resolveState() const {
@@ -587,6 +609,23 @@ public:
                 .text = item.label,
             });
         }
+    }
+
+    glm::vec2 measureContent(
+            const UIElement& e,
+            glm::vec2 available) const override
+    {
+        float fontSize = e.transform.fontSize;
+        float width = padding.x * 2.f;
+        float itemHeight = font->lineHeightAt(fontSize) + itemPadding.y * 2.f;
+
+        for (size_t i = 0; i < items.size(); ++i) {
+            if (i > 0)
+                width += itemSpacing;
+            width += measureItem(static_cast<int>(i), fontSize).x;
+        }
+
+        return {width, itemHeight + padding.y * 2.f};
     }
 
 private:

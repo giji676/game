@@ -133,7 +133,7 @@ void App::updateViewport() {
 }
 
 Uint32 App::getWindowFlags() const {
-    Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
+    Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
 
     if (videoSettings.mode == WindowMode::BorderlessFullscreen) {
         flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;

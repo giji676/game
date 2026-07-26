@@ -60,6 +60,7 @@ public:
     void toggleWindow();
     void getCursor();
     void releaseCursor();
+    void updateViewport();
 
     int width() const;
     int height() const;
@@ -70,5 +71,4 @@ public:
 private:
     Uint32 getWindowFlags() const;
     VideoSettings prevVideoSettings;
-    void updateViewport();
 };
