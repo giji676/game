@@ -30,7 +30,7 @@ public:
 
     void init();
     void update();
-    void render();
+    void render(const glm::mat4& view, const glm::mat4& projection);
     void recurseRender(
         const ObjectID objId,
         const glm::mat4& parentMatrix);

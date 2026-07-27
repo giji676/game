@@ -50,15 +50,32 @@ void Engine::run() {
             beginFrame();
 
             getInput(event);
-            editor.update();
+            {
+                PROFILE_SCOPE("Engine::editor.update");
+                editor.update();
+            }
+
+            // Editor chrome lives in window space.
+            const float winW = static_cast<float>(app.width());
+            const float winH = static_cast<float>(app.height());
+            editorUi.setSurface({0.f, 0.f}, {winW, winH}, {winW, winH});
+            editorUi.update();
+
+            const glm::vec4 viewport = gameViewport();
+            const glm::vec2 vpSize = {viewport.z, viewport.w};
+
+            // Layout in viewport space (1:1). Fixed px sizes stay fixed; % sizes
+            // resolve against the viewport and scale when it is resized.
+            gameUi.setSurface({viewport.x, viewport.y}, vpSize, vpSize);
+
             game->update();
             if (!paused)
                 scene.update();
-            ui.update();
+            gameUi.update();
 
-            auto uiCommands = ui.buildRenderList();
-            game->render();
-            callRenderer(uiCommands);
+            auto gameUiCommands = gameUi.buildRenderList();
+            auto editorUiCommands = editorUi.buildRenderList();
+            callRenderer(gameUiCommands, editorUiCommands, viewport);
 
             {
                 GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -76,9 +93,30 @@ void Engine::run() {
     app.cleanup();
 }
 
+glm::vec4 Engine::gameViewport() const {
+    return editor.gameViewportRect();
+}
+
 void Engine::callRenderer(
-        std::vector<UIRenderCommand>& uiQue)
+        std::vector<UIRenderCommand>& gameUiQue,
+        std::vector<UIRenderCommand>& editorUiQue,
+        const glm::vec4& viewport)
 {
+    const GLint vx = static_cast<GLint>(viewport.x);
+    const GLint vy = static_cast<GLint>(viewport.y);
+    const GLsizei vw = static_cast<GLsizei>(viewport.z);
+    const GLsizei vh = static_cast<GLsizei>(viewport.w);
+
+    // Game pass: confined to the viewport, drawn in game space.
+    glViewport(vx, vy, vw, vh);
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(vx, vy, vw, vh);
+
+    // Reset settings for the game pass.
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     Camera& camera = *getActiveCamera();
 
     glm::mat4 view = glm::lookAt(
@@ -89,14 +127,10 @@ void Engine::callRenderer(
 
     glm::mat4 projection = glm::perspective(
         glm::radians(45.f),
-        app.width() / (float)app.height(),
+        static_cast<float>(vw) / static_cast<float>(vh),
         0.1f,
         100.0f
     );
-
-    glm::mat4 orthoProjection = glm::ortho(
-            0.0f, static_cast<float>(app.width()),
-            0.0f, static_cast<float>(app.height()));
 
     glm::mat4 vp = projection * view;
     Frustum frustum = Frustum::fromMatrix(vp);
@@ -104,13 +138,36 @@ void Engine::callRenderer(
     renderCommands.clear();
     scene.buildRenderList(renderCommands, frustum);
 
+    game->render(view, projection);
     renderer.render(renderCommands, view, projection);
+    debugRenderer.render(view, projection);
+
+    const float vpW = viewport.z;
+    const float vpH = viewport.w;
+
+    glm::mat4 gameOrtho = glm::ortho(0.f, vpW, 0.f, vpH);
     uiRenderer.render(
-            uiQue,
-            orthoProjection,
+            gameUiQue,
+            gameOrtho,
+            assets.getShader("glyph"),
+            assets.getShader("rect"),
+            {viewport.x, viewport.y},
+            viewport);
+
+    glDisable(GL_SCISSOR_TEST);
+
+    // Editor pass: whole window.
+    glViewport(0, 0, app.width(), app.height());
+
+    glm::mat4 windowOrtho = glm::ortho(
+            0.0f, static_cast<float>(app.width()),
+            0.0f, static_cast<float>(app.height()));
+
+    uiRenderer.render(
+            editorUiQue,
+            windowOrtho,
             assets.getShader("glyph"),
             assets.getShader("rect"));
-    debugRenderer.render(view, projection);
 }
 
 void Engine::beginFrame() {
@@ -123,7 +180,9 @@ void Engine::beginFrame() {
         fpsTimer = 0.0f;
     }
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    // Backdrop behind the game viewport; the game pass clears its own rect.
+    glDisable(GL_SCISSOR_TEST);
+    glClearColor(0.05f, 0.05f, 0.06f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
@@ -147,7 +206,10 @@ void Engine::getInput(SDL_Event &event) {
                 break;
 
             case SDL_KEYDOWN:
-                ui.dispatchKeyInput(event.key.keysym.scancode);
+                if (editorUi.hasFocus())
+                    editorUi.dispatchKeyInput(event.key.keysym.scancode);
+                else
+                    gameUi.dispatchKeyInput(event.key.keysym.scancode);
                 input.setKey(event.key.keysym.scancode, true);
                 break;
 
@@ -156,7 +218,10 @@ void Engine::getInput(SDL_Event &event) {
                 break;
 
             case SDL_TEXTINPUT:
-                ui.dispatchTextInput(event.text.text);
+                if (editorUi.hasFocus())
+                    editorUi.dispatchTextInput(event.text.text);
+                else
+                    gameUi.dispatchTextInput(event.text.text);
                 break;
 
             case SDL_MOUSEMOTION:
@@ -268,6 +333,7 @@ void Engine::setPaused(bool value) {
         app.getCursor();
     } else {
         app.releaseCursor();
-        ui.onUnpause();
+        gameUi.onUnpause();
+        editorUi.onUnpause();
     }
 }

@@ -1,21 +1,54 @@
 #include "ui_renderer.h"
 #include "engine/asset_manager/shader.h"
+#include <algorithm>
 #include <iostream>
 
 namespace {
-void setClipRect(const UIRenderCommand& cmd) {
-    if (!cmd.clip) return;
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(
-        static_cast<GLint>(cmd.clipPos.x),
-        static_cast<GLint>(cmd.clipPos.y),
-        static_cast<GLsizei>(cmd.clipSize.x),
-        static_cast<GLsizei>(cmd.clipSize.y));
+bool hasBaseScissor(const glm::vec4& base) {
+    return base.z > 0.f && base.w > 0.f;
 }
 
-void clearClipRect(const UIRenderCommand& cmd) {
+void applyScissor(glm::vec2 pos, glm::vec2 size) {
+    glScissor(
+        static_cast<GLint>(pos.x),
+        static_cast<GLint>(pos.y),
+        static_cast<GLsizei>(size.x),
+        static_cast<GLsizei>(size.y));
+}
+
+void setClipRect(
+    const UIRenderCommand& cmd,
+    glm::vec2 clipOrigin,
+    const glm::vec4& base,
+    glm::vec2 clipScale)
+{
     if (!cmd.clip) return;
-    glDisable(GL_SCISSOR_TEST);
+
+    glm::vec2 pos = cmd.clipPos * clipScale + clipOrigin;
+    glm::vec2 size = cmd.clipSize * clipScale;
+
+    if (hasBaseScissor(base)) {
+        const float x0 = std::max(pos.x, base.x);
+        const float y0 = std::max(pos.y, base.y);
+        const float x1 = std::min(pos.x + size.x, base.x + base.z);
+        const float y1 = std::min(pos.y + size.y, base.y + base.w);
+        pos = {x0, y0};
+        size = {std::max(0.f, x1 - x0), std::max(0.f, y1 - y0)};
+    } else {
+        glEnable(GL_SCISSOR_TEST);
+    }
+
+    applyScissor(pos, size);
+}
+
+// Restores the surrounding scissor rather than disabling the test, which would
+// otherwise release the confinement of the whole pass.
+void clearClipRect(const UIRenderCommand& cmd, const glm::vec4& base) {
+    if (!cmd.clip) return;
+    if (hasBaseScissor(base))
+        applyScissor({base.x, base.y}, {base.z, base.w});
+    else
+        glDisable(GL_SCISSOR_TEST);
 }
 
 RectInstance toRectInstance(const UIRenderCommand& cmd) {
@@ -29,9 +62,12 @@ RectInstance toRectInstance(const UIRenderCommand& cmd) {
 void UIRenderer::drawText(
     const UIRenderCommand& cmd,
     const glm::mat4& projection,
-    Shader& shader)
+    Shader& shader,
+    glm::vec2 clipOrigin,
+    glm::vec4 baseScissor,
+    glm::vec2 clipScale)
 {
-    setClipRect(cmd);
+    setClipRect(cmd, clipOrigin, baseScissor, clipScale);
     cmd.font->draw(
         cmd.text,
         cmd.position,
@@ -40,18 +76,28 @@ void UIRenderer::drawText(
         projection,
         shader
     );
-    clearClipRect(cmd);
+    clearClipRect(cmd, baseScissor);
 }
 
 void UIRenderer::render(
     const std::vector<UIRenderCommand>& cmds,
     const glm::mat4& projection,
     Shader& textShader,
-    Shader& rectShader)
+    Shader& rectShader,
+    glm::vec2 clipOrigin,
+    glm::vec4 baseScissor,
+    glm::vec2 clipScale)
 {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    const bool confined = hasBaseScissor(baseScissor);
+    if (confined) {
+        glEnable(GL_SCISSOR_TEST);
+        applyScissor({baseScissor.x, baseScissor.y},
+                     {baseScissor.z, baseScissor.w});
+    }
 
     std::vector<RectInstance> batch;
     batch.reserve(MAX_INSTANCES);
@@ -66,9 +112,9 @@ void UIRenderer::render(
         if (cmd.type == UICmdType::Rect) {
             if (cmd.clip) {
                 flush();
-                setClipRect(cmd);
+                setClipRect(cmd, clipOrigin, baseScissor, clipScale);
                 flushRectBatch({ toRectInstance(cmd) }, projection, rectShader);
-                clearClipRect(cmd);
+                clearClipRect(cmd, baseScissor);
             } else {
                 batch.push_back({
                     cmd.position, cmd.size, cmd.color,
@@ -78,10 +124,13 @@ void UIRenderer::render(
             }
         } else if (cmd.type == UICmdType::Text) {
             flush();
-            drawText(cmd, projection, textShader);
+            drawText(cmd, projection, textShader, clipOrigin, baseScissor, clipScale);
         }
     }
     flush();
+
+    if (confined)
+        glDisable(GL_SCISSOR_TEST);
 }
 
 void UIRenderer::flushRectBatch(

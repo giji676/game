@@ -43,16 +43,26 @@ struct RectInstance {
 class UIRenderer {
 public:
     void init();
+
+    // clipOrigin shifts surface-local clip rects into window space.
+    // baseScissor (x, y, w, h, window space) confines the whole pass; a zero
+    // width or height means unconfined.
     void render(
         const std::vector<UIRenderCommand>& cmds,
         const glm::mat4& projection,
         Shader& textShader,
-        Shader& rectShader);
+        Shader& rectShader,
+        glm::vec2 clipOrigin = {0.f, 0.f},
+        glm::vec4 baseScissor = {0.f, 0.f, 0.f, 0.f},
+        glm::vec2 clipScale = {1.f, 1.f});
 
     void drawText(
         const UIRenderCommand& cmd,
         const glm::mat4& projection,
-        Shader& shader);
+        Shader& shader,
+        glm::vec2 clipOrigin,
+        glm::vec4 baseScissor,
+        glm::vec2 clipScale);
 
 private:
     GLuint quadVAO = 0, quadVBO = 0, instanceVBO = 0;

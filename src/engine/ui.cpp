@@ -113,21 +113,23 @@ const UIElement& UI::get(UIElementID id) const {
 void UI::update() {
     Engine& engine = Engine::instance();
 
+    // Window space -> logical space. When the surface is presented smaller than
+    // its layout size, divide out the scale so hit tests land on the right
+    // elements.
+    const glm::vec2 scale = surface.presentScale();
+    const glm::vec2 mouse =
+        (engine.input.mousePosition() - surface.origin) / scale;
+
     if (!engine.app.cursorCaptured) {
-        const glm::vec2 mouse = engine.input.mousePosition();
         const float wheelY = engine.input.mouseWheelY();
         if (wheelY != 0.f)
             recurseScrollInput(rootId, mouse, wheelY);
     }
 
-    layoutTree(*this, rootId, {
-        static_cast<float>(engine.app.width()),
-        static_cast<float>(engine.app.height())
-    });
+    layoutTree(*this, rootId, surface.size);
 
     recurseTick(rootId, engine.app.deltaTime);
     if (!engine.app.cursorCaptured) {
-        const glm::vec2 mouse = engine.input.mousePosition();
         recurseUpdateInput(rootId, mouse);
 
         if (engine.input.pressed(MouseAction::Left) && focusedId != INVALID_UI_ELEMENT) {
@@ -262,6 +264,7 @@ void UI::reparent(UIElementID childId, UIElementID newParentId) {
 UIElementID UI::createElementInternal() {
     UIElementID id = static_cast<UIElementID>(elements.size());
     elements.emplace_back();
+    elements[id].owner = this;
     return id;
 }
 

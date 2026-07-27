@@ -28,7 +28,10 @@ public:
     UIRenderer uiRenderer;
     DebugRenderer debugRenderer;
     Scene scene;
-    UI ui;
+    // Laid out in game space, drawn inside the game viewport.
+    UI gameUi;
+    // Laid out in window space, drawn over the whole window.
+    UI editorUi;
     Raycasting raycasting;
     MeshRegistry meshRegistry;
     Editor editor;
@@ -58,12 +61,18 @@ private:
 
     std::vector<RenderCommand> renderCommands;
 
+    // x, y, w, h in window pixels: where the game renders and what it believes
+    // its window dimensions are.
+    glm::vec4 gameViewport() const;
+
     void getInput(SDL_Event &event);
     void setupKeyBindings();
     void loadAssets();
     void setupCamera();
     void callRenderer(
-        std::vector<UIRenderCommand>& uiQue);
+        std::vector<UIRenderCommand>& gameUiQue,
+        std::vector<UIRenderCommand>& editorUiQue,
+        const glm::vec4& viewport);
 
     void beginFrame();
     void endFrame();

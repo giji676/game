@@ -4,12 +4,38 @@
 #include "engine/defines.h"
 #include "engine/renderer/ui_renderer.h"
 
+// Region of the window this tree occupies.
+// `size` is the layout coordinate space. When `presentSize` matches `size`,
+// px-based elements keep their pixel dimensions and %-based elements scale
+// with the surface. When they differ, the render pass scales uniformly.
+struct UISurface {
+    glm::vec2 origin = {0.f, 0.f};
+    glm::vec2 size = {0.f, 0.f};
+    glm::vec2 presentSize = {0.f, 0.f};
+
+    glm::vec2 presentScale() const {
+        if (size.x <= 0.f || size.y <= 0.f)
+            return {1.f, 1.f};
+        const glm::vec2 present = (presentSize.x > 0.f && presentSize.y > 0.f)
+            ? presentSize
+            : size;
+        return {present.x / size.x, present.y / size.y};
+    }
+};
+
 class UI {
 public:
     UI() { rootId = createElementInternal(); }
 
     void init();
     void update();
+
+    void setSurface(glm::vec2 origin, glm::vec2 logicalSize, glm::vec2 presentSize) {
+        surface = {origin, logicalSize, presentSize};
+    }
+    const UISurface& getSurface() const { return surface; }
+
+    bool hasFocus() const { return focusedId != INVALID_UI_ELEMENT; }
 
     std::vector<UIRenderCommand> buildRenderList();
 
@@ -73,6 +99,7 @@ private:
     std::vector<UIElement> elements;
     UIElementID rootId = 0;
     UIElementID focusedId = INVALID_UI_ELEMENT;
+    UISurface surface;
 
     UIElementID createElementInternal();
     void recurseBuild(UIElementID id, std::vector<UIRenderCommand>& out, bool clipActive,

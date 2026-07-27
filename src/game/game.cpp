@@ -63,7 +63,7 @@ Game::Game(Engine& engine)
 
 void Game::init() {
     Scene& scene = engine.scene;
-    UI& ui = engine.ui;
+    UI& ui = engine.gameUi;
     setupTerrain();
 
     player.pos = glm::vec3(0.f);
@@ -110,7 +110,7 @@ void Game::init() {
 
     // --- Absolute positioning (always visible) ---
     fpsLabelId = ui.label(
-            {50.f, engine.app.height() - 60.f},
+            {0.f, 0.f},
             {0.f, 48.f},
             {1.f, 0.f, 0.f, 1.f},
             "hello");
@@ -226,7 +226,7 @@ void Game::init() {
     field.focusedStyle.borderWidth = 2.f;
     field.cornerRadii = {6.f, 6.f, 6.f, 6.f};
 
-    for (int i = 1; i <= 10; ++i) {
+    for (int i = 1; i <= 15; ++i) {
         addFlowButton(
             ui,
             pausePanelId,
@@ -543,13 +543,13 @@ void Game::update() {
     if (input.pressed(Action::Pause)) {
         bool nowPaused = !engine.isPaused();
         engine.setPaused(nowPaused);
-        engine.ui.get(pausePanelId).visible = nowPaused;
-        engine.ui.get(toolbarId).visible = nowPaused;
-        engine.ui.get(flexRowDemoId).visible = nowPaused;
-        engine.ui.get(flexColDemoId).visible = nowPaused;
-        engine.ui.get(absoluteDemoId).visible = nowPaused;
-        engine.ui.get(flexGrowDemoId).visible = nowPaused;
-        engine.ui.get(flexGrowRatioDemoId).visible = nowPaused;
+        engine.gameUi.get(pausePanelId).visible = nowPaused;
+        engine.gameUi.get(toolbarId).visible = nowPaused;
+        engine.gameUi.get(flexRowDemoId).visible = nowPaused;
+        engine.gameUi.get(flexColDemoId).visible = nowPaused;
+        engine.gameUi.get(absoluteDemoId).visible = nowPaused;
+        engine.gameUi.get(flexGrowDemoId).visible = nowPaused;
+        engine.gameUi.get(flexGrowRatioDemoId).visible = nowPaused;
     }
 
     if (input.pressed(Action::ToggleScreen))
@@ -631,22 +631,16 @@ void Game::update() {
     // -------------------------
     // 3. UI (always runs)
     // -------------------------
-    UIElement& e = engine.ui.get(fpsLabelId);
+    UIElement& e = engine.gameUi.get(fpsLabelId);
     if (auto* lbl = dynamic_cast<Label*>(e.widget.get())) {
         lbl->text = "FPS: " + std::to_string(engine.fps);
     }
 }
 
-void Game::render() {
+void Game::render(const glm::mat4& view, const glm::mat4& projection) {
     PROFILE_SCOPE("Game::render");
-    Camera& camera = *engine.getActiveCamera();
 
     glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
-    glm::mat4 projection = glm::perspective(
-        glm::radians(45.f),
-        (float)engine.app.width() / (float)engine.app.height(),
-        0.1f, 100.0f);
 
     Shader& sceneShader = engine.assets.getShader("scene");
     sceneShader.use();

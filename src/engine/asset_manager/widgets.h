@@ -3,18 +3,12 @@
 #include "ui_widget.h"
 #include "engine/engine.h"
 #include "engine/ui/style.h"
+#include "engine/utils/geometry.h"
 #include <functional>
 #include <string>
 #include <vector>
 
 namespace {
-bool hitRect(glm::vec2 pos, glm::vec2 rectPos, glm::vec2 rectSize) {
-    return pos.x >= rectPos.x &&
-           pos.x <= rectPos.x + rectSize.x &&
-           pos.y >= rectPos.y &&
-           pos.y <= rectPos.y + rectSize.y;
-}
-
 glm::vec2 textInnerSize(glm::vec2 rectSize, glm::vec2 padding) {
     return {
         std::max(0.f, rectSize.x - padding.x * 2.f),
@@ -193,7 +187,7 @@ public:
             return;
         }
 
-        hovered = hitRect(pos, e.transform.position, e.transform.size);
+        hovered = pointInRect(pos, e.transform.position, e.transform.size);
 
         Input& input = Engine::instance().input;
         if (hovered && input.pressed(MouseAction::Left))
@@ -343,11 +337,11 @@ public:
     void updateInput(const UIElement& e, const glm::vec2& pos) override {
         if (disabled) { hovered = false; return; }
 
-        hovered = hitRect(pos, e.transform.position, e.transform.size);
+        hovered = pointInRect(pos, e.transform.position, e.transform.size);
 
         if (hovered && Engine::instance().input.pressed(MouseAction::Left)) {
-            if (!focused)
-                Engine::instance().ui.requestFocus(selfId);
+            if (!focused && e.owner)
+                e.owner->requestFocus(selfId);
             setCaretFromClick(e, pos);
         }
     }
@@ -596,7 +590,7 @@ public:
             glm::vec2 itemPos = itemPosition(e, static_cast<int>(i));
             glm::vec2 itemSize = measureItem(static_cast<int>(i), e.transform.fontSize);
 
-            hovered[i] = hitRect(pos, itemPos, itemSize);
+            hovered[i] = pointInRect(pos, itemPos, itemSize);
             if (!hovered[i]) {
                 if (!input.down(MouseAction::Left))
                     pressed[i] = false;

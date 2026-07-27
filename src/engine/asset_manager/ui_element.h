@@ -7,6 +7,8 @@
 #include "engine/asset_manager/ui_widget.h"
 #include "engine/ui/style.h"
 
+class UI;
+
 struct Transform2D {
     glm::vec2 position;
     glm::vec2 size;
@@ -26,6 +28,10 @@ public:
     UIElementID parent = 0;
     std::vector<UIElementID> children;
     std::unique_ptr<UIWidget> widget;
+
+    // Owning tree. Widgets need this to reach the right UI now that the game
+    // and the editor each have their own instance.
+    UI* owner = nullptr;
 
     // Scroll state (containers with overflow: Scroll).
     glm::vec2 scrollOffset = {0.f, 0.f};

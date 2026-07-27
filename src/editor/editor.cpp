@@ -1,9 +1,26 @@
 #include "editor/editor.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include "engine/asset_manager/widgets.h"
 #include "engine/engine.h"
 #include "engine/input.h"
 #include "engine/ui.h"
+#include "engine/utils/geometry.h"
+
+namespace {
+
+constexpr float kDefaultViewportScale = 0.6f;
+constexpr float kMinViewportW = 192.f;
+constexpr float kMinViewportH = 108.f;
+constexpr float kResizeHandle = 10.f;
+
+float clampf(float v, float lo, float hi) {
+    return std::max(lo, std::min(v, hi));
+}
+
+} // namespace
 
 Editor::Editor(Engine& engine)
     : engine_(engine)
@@ -27,7 +44,9 @@ void Editor::update() {
     if (!open_)
         return;
 
-    // Play/Stop and panel updates land here in later stages.
+    clampViewportToWindow();
+    updateViewportInteraction();
+    syncViewportChrome();
 }
 
 void Editor::setOpen(bool open) {
@@ -40,10 +59,17 @@ void Editor::setOpen(bool open) {
         wasPausedBeforeOpen_ = engine_.isPaused();
         playState_ = EditorPlayState::Edit;
         engine_.setPaused(true);
+        if (!viewportInitialized_) {
+            resetViewportDefault();
+            viewportInitialized_ = true;
+        } else {
+            clampViewportToWindow();
+        }
     } else {
+        viewportDrag_ = ViewportDrag::None;
         engine_.setPaused(wasPausedBeforeOpen_);
         if (!wasPausedBeforeOpen_)
-            engine_.ui.onUnpause();
+            engine_.gameUi.onUnpause();
     }
 
     syncVisibility();
@@ -54,7 +80,7 @@ void Editor::toggleOpen() {
 }
 
 void Editor::buildShell() {
-    UI& ui = engine_.ui;
+    UI& ui = engine_.editorUi;
 
     rootId_ = ui.createElement();
     UIElement& root = ui.get(rootId_);
@@ -64,25 +90,230 @@ void Editor::buildShell() {
     root.style.inset.top = Length::px(0.f);
     root.style.inset.bottom = Length::px(0.f);
     root.style.display = Display::Block;
-    root.style.padding.left = Length::px(24.f);
-    root.style.padding.right = Length::px(24.f);
-    root.style.padding.top = Length::px(24.f);
-    root.style.padding.bottom = Length::px(24.f);
-
-    auto& bg = root.addWidget<Rect>();
-    bg.color = {0.08f, 0.08f, 0.1f, 0.97f};
 
     placeholderLabelId_ = ui.label(
             {0.f, 0.f},
-            {0.f, 24.f},
+            {0.f, 20.f},
             {0.85f, 0.85f, 0.9f, 1.f},
-            "Editor (stage 1) - F3 to close");
+            "Editor - F3 to close  |  drag edges to resize, drag center to move");
     ui.reparent(placeholderLabelId_, rootId_);
-    ui.get(placeholderLabelId_).style.position = PositionMode::Relative;
-    ui.get(placeholderLabelId_).style.height = Length::px(32.f);
+    ui.get(placeholderLabelId_).style.position = PositionMode::Absolute;
+    ui.get(placeholderLabelId_).style.inset.left = Length::px(12.f);
+    ui.get(placeholderLabelId_).style.inset.top = Length::px(12.f);
+    ui.get(placeholderLabelId_).style.width = Length::automatic();
+    ui.get(placeholderLabelId_).style.height = Length::px(24.f);
+
+    viewportFrameId_ = ui.createElement();
+    ui.reparent(viewportFrameId_, rootId_);
+    UIElement& frame = ui.get(viewportFrameId_);
+    frame.style.position = PositionMode::Absolute;
+    frame.style.display = Display::Block;
+
+    auto& border = frame.addWidget<Rect>();
+    border.color = {0.f, 0.f, 0.f, 0.f};
+    border.borderWidth = 2.f;
+    border.borderColor = {0.45f, 0.55f, 0.75f, 1.f};
 }
 
 void Editor::syncVisibility() {
     if (rootId_ != INVALID_UI_ELEMENT)
-        engine_.ui.get(rootId_).visible = open_;
+        engine_.editorUi.get(rootId_).visible = open_;
+}
+
+void Editor::resetViewportDefault() {
+    const float winW = std::max(1.f, static_cast<float>(engine_.app.width()));
+    const float winH = std::max(1.f, static_cast<float>(engine_.app.height()));
+
+    const float vw = std::max(kMinViewportW, std::floor(winW * kDefaultViewportScale));
+    const float vh = std::max(kMinViewportH, std::floor(winH * kDefaultViewportScale));
+    viewportRect_ = {
+        std::floor((winW - vw) * 0.5f),
+        std::floor((winH - vh) * 0.5f),
+        vw,
+        vh,
+    };
+}
+
+void Editor::clampViewportToWindow() {
+    const float winW = std::max(1.f, static_cast<float>(engine_.app.width()));
+    const float winH = std::max(1.f, static_cast<float>(engine_.app.height()));
+
+    float x = viewportRect_.x;
+    float y = viewportRect_.y;
+    float w = viewportRect_.z;
+    float h = viewportRect_.w;
+
+    // Clip overflow on each edge instead.
+    if (x < 0.f) {
+        w += x;
+        x = 0.f;
+    }
+    if (y < 0.f) {
+        h += y;
+        y = 0.f;
+    }
+    if (x + w > winW)
+        w = winW - x;
+    if (y + h > winH)
+        h = winH - y;
+
+    w = std::max(kMinViewportW, std::min(w, winW));
+    h = std::max(kMinViewportH, std::min(h, winH));
+
+    if (x + w > winW)
+        x = winW - w;
+    if (y + h > winH)
+        y = winH - h;
+
+    x = clampf(x, 0.f, std::max(0.f, winW - w));
+    y = clampf(y, 0.f, std::max(0.f, winH - h));
+
+    viewportRect_ = {x, y, w, h};
+}
+
+void Editor::syncViewportChrome() {
+    if (viewportFrameId_ == INVALID_UI_ELEMENT)
+        return;
+
+    UIElement& frame = engine_.editorUi.get(viewportFrameId_);
+    frame.style.inset.left = Length::px(viewportRect_.x);
+    frame.style.inset.bottom = Length::px(viewportRect_.y);
+    frame.style.width = Length::px(viewportRect_.z);
+    frame.style.height = Length::px(viewportRect_.w);
+}
+
+ViewportDrag Editor::hitTestViewport(glm::vec2 mouse, glm::vec4 r) {
+    const float x = r.x;
+    const float y = r.y;
+    const float w = r.z;
+    const float h = r.w;
+    const float hs = kResizeHandle;
+
+    if (!pointInRect(
+            mouse,
+            {x - hs, y - hs},
+            {w + hs * 2.f, h + hs * 2.f}))
+        return ViewportDrag::None;
+
+    const bool left   = mouse.x <= x + hs;
+    const bool right  = mouse.x >= x + w - hs;
+    const bool bottom = mouse.y <= y + hs;
+    const bool top    = mouse.y >= y + h - hs;
+
+    if (bottom && left)  return ViewportDrag::BottomLeft;
+    if (bottom && right) return ViewportDrag::BottomRight;
+    if (top && left)     return ViewportDrag::TopLeft;
+    if (top && right)    return ViewportDrag::TopRight;
+    if (left)            return ViewportDrag::Left;
+    if (right)           return ViewportDrag::Right;
+    if (bottom)          return ViewportDrag::Bottom;
+    if (top)             return ViewportDrag::Top;
+
+    return ViewportDrag::Move;
+}
+
+glm::vec4 Editor::applyViewportDrag(
+        ViewportDrag drag,
+        glm::vec4 start,
+        glm::vec2 delta)
+{
+    float x = start.x;
+    float y = start.y;
+    float w = start.z;
+    float h = start.w;
+
+    switch (drag) {
+        case ViewportDrag::Move:
+            x += delta.x;
+            y += delta.y;
+            break;
+        case ViewportDrag::Left:
+            x += delta.x;
+            w -= delta.x;
+            break;
+        case ViewportDrag::Right:
+            w += delta.x;
+            break;
+        case ViewportDrag::Bottom:
+            y += delta.y;
+            h -= delta.y;
+            break;
+        case ViewportDrag::Top:
+            h += delta.y;
+            break;
+        case ViewportDrag::BottomLeft:
+            x += delta.x;
+            w -= delta.x;
+            y += delta.y;
+            h -= delta.y;
+            break;
+        case ViewportDrag::BottomRight:
+            w += delta.x;
+            y += delta.y;
+            h -= delta.y;
+            break;
+        case ViewportDrag::TopLeft:
+            x += delta.x;
+            w -= delta.x;
+            h += delta.y;
+            break;
+        case ViewportDrag::TopRight:
+            w += delta.x;
+            h += delta.y;
+            break;
+        default:
+            break;
+    }
+
+    if (w < kMinViewportW) {
+        if (drag == ViewportDrag::Left ||
+            drag == ViewportDrag::BottomLeft ||
+            drag == ViewportDrag::TopLeft) {
+            x -= kMinViewportW - w;
+        }
+        w = kMinViewportW;
+    }
+
+    if (h < kMinViewportH) {
+        if (drag == ViewportDrag::Bottom ||
+            drag == ViewportDrag::BottomLeft ||
+            drag == ViewportDrag::BottomRight) {
+            y -= kMinViewportH - h;
+        }
+        h = kMinViewportH;
+    }
+
+    return {x, y, w, h};
+}
+
+void Editor::updateViewportInteraction() {
+    Input& input = engine_.input;
+    const glm::vec2 mouse = input.mousePosition();
+
+    if (input.pressed(MouseAction::Left)) {
+        viewportDrag_ = hitTestViewport(mouse, viewportRect_);
+        if (viewportDrag_ != ViewportDrag::None) {
+            dragStartMouse_ = mouse;
+            dragStartRect_ = viewportRect_;
+        }
+    }
+
+    if (input.down(MouseAction::Left) && viewportDrag_ != ViewportDrag::None) {
+        const glm::vec2 delta = mouse - dragStartMouse_;
+        viewportRect_ = applyViewportDrag(viewportDrag_, dragStartRect_, delta);
+        clampViewportToWindow();
+    }
+
+    if (input.released(MouseAction::Left))
+        viewportDrag_ = ViewportDrag::None;
+}
+
+glm::vec4 Editor::gameViewportRect() const {
+    const float winW = std::max(1.f, static_cast<float>(engine_.app.width()));
+    const float winH = std::max(1.f, static_cast<float>(engine_.app.height()));
+
+    if (!open_)
+        return {0.f, 0.f, winW, winH};
+
+    return viewportRect_;
 }
