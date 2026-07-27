@@ -16,10 +16,6 @@ constexpr float kMinViewportW = 192.f;
 constexpr float kMinViewportH = 108.f;
 constexpr float kResizeHandle = 10.f;
 
-float clampf(float v, float lo, float hi) {
-    return std::max(lo, std::min(v, hi));
-}
-
 } // namespace
 
 Editor::Editor(Engine& engine)
@@ -45,7 +41,15 @@ void Editor::update() {
         return;
 
     clampViewportToWindow();
-    updateViewportInteraction();
+
+    const float winW = static_cast<float>(engine_.app.width());
+    const float winH = static_cast<float>(engine_.app.height());
+    samplePanel_.update(input, {winW, winH});
+
+    // Panels own the pointer while dragging so the viewport does not steal it.
+    if (!samplePanel_.isDragging())
+        updateViewportInteraction();
+
     syncViewportChrome();
 }
 
@@ -70,6 +74,7 @@ void Editor::setOpen(bool open) {
         engine_.setPaused(wasPausedBeforeOpen_);
         if (!wasPausedBeforeOpen_)
             engine_.gameUi.onUnpause();
+        samplePanel_.setVisible(false);
     }
 
     syncVisibility();
@@ -113,11 +118,27 @@ void Editor::buildShell() {
     border.color = {0.f, 0.f, 0.f, 0.f};
     border.borderWidth = 2.f;
     border.borderColor = {0.45f, 0.55f, 0.75f, 1.f};
+
+    // Empty panel template instance. Future Hierarchy / Inspector panels will
+    // use the same EditorPanel shell and parent content into contentId().
+    const float winW = std::max(1.f, static_cast<float>(engine_.app.width()));
+    const float winH = std::max(1.f, static_cast<float>(engine_.app.height()));
+    samplePanel_.build(
+            ui,
+            rootId_,
+            "Panel",
+            {
+                std::floor(winW - 300.f - 24.f),
+                std::floor((winH - 360.f) * 0.5f),
+                300.f,
+                360.f,
+            });
 }
 
 void Editor::syncVisibility() {
     if (rootId_ != INVALID_UI_ELEMENT)
         engine_.editorUi.get(rootId_).visible = open_;
+    samplePanel_.setVisible(open_);
 }
 
 void Editor::resetViewportDefault() {

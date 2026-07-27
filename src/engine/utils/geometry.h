@@ -1,6 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <glm/glm.hpp>
+
+inline float clampf(float v, float lo, float hi) {
+    return std::max(lo, std::min(v, hi));
+}
 
 inline bool pointInRect(
         const glm::vec2& point,

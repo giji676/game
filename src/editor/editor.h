@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 
+#include "editor/panel.h"
 #include "engine/defines.h"
 
 class Engine;
@@ -61,6 +62,9 @@ private:
     UIElementID rootId_ = INVALID_UI_ELEMENT;
     UIElementID placeholderLabelId_ = INVALID_UI_ELEMENT;
     UIElementID viewportFrameId_ = INVALID_UI_ELEMENT;
+
+    // Template instance; Hierarchy / Inspector will reuse EditorPanel.
+    EditorPanel samplePanel_;
 
     void buildShell();
     void syncVisibility();
