@@ -43,6 +43,13 @@ void Editor::update() {
     const float winW = static_cast<float>(engine_.app.width());
     const float winH = static_cast<float>(engine_.app.height());
 
+    // Reflow the dock tree whenever the OS window size changes.
+    if (winW != lastWindowSize_.x || winH != lastWindowSize_.y) {
+        lastWindowSize_ = {winW, winH};
+        layout_.relayout({0.f, 0.f, winW, winH});
+        applyLayoutRects();
+    }
+
     for (EditorPanel* panel : panels_)
         panel->update(input, {winW, winH});
 
@@ -175,6 +182,7 @@ void Editor::buildShell() {
         {0.f, 0.f, winW, winH});
     applyLayoutRects();
     viewportRect_ = viewportPanel_.rect();
+    lastWindowSize_ = {winW, winH};
 }
 
 void Editor::syncVisibility() {

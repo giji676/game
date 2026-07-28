@@ -57,6 +57,7 @@ private:
 
     bool viewportInitialized_ = false;
     glm::vec4 viewportRect_ = {0.f, 0.f, 0.f, 0.f};
+    glm::vec2 lastWindowSize_ = {0.f, 0.f};
 
     ViewportDrag viewportDrag_ = ViewportDrag::None;
     glm::vec2 dragStartMouse_ = {0.f, 0.f};
