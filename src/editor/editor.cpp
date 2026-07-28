@@ -46,6 +46,9 @@ void Editor::update() {
     for (EditorPanel* panel : panels_)
         panel->update(input, {winW, winH});
 
+    if (open_)
+        hierarchyView_.update(engine_.scene);
+
     syncResize();
     syncDocking();
 
@@ -73,7 +76,8 @@ void Editor::setOpen(bool open) {
         engine_.setPaused(wasPausedBeforeOpen_);
         if (!wasPausedBeforeOpen_)
             engine_.gameUi.onUnpause();
-        samplePanel_.setVisible(false);
+        samplePanelB_.setVisible(false);
+        hierarchyPanel_.setVisible(false);
     }
 
     syncVisibility();
@@ -128,17 +132,18 @@ void Editor::buildShell() {
         bg->borderColor = {0.35f, 0.45f, 0.7f, 1.f};
     }
 
-    samplePanel_.build(
+    hierarchyPanel_.build(
             ui,
             rootId_,
-            "Panel",
+            "Hierarchy",
             {
                 std::floor(winW - 300.f - 24.f),
                 std::floor((winH - 360.f) * 0.5f),
                 300.f,
                 360.f,
             });
-    samplePanel_.setDockedMode(true);
+    hierarchyPanel_.setDockedMode(true);
+    hierarchyView_.bind(ui, hierarchyPanel_);
 
     samplePanelB_.build(
             ui,
@@ -152,7 +157,7 @@ void Editor::buildShell() {
             });
     samplePanelB_.setDockedMode(true);
 
-    panels_ = {&viewportPanel_, &samplePanel_, &samplePanelB_};
+    panels_ = {&viewportPanel_, &hierarchyPanel_, &samplePanelB_};
 
     dockPreviewIndicatorId_ = ui.createElement();
     ui.reparent(dockPreviewIndicatorId_, rootId_);
@@ -166,7 +171,7 @@ void Editor::buildShell() {
     indicatorRect.borderColor = {0.55f, 0.75f, 1.f, 0.95f};
 
     layout_.initialize(
-        {viewportPanel_.rootId(), samplePanel_.rootId(), samplePanelB_.rootId()},
+        {viewportPanel_.rootId(), hierarchyPanel_.rootId(), samplePanelB_.rootId()},
         {0.f, 0.f, winW, winH});
     applyLayoutRects();
     viewportRect_ = viewportPanel_.rect();
@@ -176,7 +181,7 @@ void Editor::syncVisibility() {
     if (rootId_ != INVALID_UI_ELEMENT)
         engine_.editorUi.get(rootId_).visible = open_;
     viewportPanel_.setVisible(open_);
-    samplePanel_.setVisible(open_);
+    hierarchyPanel_.setVisible(open_);
     samplePanelB_.setVisible(open_);
 }
 

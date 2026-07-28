@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "editor/editor_layout.h"
+#include "editor/hierarchy_panel.h"
 #include "editor/panel.h"
 #include "engine/defines.h"
 
@@ -65,10 +66,10 @@ private:
     UIElementID placeholderLabelId_ = INVALID_UI_ELEMENT;
     UIElementID dockPreviewIndicatorId_ = INVALID_UI_ELEMENT;
 
-    // Template instance; Hierarchy / Inspector will reuse EditorPanel.
     EditorPanel viewportPanel_;
-    EditorPanel samplePanel_;
+    EditorPanel hierarchyPanel_;
     EditorPanel samplePanelB_;
+    HierarchyPanel hierarchyView_;
     EditrLayout layout_;
     std::vector<EditorPanel*> panels_;
 
