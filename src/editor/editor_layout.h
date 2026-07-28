@@ -7,7 +7,7 @@
 #include "engine/defines.h"
 #include "panel.h"
 
-class EditrLayout {
+class EditorLayout {
 public:
     enum class SplitAxis {
         Vertical,

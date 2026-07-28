@@ -70,17 +70,17 @@ private:
     EditorPanel hierarchyPanel_;
     EditorPanel samplePanelB_;
     HierarchyPanel hierarchyView_;
-    EditrLayout layout_;
+    EditorLayout layout_;
     std::vector<EditorPanel*> panels_;
 
     UIElementID activeDragPanelId_ = INVALID_UI_ELEMENT;
-    EditrLayout::DockPreview activeDockPreview_;
+    EditorLayout::DockPreview activeDockPreview_;
 
     UIElementID activeResizePanelId_ = INVALID_UI_ELEMENT;
     PanelDrag activeResizeDrag_ = PanelDrag::None;
     glm::vec2 resizeStartMouse_ = {0.f, 0.f};
-    EditrLayout::ResizeHandle resizeHandleX_;
-    EditrLayout::ResizeHandle resizeHandleY_;
+    EditorLayout::ResizeHandle resizeHandleX_;
+    EditorLayout::ResizeHandle resizeHandleY_;
 
     void buildShell();
     void syncVisibility();

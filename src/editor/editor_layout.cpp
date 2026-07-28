@@ -10,7 +10,7 @@ constexpr float kMinSplitRatio = 0.15f;
 constexpr float kMaxSplitRatio = 0.85f;
 }
 
-int EditrLayout::createLeaf(UIElementID panelId) {
+int EditorLayout::createLeaf(UIElementID panelId) {
     DockNode node;
     node.isLeaf = true;
     node.panelId = panelId;
@@ -18,7 +18,7 @@ int EditrLayout::createLeaf(UIElementID panelId) {
     return static_cast<int>(nodes_.size() - 1);
 }
 
-int EditrLayout::createSplit(SplitAxis axis, float splitRatio, int firstChild, int secondChild) {
+int EditorLayout::createSplit(SplitAxis axis, float splitRatio, int firstChild, int secondChild) {
     DockNode node;
     node.isLeaf = false;
     node.axis = axis;
@@ -29,7 +29,7 @@ int EditrLayout::createSplit(SplitAxis axis, float splitRatio, int firstChild, i
     return static_cast<int>(nodes_.size() - 1);
 }
 
-void EditrLayout::initialize(const std::vector<UIElementID>& panels, glm::vec4 bounds) {
+void EditorLayout::initialize(const std::vector<UIElementID>& panels, glm::vec4 bounds) {
     nodes_.clear();
     panelRects_.clear();
     nodeRects_.clear();
@@ -54,7 +54,7 @@ void EditrLayout::initialize(const std::vector<UIElementID>& panels, glm::vec4 b
     relayout(bounds_);
 }
 
-void EditrLayout::assignRectsRecursive(int nodeIndex, const glm::vec4& rect) {
+void EditorLayout::assignRectsRecursive(int nodeIndex, const glm::vec4& rect) {
     if (nodeIndex < 0 || nodeIndex >= static_cast<int>(nodes_.size()))
         return;
 
@@ -89,7 +89,7 @@ void EditrLayout::assignRectsRecursive(int nodeIndex, const glm::vec4& rect) {
     assignRectsRecursive(node.secondChild, secondRect);
 }
 
-void EditrLayout::relayout(glm::vec4 bounds) {
+void EditorLayout::relayout(glm::vec4 bounds) {
     bounds_ = bounds;
     panelRects_.clear();
     nodeRects_.clear();
@@ -98,20 +98,20 @@ void EditrLayout::relayout(glm::vec4 bounds) {
     assignRectsRecursive(rootNode_, bounds_);
 }
 
-glm::vec4 EditrLayout::panelRect(UIElementID panelId) const {
+glm::vec4 EditorLayout::panelRect(UIElementID panelId) const {
     auto it = panelRects_.find(panelId);
     if (it == panelRects_.end())
         return {0.f, 0.f, 0.f, 0.f};
     return it->second;
 }
 
-void EditrLayout::setPanelRect(UIElementID panelId, const glm::vec4& rect) {
+void EditorLayout::setPanelRect(UIElementID panelId, const glm::vec4& rect) {
     if (panelId == INVALID_UI_ELEMENT)
         return;
     panelRects_[panelId] = rect;
 }
 
-int EditrLayout::findLeafNode(UIElementID panelId) const {
+int EditorLayout::findLeafNode(UIElementID panelId) const {
     for (size_t i = 0; i < nodes_.size(); ++i) {
         if (nodes_[i].isLeaf && nodes_[i].panelId == panelId)
             return static_cast<int>(i);
@@ -119,7 +119,7 @@ int EditrLayout::findLeafNode(UIElementID panelId) const {
     return -1;
 }
 
-int EditrLayout::findParentInTree(int root, int child) const {
+int EditorLayout::findParentInTree(int root, int child) const {
     if (root < 0 || root >= static_cast<int>(nodes_.size()))
         return -1;
 
@@ -140,7 +140,7 @@ int EditrLayout::findParentInTree(int root, int child) const {
     return -1;
 }
 
-EditrLayout::DockZone EditrLayout::zoneForMouse(const glm::vec4& rect, glm::vec2 mouse) const {
+EditorLayout::DockZone EditorLayout::zoneForMouse(const glm::vec4& rect, glm::vec2 mouse) const {
     const float leftBand = rect.x + rect.z * kEdgeBandRatio;
     const float rightBand = rect.x + rect.z * (1.f - kEdgeBandRatio);
     const float bottomBand = rect.y + rect.w * kEdgeBandRatio;
@@ -157,7 +157,7 @@ EditrLayout::DockZone EditrLayout::zoneForMouse(const glm::vec4& rect, glm::vec2
     return DockZone::None;
 }
 
-EditrLayout::DockPreview EditrLayout::findDockPreview(const EditorPanel& draggingPanel, glm::vec2 mouse) const {
+EditorLayout::DockPreview EditorLayout::findDockPreview(const EditorPanel& draggingPanel, glm::vec2 mouse) const {
     DockPreview preview;
     const UIElementID draggingId = draggingPanel.rootId();
 
@@ -194,7 +194,7 @@ EditrLayout::DockPreview EditrLayout::findDockPreview(const EditorPanel& draggin
     return preview;
 }
 
-bool EditrLayout::dockPanel(UIElementID draggingPanelId, const DockPreview& preview) {
+bool EditorLayout::dockPanel(UIElementID draggingPanelId, const DockPreview& preview) {
     if (!preview.valid || preview.zone == DockZone::None)
         return false;
 
@@ -263,7 +263,7 @@ bool EditrLayout::dockPanel(UIElementID draggingPanelId, const DockPreview& prev
     return true;
 }
 
-EditrLayout::ResizeHandle EditrLayout::findResizeHandle(
+EditorLayout::ResizeHandle EditorLayout::findResizeHandle(
         UIElementID panelId,
         SplitAxis axis,
         bool growFirst) const
@@ -300,7 +300,7 @@ EditrLayout::ResizeHandle EditrLayout::findResizeHandle(
     return handle;
 }
 
-EditrLayout::ResizeHandle EditrLayout::beginResize(UIElementID panelId, PanelDrag drag) const {
+EditorLayout::ResizeHandle EditorLayout::beginResize(UIElementID panelId, PanelDrag drag) const {
     // Vertical split: first = left, second = right.
     // Horizontal split: first = bottom, second = top.
     switch (drag) {
@@ -323,7 +323,7 @@ EditrLayout::ResizeHandle EditrLayout::beginResize(UIElementID panelId, PanelDra
     }
 }
 
-bool EditrLayout::updateResize(const ResizeHandle& handle, float mouseDeltaAlongAxis) {
+bool EditorLayout::updateResize(const ResizeHandle& handle, float mouseDeltaAlongAxis) {
     if (!handle.valid || handle.splitNode < 0 || handle.splitNode >= static_cast<int>(nodes_.size()))
         return false;
 
