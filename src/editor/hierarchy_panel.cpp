@@ -186,6 +186,16 @@ void HierarchyPanel::styleLabel(UIElementID id, bool selected) const {
     btn->pressedStyle.textColor = {0.95f, 0.95f, 0.97f, 1.f};
 }
 
+void HierarchyPanel::syncObjectDebug(Scene& scene) const {
+    std::function<void(ObjectID)> walk = [&](ObjectID id) {
+        Object& obj = scene.get(id);
+        obj.debug = (id == selectedId_);
+        for (ObjectID child : obj.children)
+            walk(child);
+    };
+    walk(scene.getRoot());
+}
+
 void HierarchyPanel::rebuildRows(Scene& scene) {
     std::vector<Entry> entries;
     collectEntries(scene, scene.getRoot(), 0, true, {}, entries);
@@ -247,4 +257,5 @@ void HierarchyPanel::update(Scene& scene) {
 
     lastSignature_ = signature;
     rebuildRows(scene);
+    syncObjectDebug(scene);
 }

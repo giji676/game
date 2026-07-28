@@ -48,6 +48,7 @@ private:
     void ensureRowCount(size_t count);
     void styleToggle(UIElementID id, bool hasChildren, bool expanded) const;
     void styleLabel(UIElementID id, bool selected) const;
+    void syncObjectDebug(Scene& scene) const;
     std::string treePrefix(const Entry& entry) const;
     uint64_t sceneSignature(Scene& scene) const;
 
