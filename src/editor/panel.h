@@ -38,9 +38,13 @@ public:
     void update(Input& input, glm::vec2 windowSize);
     void setVisible(bool visible);
     void setRect(glm::vec4 rect);
+    void setDockedMode(bool docked) { dockedMode_ = docked; }
     void sync();
 
     bool isDragging() const { return drag_ != PanelDrag::None; }
+    bool isMoving() const { return drag_ == PanelDrag::Move; }
+    bool isResizing() const { return drag_ != PanelDrag::None && drag_ != PanelDrag::Move; }
+    PanelDrag dragMode() const { return drag_; }
     bool isBuilt() const { return rootId_ != INVALID_UI_ELEMENT; }
     glm::vec4 rect() const { return rect_; }
     UIElementID rootId() const { return rootId_; }
@@ -66,6 +70,7 @@ private:
     PanelDrag drag_ = PanelDrag::None;
     glm::vec2 dragStartMouse_ = {0.f, 0.f};
     glm::vec4 dragStartRect_ = {0.f, 0.f, 0.f, 0.f};
+    bool dockedMode_ = false;
 
     void clampToWindow(glm::vec2 windowSize);
     PanelDrag hitTest(glm::vec2 mouse) const;

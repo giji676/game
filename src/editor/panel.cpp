@@ -146,6 +146,7 @@ PanelDrag EditorPanel::hitTest(glm::vec2 mouse) const {
     const bool bottom = mouse.y <= y + hs;
     const bool top    = mouse.y >= y + h - hs;
 
+    // Side/bottom edges and corners first.
     if (bottom && left)  return PanelDrag::BottomLeft;
     if (bottom && right) return PanelDrag::BottomRight;
     if (top && left)     return PanelDrag::TopLeft;
@@ -153,12 +154,15 @@ PanelDrag EditorPanel::hitTest(glm::vec2 mouse) const {
     if (left)            return PanelDrag::Left;
     if (right)           return PanelDrag::Right;
     if (bottom)          return PanelDrag::Bottom;
-    if (top)             return PanelDrag::Top;
 
-    // Move only from the title bar so content stays clickable later.
+    // Title-bar move takes priority over pure top-edge resize so dragging the
+    // title does not look like a relocate-via-resize.
     const float titleBottom = y + h - kTitleBarH;
-    if (pointInRect(mouse, {x, titleBottom}, {w, kTitleBarH}))
+    if (pointInRect(mouse, {x + hs, titleBottom}, {w - hs * 2.f, kTitleBarH}))
         return PanelDrag::Move;
+
+    if (top)
+        return PanelDrag::Top;
 
     return PanelDrag::None;
 }
@@ -252,14 +256,20 @@ void EditorPanel::update(Input& input, glm::vec2 windowSize) {
     }
 
     if (input.down(MouseAction::Left) && drag_ != PanelDrag::None) {
-        rect_ = applyDrag(drag_, dragStartRect_, mouse - dragStartMouse_);
-        clampToWindow(windowSize);
-        sync();
+        // Docked panels: title-bar move is docking intent only, and edge resize
+        // is owned by the split layout (so adjacent panels get pushed).
+        if (!dockedMode_) {
+            rect_ = applyDrag(drag_, dragStartRect_, mouse - dragStartMouse_);
+            clampToWindow(windowSize);
+            sync();
+        }
     }
 
     if (input.released(MouseAction::Left))
         drag_ = PanelDrag::None;
 
-    clampToWindow(windowSize);
-    sync();
+    if (!dockedMode_) {
+        clampToWindow(windowSize);
+        sync();
+    }
 }
