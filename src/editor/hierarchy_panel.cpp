@@ -12,9 +12,10 @@
 
 namespace {
 
-constexpr float kRowFontSize = 13.f;
-constexpr float kRowHeight = 22.f;
-constexpr float kToggleWidth = 16.f;
+// Font size is the sizing input. Button measureContent derives row height.
+constexpr float kRowFontSize = 14.f;
+constexpr float kLabelPadX = 4.f;
+constexpr float kLabelPadY = 4.f;
 
 std::string objectLabel(const Object& obj, ObjectID rootId) {
     if (obj.getID() == rootId)
@@ -100,12 +101,39 @@ std::string HierarchyPanel::treePrefix(const Entry& entry) const {
         return {};
 
     std::string prefix;
-    // Depth 1 uses no ancestor guides; deeper nodes draw guides for depths 1..depth-1.
-    for (size_t i = 0; i < entry.ancestorOpen.size(); ++i) {
+    for (size_t i = 0; i < entry.ancestorOpen.size(); ++i)
         prefix += entry.ancestorOpen[i] ? "|  " : "   ";
-    }
     prefix += entry.isLastSibling ? "`- " : "|- ";
     return prefix;
+}
+
+void HierarchyPanel::applyRowMetrics(Row& row) const {
+    UIElement& labelEl = ui_->get(row.labelId);
+    labelEl.transform.fontSize = kRowFontSize;
+
+    auto* labelBtn = dynamic_cast<Button*>(labelEl.widget.get());
+    if (!labelBtn)
+        return;
+
+    labelBtn->padding = {kLabelPadX, kLabelPadY};
+
+    // Buttons already know how tall they should be for the current fontSize.
+    // Flex row parents do not yet infer height from children, so lift that
+    // measured height onto the row (and match the toggle to it).
+    const glm::vec2 measured = labelBtn->measureContent(labelEl, {0.f, 0.f});
+    const float rowH = measured.y;
+
+    UIElement& rootEl = ui_->get(row.rootId);
+    rootEl.style.height = Length::px(rowH);
+    rootEl.transform.fontSize = kRowFontSize;
+
+    UIElement& toggleEl = ui_->get(row.toggleId);
+    toggleEl.transform.fontSize = kRowFontSize;
+    toggleEl.style.height = Length::px(rowH);
+    toggleEl.style.width = Length::px(rowH);
+    toggleEl.transform.size = {rowH, rowH};
+
+    labelEl.style.height = Length::automatic();
 }
 
 void HierarchyPanel::ensureRowCount(size_t count) {
@@ -117,16 +145,17 @@ void HierarchyPanel::ensureRowCount(size_t count) {
         rootEl.style.display = Display::Flex;
         rootEl.style.flexDirection = FlexDirection::Row;
         rootEl.style.alignItems = AlignItems::Center;
-        rootEl.style.height = Length::px(kRowHeight);
         rootEl.style.width = Length::percent(100.f);
+        rootEl.style.height = Length::automatic();
 
         UIElementID toggle = ui_->button({0.f, 0.f}, kRowFontSize, " ", nullptr);
         ui_->reparent(toggle, root);
         UIElement& toggleEl = ui_->get(toggle);
         toggleEl.style.position = PositionMode::Relative;
-        toggleEl.style.width = Length::px(kToggleWidth);
-        toggleEl.style.height = Length::px(kRowHeight);
+        toggleEl.style.width = Length::automatic();
+        toggleEl.style.height = Length::automatic();
         toggleEl.style.flexGrow = 0.f;
+        toggleEl.transform.fontSize = kRowFontSize;
         if (auto* btn = dynamic_cast<Button*>(toggleEl.widget.get())) {
             btn->padding = {0.f, 0.f};
             btn->cornerRadii = {0.f, 0.f, 0.f, 0.f};
@@ -137,16 +166,18 @@ void HierarchyPanel::ensureRowCount(size_t count) {
         ui_->reparent(label, root);
         UIElement& labelEl = ui_->get(label);
         labelEl.style.position = PositionMode::Relative;
-        labelEl.style.height = Length::px(kRowHeight);
+        labelEl.style.height = Length::automatic();
         labelEl.style.flexGrow = 1.f;
         labelEl.style.flexBasis = Length::px(0.f);
+        labelEl.transform.fontSize = kRowFontSize;
         if (auto* btn = dynamic_cast<Button*>(labelEl.widget.get())) {
-            btn->padding = {4.f, 2.f};
+            btn->padding = {kLabelPadX, kLabelPadY};
             btn->cornerRadii = {0.f, 0.f, 0.f, 0.f};
             btn->centerText = false;
         }
 
         rows_.push_back({root, toggle, label, INVALID_OBJECT});
+        applyRowMetrics(rows_.back());
     }
 }
 
@@ -244,6 +275,7 @@ void HierarchyPanel::rebuildRows(Scene& scene) {
             };
         }
         styleLabel(rows_[i].labelId, entry.id == selectedId_);
+        applyRowMetrics(rows_[i]);
     }
 }
 

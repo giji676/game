@@ -46,6 +46,7 @@ private:
         const std::vector<bool>& ancestorOpen,
         std::vector<Entry>& out) const;
     void ensureRowCount(size_t count);
+    void applyRowMetrics(Row& row) const;
     void styleToggle(UIElementID id, bool hasChildren, bool expanded) const;
     void styleLabel(UIElementID id, bool selected) const;
     void syncObjectDebug(Scene& scene) const;
