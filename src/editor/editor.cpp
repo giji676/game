@@ -34,8 +34,16 @@ void Editor::shutdown() {
 void Editor::update() {
     Input& input = engine_.input;
 
-    if (input.pressed(Action::ToggleEditor))
-        toggleOpen();
+    if (input.pressed(Action::ToggleEditor)) {
+        // When editor is open but gameplay control is active, F3 should return
+        // to editor control instead of closing the editor entirely.
+        if (open_ && !engine_.isPaused()) {
+            engine_.setPaused(true);
+            playState_ = EditorPlayState::Edit;
+        } else {
+            toggleOpen();
+        }
+    }
 
     if (!open_)
         return;
