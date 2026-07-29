@@ -66,6 +66,14 @@ public:
             Font* font
     );
 
+    UIElementID inputField(
+            glm::vec2 pos,
+            glm::vec2 size,
+            float fontSize,
+            std::string placeholder = "",
+            Font* font = nullptr
+    );
+
     UIElementID toolbar(
             glm::vec2 pos,
             glm::vec2 size,
