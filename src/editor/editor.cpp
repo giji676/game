@@ -64,6 +64,7 @@ void Editor::update() {
     if (open_) {
         hierarchyView_.update(engine_.scene);
         inspectorView_.setSelectedId(hierarchyView_.selectedId());
+        inspectorView_.setEditable(engine_.isPaused());
         inspectorView_.update(engine_.scene);
     }
 
