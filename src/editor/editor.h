@@ -70,6 +70,7 @@ private:
     EditorPanel viewportPanel_;
     EditorPanel hierarchyPanel_;
     EditorPanel samplePanelB_;
+    EditorPanel samplePanelC_;
     HierarchyPanel hierarchyView_;
     EditorLayout layout_;
     std::vector<EditorPanel*> panels_;

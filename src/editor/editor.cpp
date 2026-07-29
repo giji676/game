@@ -84,6 +84,7 @@ void Editor::setOpen(bool open) {
         if (!wasPausedBeforeOpen_)
             engine_.gameUi.onUnpause();
         samplePanelB_.setVisible(false);
+        samplePanelC_.setVisible(false);
         hierarchyPanel_.setVisible(false);
     }
 
@@ -126,10 +127,10 @@ void Editor::buildShell() {
             rootId_,
             "Viewport",
             {
-                std::floor((winW - 900.f) * 0.5f),
-                std::floor((winH - 620.f) * 0.5f),
-                900.f,
-                620.f,
+                std::floor(winW/4),
+                std::floor(winH/3),
+                std::floor(2*winW/4),
+                std::floor(2*winH/3),
             });
     viewportPanel_.setDockedMode(true);
     if (UIElement& viewportRoot = ui.get(viewportPanel_.rootId()); viewportRoot.widget) {
@@ -144,10 +145,10 @@ void Editor::buildShell() {
             rootId_,
             "Hierarchy",
             {
-                std::floor(winW - 300.f - 24.f),
-                std::floor((winH - 360.f) * 0.5f),
-                300.f,
-                360.f,
+                0.f,
+                0.f,
+                std::floor(winW/4),
+                winH,
             });
     hierarchyPanel_.setDockedMode(true);
     hierarchyView_.bind(ui, hierarchyPanel_);
@@ -157,14 +158,26 @@ void Editor::buildShell() {
             rootId_,
             "Panel B",
             {
-                24.f,
-                std::floor((winH - 320.f) * 0.5f),
-                280.f,
-                320.f,
+                std::floor(winW/4),
+                0.f,
+                std::floor(2*winW/4),
+                std::floor(winH/3),
             });
     samplePanelB_.setDockedMode(true);
 
-    panels_ = {&viewportPanel_, &hierarchyPanel_, &samplePanelB_};
+    samplePanelC_.build(
+            ui,
+            rootId_,
+            "Panel C",
+            {
+                std::floor(3*winW/4),
+                0.f,
+                std::floor(winW/4),
+                winH
+            });
+    samplePanelC_.setDockedMode(true);
+
+    panels_ = {&viewportPanel_, &hierarchyPanel_, &samplePanelB_, &samplePanelC_};
 
     dockPreviewIndicatorId_ = ui.createElement();
     ui.reparent(dockPreviewIndicatorId_, rootId_);
@@ -178,7 +191,10 @@ void Editor::buildShell() {
     indicatorRect.borderColor = {0.55f, 0.75f, 1.f, 0.95f};
 
     layout_.initialize(
-        {viewportPanel_.rootId(), hierarchyPanel_.rootId(), samplePanelB_.rootId()},
+        {viewportPanel_.rootId(), hierarchyPanel_.rootId(),
+         samplePanelB_.rootId(), samplePanelC_.rootId()},
+        {viewportPanel_.rect(), hierarchyPanel_.rect(),
+         samplePanelB_.rect(), samplePanelC_.rect()},
         {0.f, 0.f, winW, winH});
     applyLayoutRects();
     viewportRect_ = viewportPanel_.rect();
@@ -191,6 +207,7 @@ void Editor::syncVisibility() {
     viewportPanel_.setVisible(open_);
     hierarchyPanel_.setVisible(open_);
     samplePanelB_.setVisible(open_);
+    samplePanelC_.setVisible(open_);
 }
 
 void Editor::resetViewportDefault() {

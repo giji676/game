@@ -13,7 +13,7 @@
 namespace {
 
 // Font size is the sizing input. Button measureContent derives row height.
-constexpr float kRowFontSize = 14.f;
+constexpr float kRowFontSize = 28.f;
 constexpr float kLabelPadX = 4.f;
 constexpr float kLabelPadY = 4.f;
 

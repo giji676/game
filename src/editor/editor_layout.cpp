@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 
 namespace {
 constexpr float kEdgeBandRatio = 0.25f;
@@ -29,28 +30,132 @@ int EditorLayout::createSplit(SplitAxis axis, float splitRatio, int firstChild, 
     return static_cast<int>(nodes_.size() - 1);
 }
 
-void EditorLayout::initialize(const std::vector<UIElementID>& panels, glm::vec4 bounds) {
+void EditorLayout::initialize(const std::vector<UIElementID>& panels,
+                              const std::vector<glm::vec4>& rects,
+                              glm::vec4 bounds) {
     nodes_.clear();
     panelRects_.clear();
     nodeRects_.clear();
     rootNode_ = -1;
     bounds_ = bounds;
 
-    std::vector<UIElementID> validPanels;
-    for (UIElementID id : panels) {
-        if (id != INVALID_UI_ELEMENT)
-            validPanels.push_back(id);
+    struct PanelEntry { UIElementID id; glm::vec4 rect; };
+    std::vector<PanelEntry> entries;
+    for (size_t i = 0; i < panels.size(); ++i) {
+        if (panels[i] != INVALID_UI_ELEMENT && i < rects.size())
+            entries.push_back({panels[i], rects[i]});
     }
-
-    if (validPanels.empty())
+    if (entries.empty())
         return;
 
-    rootNode_ = createLeaf(validPanels[0]);
-    for (size_t i = 1; i < validPanels.size(); ++i) {
-        const int newLeaf = createLeaf(validPanels[i]);
-        rootNode_ = createSplit(SplitAxis::Vertical, 0.5f, rootNode_, newLeaf);
-    }
+    // Recursively partition the panel set by finding the best axis-aligned
+    // split that separates them into two non-empty groups, then derive the
+    // split ratio from the actual rect positions.
+    std::function<int(std::vector<PanelEntry>&, const glm::vec4&)> buildTree =
+        [&](std::vector<PanelEntry>& items, const glm::vec4& region) -> int {
+        if (items.size() == 1)
+            return createLeaf(items[0].id);
 
+        float regionW = region.z;
+        float regionH = region.w;
+
+        // Try vertical split: find an x coordinate that separates panels
+        // into left and right groups. Try the midpoint of each panel's
+        // right edge as a candidate split line.
+        float bestScore = -1.f;
+        float bestSplit = 0.f;
+        SplitAxis bestAxis = SplitAxis::Vertical;
+
+        auto trySplit = [&](SplitAxis axis) {
+            std::vector<float> candidates;
+            for (auto& e : items) {
+                if (axis == SplitAxis::Vertical) {
+                    float rightEdge = e.rect.x + e.rect.z;
+                    if (rightEdge > region.x + 1.f && rightEdge < region.x + regionW - 1.f)
+                        candidates.push_back(rightEdge);
+                } else {
+                    float bottomEdge = e.rect.y + e.rect.w;
+                    if (bottomEdge > region.y + 1.f && bottomEdge < region.y + regionH - 1.f)
+                        candidates.push_back(bottomEdge);
+                }
+            }
+            for (float splitPos : candidates) {
+                int leftCount = 0, rightCount = 0;
+                for (auto& e : items) {
+                    float center = (axis == SplitAxis::Vertical)
+                        ? (e.rect.x + e.rect.z * 0.5f)
+                        : (e.rect.y + e.rect.w * 0.5f);
+                    if (center < splitPos)
+                        ++leftCount;
+                    else
+                        ++rightCount;
+                }
+                if (leftCount > 0 && rightCount > 0) {
+                    float balance = 1.f - std::abs(
+                        static_cast<float>(leftCount - rightCount) /
+                        static_cast<float>(leftCount + rightCount));
+                    if (balance > bestScore) {
+                        bestScore = balance;
+                        bestSplit = splitPos;
+                        bestAxis = axis;
+                    }
+                }
+            }
+        };
+
+        trySplit(SplitAxis::Vertical);
+        trySplit(SplitAxis::Horizontal);
+
+        if (bestScore < 0.f) {
+            // No clean split found - fall back to balanced halving
+            std::sort(items.begin(), items.end(), [](const PanelEntry& a, const PanelEntry& b) {
+                return a.rect.x < b.rect.x;
+            });
+            size_t half = items.size() / 2;
+            std::vector<PanelEntry> left(items.begin(), items.begin() + half);
+            std::vector<PanelEntry> right(items.begin() + half, items.end());
+            glm::vec4 leftRegion = {region.x, region.y, regionW * 0.5f, regionH};
+            glm::vec4 rightRegion = {region.x + regionW * 0.5f, region.y, regionW * 0.5f, regionH};
+            int l = buildTree(left, leftRegion);
+            int r = buildTree(right, rightRegion);
+            return createSplit(SplitAxis::Vertical, 0.5f, l, r);
+        }
+
+        std::vector<PanelEntry> firstGroup, secondGroup;
+        for (auto& e : items) {
+            float center = (bestAxis == SplitAxis::Vertical)
+                ? (e.rect.x + e.rect.z * 0.5f)
+                : (e.rect.y + e.rect.w * 0.5f);
+            if (center < bestSplit)
+                firstGroup.push_back(e);
+            else
+                secondGroup.push_back(e);
+        }
+
+        float ratio;
+        if (bestAxis == SplitAxis::Vertical)
+            ratio = (bestSplit - region.x) / regionW;
+        else
+            ratio = (bestSplit - region.y) / regionH;
+        ratio = std::clamp(ratio, 0.05f, 0.95f);
+
+        glm::vec4 firstRegion, secondRegion;
+        if (bestAxis == SplitAxis::Vertical) {
+            float splitW = ratio * regionW;
+            firstRegion = {region.x, region.y, splitW, regionH};
+            secondRegion = {region.x + splitW, region.y, regionW - splitW, regionH};
+        } else {
+            float splitH = ratio * regionH;
+            firstRegion = {region.x, region.y, regionW, splitH};
+            secondRegion = {region.x, region.y + splitH, regionW, regionH - splitH};
+        }
+
+        int first = buildTree(firstGroup, firstRegion);
+        int second = buildTree(secondGroup, secondRegion);
+        return createSplit(bestAxis, ratio, first, second);
+    };
+
+    rootNode_ = buildTree(entries, bounds_);
     relayout(bounds_);
 }
 

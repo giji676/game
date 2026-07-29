@@ -35,7 +35,9 @@ public:
         bool valid = false;
     };
 
-    void initialize(const std::vector<UIElementID>& panels, glm::vec4 bounds);
+    void initialize(const std::vector<UIElementID>& panels,
+                    const std::vector<glm::vec4>& rects,
+                    glm::vec4 bounds);
     DockPreview findDockPreview(const EditorPanel& draggingPanel, glm::vec2 mouse) const;
     bool dockPanel(UIElementID draggingPanelId, const DockPreview& preview);
     void relayout(glm::vec4 bounds);
