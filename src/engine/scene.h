@@ -6,7 +6,7 @@
 
 class Scene {
 public:
-    Scene() { rootId = createObjectInternal(); }
+    Scene();
 
     void init();
     void update();

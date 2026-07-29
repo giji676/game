@@ -61,8 +61,11 @@ void Editor::update() {
     for (EditorPanel* panel : panels_)
         panel->update(input, {winW, winH});
 
-    if (open_)
+    if (open_) {
         hierarchyView_.update(engine_.scene);
+        inspectorView_.setSelectedId(hierarchyView_.selectedId());
+        inspectorView_.update(engine_.scene);
+    }
 
     syncResize();
     syncDocking();
@@ -92,7 +95,7 @@ void Editor::setOpen(bool open) {
         if (!wasPausedBeforeOpen_)
             engine_.gameUi.onUnpause();
         samplePanelB_.setVisible(false);
-        samplePanelC_.setVisible(false);
+        inspectorPanel_.setVisible(false);
         hierarchyPanel_.setVisible(false);
     }
 
@@ -173,19 +176,20 @@ void Editor::buildShell() {
             });
     samplePanelB_.setDockedMode(true);
 
-    samplePanelC_.build(
+    inspectorPanel_.build(
             ui,
             rootId_,
-            "Panel C",
+            "Inspector",
             {
                 std::floor(3*winW/4),
                 0.f,
                 std::floor(winW/4),
                 winH
             });
-    samplePanelC_.setDockedMode(true);
+    inspectorPanel_.setDockedMode(true);
+    inspectorView_.bind(ui, inspectorPanel_);
 
-    panels_ = {&viewportPanel_, &hierarchyPanel_, &samplePanelB_, &samplePanelC_};
+    panels_ = {&viewportPanel_, &hierarchyPanel_, &samplePanelB_, &inspectorPanel_};
 
     dockPreviewIndicatorId_ = ui.createElement();
     ui.reparent(dockPreviewIndicatorId_, rootId_);
@@ -200,9 +204,9 @@ void Editor::buildShell() {
 
     layout_.initialize(
         {viewportPanel_.rootId(), hierarchyPanel_.rootId(),
-         samplePanelB_.rootId(), samplePanelC_.rootId()},
+         samplePanelB_.rootId(), inspectorPanel_.rootId()},
         {viewportPanel_.rect(), hierarchyPanel_.rect(),
-         samplePanelB_.rect(), samplePanelC_.rect()},
+         samplePanelB_.rect(), inspectorPanel_.rect()},
         {0.f, 0.f, winW, winH});
     applyLayoutRects();
     viewportRect_ = viewportPanel_.rect();
@@ -215,7 +219,7 @@ void Editor::syncVisibility() {
     viewportPanel_.setVisible(open_);
     hierarchyPanel_.setVisible(open_);
     samplePanelB_.setVisible(open_);
-    samplePanelC_.setVisible(open_);
+    inspectorPanel_.setVisible(open_);
 }
 
 void Editor::resetViewportDefault() {

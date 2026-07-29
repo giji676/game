@@ -5,6 +5,7 @@
 
 #include "editor/editor_layout.h"
 #include "editor/hierarchy_panel.h"
+#include "editor/inspector_panel.h"
 #include "editor/panel.h"
 #include "engine/defines.h"
 
@@ -70,8 +71,9 @@ private:
     EditorPanel viewportPanel_;
     EditorPanel hierarchyPanel_;
     EditorPanel samplePanelB_;
-    EditorPanel samplePanelC_;
+    EditorPanel inspectorPanel_;
     HierarchyPanel hierarchyView_;
+    InspectorPanel inspectorView_;
     EditorLayout layout_;
     std::vector<EditorPanel*> panels_;
 

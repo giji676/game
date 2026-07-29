@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <string>
 
 #include "scene.h"
 #include "engine/profilers/profile_scope.h"
@@ -11,6 +12,13 @@ void collectRenderCommands(
     const glm::mat4& parent,
     std::vector<RenderCommand>& out,
     const Frustum& frustum);
+
+Scene::Scene() {
+    rootId = createObjectInternal();
+    objects[rootId].setID(rootId);
+    objects[rootId].parent = rootId;
+    objects[rootId].name = "Scene";
+}
 
 void Scene::buildRenderList(
         std::vector<RenderCommand>& out,
@@ -130,6 +138,7 @@ ObjectID Scene::createObject() {
     ObjectID id = createObjectInternal();
     objects[id].setID(id);
     objects[id].parent = rootId;
+    objects[id].name = "Object " + std::to_string(id);
     objects[rootId].children.push_back(id);
     return id;
 }

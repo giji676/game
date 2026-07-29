@@ -20,6 +20,8 @@ constexpr float kLabelPadY = 4.f;
 std::string objectLabel(const Object& obj, ObjectID rootId) {
     if (obj.getID() == rootId)
         return "Scene";
+    if (!obj.name.empty())
+        return obj.name;
     return "Object " + std::to_string(obj.getID());
 }
 
