@@ -304,14 +304,22 @@ void Engine::loadAssets() {
 
     gj_vflip_image(1);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
+    assets.loadModel("car", "assets/car/car.obj");
     assets.loadFont("InterVariable", "assets/fonts/Inter-4.1/InterVariable.ttf");
 
+    // TODO: make this automatic through assets loader
     meshRegistry.init();
+
+    Model& car = assets.getModel("car");
+    for (const SubMesh& sub : car.getParts()) {
+        meshRegistry.addMesh(&sub.mesh);
+    }
 
     Model& backpack = assets.getModel("backpack");
     for (const SubMesh& sub : backpack.getParts()) {
         meshRegistry.addMesh(&sub.mesh);
     }
+
 
     meshRegistry.uploadToGPU();
 }

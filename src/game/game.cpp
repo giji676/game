@@ -84,9 +84,9 @@ void Game::init() {
     for (int i = 0; i < 10; i++) {
         ObjectID objId = scene.createObject();
         Object& obj = scene.get(objId);
-        obj.model = &engine.assets.getModel("backpack");
-        obj.transform.setPosition({i % width, 0.5f, -i/10.f});
-        obj.transform.setScale({0.1f, 0.1f, 0.1f});
+        obj.model = &engine.assets.getModel("car");
+        obj.transform.setPosition({i % width, 0.f, -i/10.f});
+        obj.transform.setScale({0.001f, 0.001f, 0.001f});
         obj.addScript<Test>();
         lastObjId = objId;
     }

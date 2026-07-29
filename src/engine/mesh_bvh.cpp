@@ -136,13 +136,13 @@ void MeshBVH::_intersectBVH(Ray& ray, uint32_t nodeIdx, const glm::mat4& world) 
     if (!intersectAABB(ray, node.aabbMin, node.aabbMax, world))
         return;
 
-    Engine::instance().debugRenderer.aabb(
-        world,
-        node.aabbMin,
-        node.aabbMax,
-        {1,0,0}
-    );
-
+    // Engine::instance().debugRenderer.aabb(
+    //     world,
+    //     node.aabbMin,
+    //     node.aabbMax,
+    //     {1,0,0}
+    // );
+    //
     if (node.primCount > 0) {
         PROFILE_SCOPE("TriangleIntersection");
         for (uint32_t i = 0; i < node.primCount; i++) {
