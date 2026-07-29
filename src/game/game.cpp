@@ -94,8 +94,8 @@ void Game::init() {
     ObjectID objId = scene.createObject();
     Object& obj = scene.get(objId);
     obj.model = &engine.assets.getModel("backpack");
-    obj.transform.setPosition({0.0f, 0.5f, -1.5f});
-    obj.transform.setScale({0.1f, 0.1f, 0.1f});
+    obj.transform.setPosition({0.0f, 1.5f, -1.5f});
+    obj.transform.setScale({100.1f, 100.1f, 100.1f});
     obj.addScript<Test>();
     scene.reparent(objId, lastObjId);
 

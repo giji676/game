@@ -304,6 +304,7 @@ void Engine::loadAssets() {
 
     gj_vflip_image(1);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
+    gj_vflip_image(0);
     assets.loadModel("car", "assets/car/car.obj");
     assets.loadFont("InterVariable", "assets/fonts/Inter-4.1/InterVariable.ttf");
 
@@ -319,7 +320,6 @@ void Engine::loadAssets() {
     for (const SubMesh& sub : backpack.getParts()) {
         meshRegistry.addMesh(&sub.mesh);
     }
-
 
     meshRegistry.uploadToGPU();
 }
