@@ -34,23 +34,44 @@ void Editor::shutdown() {
 void Editor::update() {
     Input& input = engine_.input;
 
-    if (input.pressed(Action::ToggleEditor))
-        toggleOpen();
+    if (input.pressed(Action::ToggleEditor)) {
+        // When editor is open but gameplay control is active, F3 should return
+        // to editor control instead of closing the editor entirely.
+        if (open_ && !engine_.isPaused()) {
+            engine_.setPaused(true);
+            playState_ = EditorPlayState::Edit;
+        } else {
+            toggleOpen();
+        }
+    }
 
     if (!open_)
         return;
 
-    clampViewportToWindow();
-
     const float winW = static_cast<float>(engine_.app.width());
     const float winH = static_cast<float>(engine_.app.height());
-    samplePanel_.update(input, {winW, winH});
 
-    // Panels own the pointer while dragging so the viewport does not steal it.
-    if (!samplePanel_.isDragging())
-        updateViewportInteraction();
+    // Reflow the dock tree whenever the OS window size changes.
+    if (winW != lastWindowSize_.x || winH != lastWindowSize_.y) {
+        lastWindowSize_ = {winW, winH};
+        layout_.relayout({0.f, 0.f, winW, winH});
+        applyLayoutRects();
+    }
 
-    syncViewportChrome();
+    for (EditorPanel* panel : panels_)
+        panel->update(input, {winW, winH});
+
+    if (open_) {
+        hierarchyView_.update(engine_.scene);
+        inspectorView_.setSelectedId(hierarchyView_.selectedId());
+        inspectorView_.setEditable(engine_.isPaused());
+        inspectorView_.update(engine_.scene);
+    }
+
+    syncResize();
+    syncDocking();
+
+    viewportRect_ = viewportPanel_.rect();
 }
 
 void Editor::setOpen(bool open) {
@@ -74,7 +95,9 @@ void Editor::setOpen(bool open) {
         engine_.setPaused(wasPausedBeforeOpen_);
         if (!wasPausedBeforeOpen_)
             engine_.gameUi.onUnpause();
-        samplePanel_.setVisible(false);
+        samplePanelB_.setVisible(false);
+        inspectorPanel_.setVisible(false);
+        hierarchyPanel_.setVisible(false);
     }
 
     syncVisibility();
@@ -108,37 +131,96 @@ void Editor::buildShell() {
     ui.get(placeholderLabelId_).style.width = Length::automatic();
     ui.get(placeholderLabelId_).style.height = Length::px(24.f);
 
-    viewportFrameId_ = ui.createElement();
-    ui.reparent(viewportFrameId_, rootId_);
-    UIElement& frame = ui.get(viewportFrameId_);
-    frame.style.position = PositionMode::Absolute;
-    frame.style.display = Display::Block;
-
-    auto& border = frame.addWidget<Rect>();
-    border.color = {0.f, 0.f, 0.f, 0.f};
-    border.borderWidth = 2.f;
-    border.borderColor = {0.45f, 0.55f, 0.75f, 1.f};
-
-    // Empty panel template instance. Future Hierarchy / Inspector panels will
-    // use the same EditorPanel shell and parent content into contentId().
+    // Panel shells. Future Hierarchy / Inspector panels will reuse EditorPanel.
     const float winW = std::max(1.f, static_cast<float>(engine_.app.width()));
     const float winH = std::max(1.f, static_cast<float>(engine_.app.height()));
-    samplePanel_.build(
+    viewportPanel_.build(
             ui,
             rootId_,
-            "Panel",
+            "Viewport",
             {
-                std::floor(winW - 300.f - 24.f),
-                std::floor((winH - 360.f) * 0.5f),
-                300.f,
-                360.f,
+                std::floor(winW/4),
+                std::floor(winH/3),
+                std::floor(2*winW/4),
+                std::floor(2*winH/3),
             });
+    viewportPanel_.setDockedMode(true);
+    if (UIElement& viewportRoot = ui.get(viewportPanel_.rootId()); viewportRoot.widget) {
+        auto* bg = static_cast<Rect*>(viewportRoot.widget.get());
+        bg->color = {0.f, 0.f, 0.f, 0.f};
+        bg->borderWidth = 2.f;
+        bg->borderColor = {0.35f, 0.45f, 0.7f, 1.f};
+    }
+
+    hierarchyPanel_.build(
+            ui,
+            rootId_,
+            "Hierarchy",
+            {
+                0.f,
+                0.f,
+                std::floor(winW/4),
+                winH,
+            });
+    hierarchyPanel_.setDockedMode(true);
+    hierarchyView_.bind(ui, hierarchyPanel_);
+
+    samplePanelB_.build(
+            ui,
+            rootId_,
+            "Panel B",
+            {
+                std::floor(winW/4),
+                0.f,
+                std::floor(2*winW/4),
+                std::floor(winH/3),
+            });
+    samplePanelB_.setDockedMode(true);
+
+    inspectorPanel_.build(
+            ui,
+            rootId_,
+            "Inspector",
+            {
+                std::floor(3*winW/4),
+                0.f,
+                std::floor(winW/4),
+                winH
+            });
+    inspectorPanel_.setDockedMode(true);
+    inspectorView_.bind(ui, inspectorPanel_);
+
+    panels_ = {&viewportPanel_, &hierarchyPanel_, &samplePanelB_, &inspectorPanel_};
+
+    dockPreviewIndicatorId_ = ui.createElement();
+    ui.reparent(dockPreviewIndicatorId_, rootId_);
+    UIElement& indicator = ui.get(dockPreviewIndicatorId_);
+    indicator.visible = false;
+    indicator.style.position = PositionMode::Absolute;
+    indicator.style.display = Display::Block;
+    auto& indicatorRect = indicator.addWidget<Rect>();
+    indicatorRect.color = {0.3f, 0.55f, 1.f, 0.35f};
+    indicatorRect.borderWidth = 2.f;
+    indicatorRect.borderColor = {0.55f, 0.75f, 1.f, 0.95f};
+
+    layout_.initialize(
+        {viewportPanel_.rootId(), hierarchyPanel_.rootId(),
+         samplePanelB_.rootId(), inspectorPanel_.rootId()},
+        {viewportPanel_.rect(), hierarchyPanel_.rect(),
+         samplePanelB_.rect(), inspectorPanel_.rect()},
+        {0.f, 0.f, winW, winH});
+    applyLayoutRects();
+    viewportRect_ = viewportPanel_.rect();
+    lastWindowSize_ = {winW, winH};
 }
 
 void Editor::syncVisibility() {
     if (rootId_ != INVALID_UI_ELEMENT)
         engine_.editorUi.get(rootId_).visible = open_;
-    samplePanel_.setVisible(open_);
+    viewportPanel_.setVisible(open_);
+    hierarchyPanel_.setVisible(open_);
+    samplePanelB_.setVisible(open_);
+    inspectorPanel_.setVisible(open_);
 }
 
 void Editor::resetViewportDefault() {
@@ -192,15 +274,145 @@ void Editor::clampViewportToWindow() {
     viewportRect_ = {x, y, w, h};
 }
 
-void Editor::syncViewportChrome() {
-    if (viewportFrameId_ == INVALID_UI_ELEMENT)
+void Editor::applyLayoutRects() {
+    for (EditorPanel* panel : panels_) {
+        panel->setRect(layout_.panelRect(panel->rootId()));
+    }
+}
+
+void Editor::syncResize() {
+    Input& input = engine_.input;
+    const glm::vec2 mouse = input.mousePosition();
+    const float winW = static_cast<float>(engine_.app.width());
+    const float winH = static_cast<float>(engine_.app.height());
+
+    EditorPanel* resizingPanel = nullptr;
+    for (EditorPanel* panel : panels_) {
+        if (panel->isResizing()) {
+            resizingPanel = panel;
+            break;
+        }
+    }
+
+    if (!resizingPanel) {
+        activeResizePanelId_ = INVALID_UI_ELEMENT;
+        activeResizeDrag_ = PanelDrag::None;
+        resizeHandleX_ = {};
+        resizeHandleY_ = {};
+        return;
+    }
+
+    const PanelDrag drag = resizingPanel->dragMode();
+    if (activeResizePanelId_ != resizingPanel->rootId() || activeResizeDrag_ != drag) {
+        activeResizePanelId_ = resizingPanel->rootId();
+        activeResizeDrag_ = drag;
+        resizeStartMouse_ = mouse;
+        resizeHandleX_ = {};
+        resizeHandleY_ = {};
+
+        switch (drag) {
+            case PanelDrag::Left:
+            case PanelDrag::Right:
+                resizeHandleX_ = layout_.beginResize(activeResizePanelId_, drag);
+                break;
+            case PanelDrag::Top:
+            case PanelDrag::Bottom:
+                resizeHandleY_ = layout_.beginResize(activeResizePanelId_, drag);
+                break;
+            case PanelDrag::BottomLeft:
+                resizeHandleX_ = layout_.beginResize(activeResizePanelId_, PanelDrag::Left);
+                resizeHandleY_ = layout_.beginResize(activeResizePanelId_, PanelDrag::Bottom);
+                break;
+            case PanelDrag::BottomRight:
+                resizeHandleX_ = layout_.beginResize(activeResizePanelId_, PanelDrag::Right);
+                resizeHandleY_ = layout_.beginResize(activeResizePanelId_, PanelDrag::Bottom);
+                break;
+            case PanelDrag::TopLeft:
+                resizeHandleX_ = layout_.beginResize(activeResizePanelId_, PanelDrag::Left);
+                resizeHandleY_ = layout_.beginResize(activeResizePanelId_, PanelDrag::Top);
+                break;
+            case PanelDrag::TopRight:
+                resizeHandleX_ = layout_.beginResize(activeResizePanelId_, PanelDrag::Right);
+                resizeHandleY_ = layout_.beginResize(activeResizePanelId_, PanelDrag::Top);
+                break;
+            default:
+                break;
+        }
+    }
+
+    bool changed = false;
+    if (resizeHandleX_.valid) {
+        changed |= layout_.updateResize(resizeHandleX_, mouse.x - resizeStartMouse_.x);
+    }
+    if (resizeHandleY_.valid) {
+        changed |= layout_.updateResize(resizeHandleY_, mouse.y - resizeStartMouse_.y);
+    }
+
+    if (changed) {
+        layout_.relayout({0.f, 0.f, winW, winH});
+        applyLayoutRects();
+    }
+}
+
+void Editor::syncDocking() {
+    if (dockPreviewIndicatorId_ == INVALID_UI_ELEMENT)
         return;
 
-    UIElement& frame = engine_.editorUi.get(viewportFrameId_);
-    frame.style.inset.left = Length::px(viewportRect_.x);
-    frame.style.inset.bottom = Length::px(viewportRect_.y);
-    frame.style.width = Length::px(viewportRect_.z);
-    frame.style.height = Length::px(viewportRect_.w);
+    UI& ui = engine_.editorUi;
+    UIElement& indicator = ui.get(dockPreviewIndicatorId_);
+    Input& input = engine_.input;
+    const glm::vec2 mouse = input.mousePosition();
+
+    // Docking/relocation is title-bar move only.
+    EditorPanel* draggingPanel = nullptr;
+    for (EditorPanel* panel : panels_) {
+        if (panel->isMoving()) {
+            draggingPanel = panel;
+            break;
+        }
+    }
+
+    if (!draggingPanel) {
+        if (input.released(MouseAction::Left) &&
+            activeDragPanelId_ != INVALID_UI_ELEMENT &&
+            activeDockPreview_.valid) {
+            if (layout_.dockPanel(activeDragPanelId_, activeDockPreview_)) {
+                const float winW = static_cast<float>(engine_.app.width());
+                const float winH = static_cast<float>(engine_.app.height());
+                layout_.relayout({0.f, 0.f, winW, winH});
+                applyLayoutRects();
+            }
+        }
+
+        indicator.visible = false;
+        activeDragPanelId_ = INVALID_UI_ELEMENT;
+        activeDockPreview_ = {};
+        return;
+    }
+
+    activeDragPanelId_ = draggingPanel->rootId();
+    activeDockPreview_ = layout_.findDockPreview(*draggingPanel, mouse);
+    if (activeDockPreview_.valid) {
+        indicator.visible = true;
+        indicator.style.inset.left = Length::px(activeDockPreview_.previewRect.x);
+        indicator.style.inset.bottom = Length::px(activeDockPreview_.previewRect.y);
+        indicator.style.width = Length::px(activeDockPreview_.previewRect.z);
+        indicator.style.height = Length::px(activeDockPreview_.previewRect.w);
+    } else {
+        indicator.visible = false;
+    }
+
+    if (input.released(MouseAction::Left) && activeDragPanelId_ != INVALID_UI_ELEMENT) {
+        if (layout_.dockPanel(activeDragPanelId_, activeDockPreview_)) {
+            const float winW = static_cast<float>(engine_.app.width());
+            const float winH = static_cast<float>(engine_.app.height());
+            layout_.relayout({0.f, 0.f, winW, winH});
+            applyLayoutRects();
+        }
+        activeDragPanelId_ = INVALID_UI_ELEMENT;
+        activeDockPreview_ = {};
+        indicator.visible = false;
+    }
 }
 
 ViewportDrag Editor::hitTestViewport(glm::vec2 mouse, glm::vec4 r) {
@@ -336,5 +548,19 @@ glm::vec4 Editor::gameViewportRect() const {
     if (!open_)
         return {0.f, 0.f, winW, winH};
 
-    return viewportRect_;
+    const UIElement& content = engine_.editorUi.get(viewportPanel_.contentId());
+    const glm::vec4 contentRect = {
+        content.transform.position.x,
+        content.transform.position.y,
+        content.transform.size.x,
+        content.transform.size.y
+    };
+    if (contentRect.z > 1.f && contentRect.w > 1.f)
+        return contentRect;
+
+    // During a dock-tree mutation frame, layout sizes can be transiently zero.
+    if (viewportRect_.z > 1.f && viewportRect_.w > 1.f)
+        return viewportRect_;
+
+    return {0.f, 0.f, winW, winH};
 }

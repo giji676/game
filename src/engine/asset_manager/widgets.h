@@ -161,6 +161,7 @@ public:
 
     Font* font = nullptr;
     std::string text;
+    bool centerText = true;
 
     glm::vec4 cornerRadii = {0,0,0,0};
     glm::vec2 padding = {10.f, 10.f};
@@ -224,7 +225,7 @@ public:
         });
 
         emitTextCommands(
-            e, font, text, current.textColor, padding, true, out);
+            e, font, text, current.textColor, padding, centerText, out);
     }
 
     glm::vec2 measureContent(

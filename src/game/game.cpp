@@ -79,14 +79,16 @@ void Game::init() {
     sceneShader.setVec3("lightColor", light.color);
 
     int width = 10;
+    ObjectID lastObjId;
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 10; i++) {
         ObjectID objId = scene.createObject();
         Object& obj = scene.get(objId);
         obj.model = &engine.assets.getModel("backpack");
         obj.transform.setPosition({i % width, 0.5f, -i/10.f});
         obj.transform.setScale({0.1f, 0.1f, 0.1f});
         obj.addScript<Test>();
+        lastObjId = objId;
     }
 
     ObjectID objId = scene.createObject();
@@ -95,6 +97,7 @@ void Game::init() {
     obj.transform.setPosition({0.0f, 0.5f, -1.5f});
     obj.transform.setScale({0.1f, 0.1f, 0.1f});
     obj.addScript<Test>();
+    scene.reparent(objId, lastObjId);
 
     ObjectID objId2 = scene.createObject();
     Object& obj2 = scene.get(objId2);

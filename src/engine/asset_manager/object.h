@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <memory>
+#include <string>
 
 #include "engine/defines.h"
 #include "engine/iscript.h"
@@ -22,6 +23,7 @@ public:
 
     std::vector<std::unique_ptr<IScript>> scripts;
     bool debug = false;
+    std::string name;
 
     void markChildrenDirty(Object& obj);
 

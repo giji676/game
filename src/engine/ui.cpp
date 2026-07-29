@@ -337,6 +337,29 @@ UIElementID UI::button(
     return id;
 }
 
+UIElementID UI::inputField(
+    glm::vec2 pos,
+    glm::vec2 size,
+    float fontSize,
+    std::string placeholder,
+    Font* font)
+{
+    UIElementID id = createElement();
+    UIElement& e = get(id);
+    auto& field = e.addWidget<InputField>();
+
+    field.selfId = id;
+    field.font = font
+        ? font
+        : &Engine::instance().assets.getFont("InterVariable");
+    field.placeholder = std::move(placeholder);
+
+    e.transform.position = pos;
+    e.transform.size = size;
+    e.transform.fontSize = fontSize;
+    return id;
+}
+
 UIElementID UI::toolbar(
     glm::vec2 pos,
     glm::vec2 size,
