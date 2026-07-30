@@ -81,69 +81,38 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     Texture* diffuseMap = nullptr;
     Texture* specularMap = nullptr;
 
-    if (mesh->materialIndex >= 0) {
-        struct gjMaterial material = model->materials[mesh->materialIndex];
-        if (material.diffuseMap[0] != '\0') {
-                Texture* dtex = &assetManager->loadTexture(
-                material.diffuseMap,   // name (can be full path)
-                directory + "/" + material.diffuseMap,
-                "diffuseMap"
-            );
-            diffuseMap = dtex;
-        }
+    struct gjMaterial gjMaterial = mesh->materialIndex >= 0 ?
+        model->materials[mesh->materialIndex] : model->materials[0];
 
-        if (material.specularMap[0] != '\0') {
-            Texture* stex = &assetManager->loadTexture(
-                material.specularMap,
-                directory + "/" + material.specularMap,
-                "specularMap"
-            );
-            specularMap = stex;
-        }
-
-        diffuseFallback = glm::vec3(
-            material.diffuse[0],
-            material.diffuse[1],
-            material.diffuse[2]
-        );
-
-        specularFallback = glm::vec3(
-            material.specular[0],
-            material.specular[1],
-            material.specular[2]
-        );
-    } else {
-        struct gjMaterial material = model->materials[0];
-
-        if (material.diffuseMap[0] != '\0') {
+    if (gjMaterial.diffuseMap[0] != '\0') {
             Texture* dtex = &assetManager->loadTexture(
-                material.diffuseMap,
-                directory + "/" + material.diffuseMap,
-                "diffuseMap"
-            );
-            diffuseMap = dtex;
-        }
-
-        if (material.specularMap[0] != '\0') {
-            Texture* stex = &assetManager->loadTexture(
-                material.specularMap,
-                directory + "/" + material.specularMap,
-                "specularMap"
-            );
-            specularMap = stex;
-        }
-        diffuseFallback = glm::vec3(
-            material.diffuse[0],
-            material.diffuse[1],
-            material.diffuse[2]
+            gjMaterial.diffuseMap,
+            directory + "/" + gjMaterial.diffuseMap,
+            "diffuseMap"
         );
-
-        specularFallback = glm::vec3(
-            material.specular[0],
-            material.specular[1],
-            material.specular[2]
-        );
+        diffuseMap = dtex;
     }
+
+    if (gjMaterial.specularMap[0] != '\0') {
+        Texture* stex = &assetManager->loadTexture(
+            gjMaterial.specularMap,
+            directory + "/" + gjMaterial.specularMap,
+            "specularMap"
+        );
+        specularMap = stex;
+    }
+
+    diffuseFallback = glm::vec3(
+        gjMaterial.diffuse[0],
+        gjMaterial.diffuse[1],
+        gjMaterial.diffuse[2]
+    );
+
+    specularFallback = glm::vec3(
+        gjMaterial.specular[0],
+        gjMaterial.specular[1],
+        gjMaterial.specular[2]
+    );
 
     Mesh myMesh = Mesh(vertices, indices);
     myMesh.id = assetManager->allocateMeshId();
