@@ -70,6 +70,7 @@ void collectRenderCommands(
             cmd.material = part.material;
             cmd.model = world;
             cmd.sortKey =
+                (uint64_t)(cmd.material->usesTransparency() ? 1 : 0) << 63 |
                 (uint64_t)cmd.material->shader->ID << 48 |
                 (uint64_t)cmd.material->id       << 32 |
                 (uint64_t)cmd.mesh->id           << 16;

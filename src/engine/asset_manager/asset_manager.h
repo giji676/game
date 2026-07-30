@@ -41,8 +41,10 @@ public:
             Shader* shader,
             Texture* diffuse,
             Texture* specular,
+            Texture* alpha,
             glm::vec3 diffuseFallback,
-            glm::vec3 specularFallback);
+            glm::vec3 specularFallback,
+            float opacity = 1.f);
 
     uint32_t allocateMaterialId() { return nextMaterialId++; }
     uint32_t allocateMeshId() { return nextMeshId++; }

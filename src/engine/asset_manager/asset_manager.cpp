@@ -85,13 +85,17 @@ Material& AssetManager::getOrCreateMaterial(
     Shader* shader,
     Texture* diffuse,
     Texture* specular,
+    Texture* alpha,
     glm::vec3 diffuseFallback,
-    glm::vec3 specularFallback)
+    glm::vec3 specularFallback,
+    float opacity)
 {
     // create a key from the combination
     std::string key = std::to_string((uint64_t)shader)
                     + "_" + std::to_string((uint64_t)diffuse)
-                    + "_" + std::to_string((uint64_t)specular);
+                    + "_" + std::to_string((uint64_t)specular)
+                    + "_" + std::to_string((uint64_t)alpha)
+                    + "_" + std::to_string(opacity);
 
     auto it = materials.find(key);
     if (it != materials.end())
@@ -101,9 +105,11 @@ Material& AssetManager::getOrCreateMaterial(
     mat->shader = shader;
     mat->diffuseFallback = diffuseFallback;
     mat->specularFallback = specularFallback;
+    mat->opacity = opacity;
     mat->id = allocateMaterialId();
     if (diffuse) mat->textures.push_back(diffuse);
     if (specular) mat->textures.push_back(specular);
+    if (alpha) mat->textures.push_back(alpha);
 
     materials.emplace(key, std::move(mat));
     return *materials.at(key);

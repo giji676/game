@@ -144,6 +144,7 @@ void Renderer::render(std::vector<RenderCommand>& queue,
 
                     bool hasDiffuse = false;
                     bool hasSpecular = false;
+                    bool hasAlpha = false;
                     for (Texture* tex : currentMaterial->textures) {
                         if (!tex || tex->id == 0)
                             continue;
@@ -151,18 +152,36 @@ void Renderer::render(std::vector<RenderCommand>& queue,
                             hasDiffuse = true;
                         else if (tex->type == "specularMap")
                             hasSpecular = true;
+                        else if (tex->type == "alphaMap")
+                            hasAlpha = true;
+                    }
+
+                    const bool transparent = currentMaterial->usesTransparency();
+                    if (transparent) {
+                        glEnable(GL_BLEND);
+                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                        glDepthMask(GL_FALSE);
+                    } else {
+                        glDisable(GL_BLEND);
+                        glDepthMask(GL_TRUE);
                     }
 
                     currentShader->setVec3("diffuseFallback",
                             currentMaterial->diffuseFallback);
                     currentShader->setVec3("specularFallback",
                             currentMaterial->specularFallback);
+                    currentShader->setFloat("opacity", currentMaterial->opacity);
                     currentShader->setBool("hasDiffuseMap", hasDiffuse);
                     currentShader->setBool("hasSpecularMap", hasSpecular);
+                    currentShader->setBool("hasAlphaMap", hasAlpha);
                     currentShader->setInt("diffuseMap0", 0);
                     currentShader->setInt("specularMap0", 1);
+                    currentShader->setInt("alphaMap0", 2);
                 }
             }
+
+            glDisable(GL_BLEND);
+            glDepthMask(GL_TRUE);
         }
     }
 }

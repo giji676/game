@@ -80,6 +80,7 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     glm::vec3 specularFallback(0.0f);
     Texture* diffuseMap = nullptr;
     Texture* specularMap = nullptr;
+    Texture* alphaMap = nullptr;
 
     struct gjMaterial gjMaterial = model->materials[mesh->materialIndex];
 
@@ -101,6 +102,15 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
         specularMap = stex;
     }
 
+    if (gjMaterial.alphaMap[0] != '\0') {
+        Texture* atex = &assetManager->loadTexture(
+            gjMaterial.alphaMap,
+            directory + "/" + gjMaterial.alphaMap,
+            "alphaMap"
+        );
+        alphaMap = atex;
+    }
+
     diffuseFallback = glm::vec3(
         gjMaterial.diffuse[0],
         gjMaterial.diffuse[1],
@@ -113,14 +123,21 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
         gjMaterial.specular[2]
     );
 
+    // MTL `d` is dissolve/opacity. gj_model stores it as transparency.
+    float opacity = gjMaterial.transparency;
+    if (opacity <= 0.f || opacity > 1.f)
+        opacity = 1.f;
+
     Mesh myMesh = Mesh(vertices, indices);
     myMesh.id = assetManager->allocateMeshId();
     Material& material = assetManager->getOrCreateMaterial(
         &assetManager->getShader("textured_mat"),
         diffuseMap,
         specularMap,
+        alphaMap,
         diffuseFallback,
-        specularFallback
+        specularFallback,
+        opacity
     );
 
     SubMesh subMesh = {
