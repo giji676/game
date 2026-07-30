@@ -81,8 +81,7 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     Texture* diffuseMap = nullptr;
     Texture* specularMap = nullptr;
 
-    struct gjMaterial gjMaterial = mesh->materialIndex >= 0 ?
-        model->materials[mesh->materialIndex] : model->materials[0];
+    struct gjMaterial gjMaterial = model->materials[mesh->materialIndex];
 
     if (gjMaterial.diffuseMap[0] != '\0') {
             Texture* dtex = &assetManager->loadTexture(

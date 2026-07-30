@@ -141,14 +141,26 @@ void Renderer::render(std::vector<RenderCommand>& queue,
                     PROFILE_SCOPE("Renderer::material_change");
                     currentMaterial = cmd.material;
                     currentMaterial->bind();
+
+                    bool hasDiffuse = false;
+                    bool hasSpecular = false;
+                    for (Texture* tex : currentMaterial->textures) {
+                        if (!tex || tex->id == 0)
+                            continue;
+                        if (tex->type == "diffuseMap")
+                            hasDiffuse = true;
+                        else if (tex->type == "specularMap")
+                            hasSpecular = true;
+                    }
+
                     currentShader->setVec3("diffuseFallback",
                             currentMaterial->diffuseFallback);
                     currentShader->setVec3("specularFallback",
                             currentMaterial->specularFallback);
-                    for (uint32_t t = 0; t < currentMaterial->textures.size(); t++) {
-                        currentShader->setInt(
-                                currentMaterial->textures[t]->type + std::to_string(t + 1), t);
-                    }
+                    currentShader->setBool("hasDiffuseMap", hasDiffuse);
+                    currentShader->setBool("hasSpecularMap", hasSpecular);
+                    currentShader->setInt("diffuseMap0", 0);
+                    currentShader->setInt("specularMap0", 1);
                 }
             }
         }

@@ -46,8 +46,8 @@ void collectRenderCommands(
         transformAABB(local, world, wMin, wMax);
 
         if (!frustum.intersectsAABB(wMin, wMax)) {
-            // still recurse children — child objects may be visible
-            // even if parent is culled
+            // Still recurse children - child objects may be visible
+            // even if parent is culled.
             for (ObjectID child : obj.children)
                 collectRenderCommands(scene, child, world, out, frustum);
             return;
