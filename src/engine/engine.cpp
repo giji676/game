@@ -2,6 +2,8 @@
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_mouse.h>
 #include <glad/glad.h>
+#include <chrono>
+#include <iostream>
 
 #include "engine/engine.h"
 #include "engine/input.h"
@@ -9,7 +11,6 @@
 #include "engine/profilers/profiler.h"
 #include "engine/renderer/ui_renderer.h"
 #include "game/game.h"
-#include "gj_image/gj_image.h"
 #include "glm/ext/matrix_clip_space.hpp"
 
 Engine& Engine::instance() {
@@ -302,11 +303,18 @@ void Engine::loadAssets() {
         "shaders/rect.f.glsl"
     );
 
-    gj_vflip_image(1);
+	using Clock = std::chrono::steady_clock;
+	using Second = std::chrono::duration<double, std::ratio<1> >;
+	std::chrono::time_point<Clock> m_beg = Clock::now();
+
+    // Flip is captured per texture at enqueue time (backpack on, car off).
+    assets.setImageVFlip(true);
     assets.loadModel("backpack", "assets/backpack/backpack.obj");
-    gj_vflip_image(0);
+    assets.setImageVFlip(false);
     assets.loadModel("car", "assets/car/car.obj");
     assets.loadFont("InterVariable", "assets/fonts/Inter-4.1/InterVariable.ttf");
+
+    assets.processEnqueuedImageLoads();
 
     // TODO: make this automatic through assets loader
     meshRegistry.init();
@@ -322,6 +330,11 @@ void Engine::loadAssets() {
     }
 
     meshRegistry.uploadToGPU();
+
+    std::cout << "Time elapse: " << 
+        std::chrono::duration_cast<Second>(Clock::now() - m_beg).count()
+        << std::endl;
+    // 6.4 seconds
 }
 
 void Engine::setupCamera() {
