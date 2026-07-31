@@ -85,30 +85,30 @@ SubMesh Model::processMesh(struct gjMesh *mesh, struct gjModel *model) {
     struct gjMaterial gjMaterial = model->materials[mesh->materialIndex];
 
     if (gjMaterial.diffuseMap[0] != '\0') {
-            Texture* dtex = &assetManager->loadTexture(
+            Texture& dtex = assetManager->enqueImageLoad(
             gjMaterial.diffuseMap,
             directory + "/" + gjMaterial.diffuseMap,
             "diffuseMap"
         );
-        diffuseMap = dtex;
+        diffuseMap = &dtex;
     }
 
     if (gjMaterial.specularMap[0] != '\0') {
-        Texture* stex = &assetManager->loadTexture(
-            gjMaterial.specularMap,
-            directory + "/" + gjMaterial.specularMap,
-            "specularMap"
-        );
-        specularMap = stex;
+        Texture& stex = assetManager->enqueImageLoad(
+                gjMaterial.specularMap,
+                directory + "/" + gjMaterial.specularMap,
+                "specularMap"
+                );
+        specularMap = &stex;
     }
 
     if (gjMaterial.alphaMap[0] != '\0') {
-        Texture* atex = &assetManager->loadTexture(
+        Texture& atex = assetManager->enqueImageLoad(
             gjMaterial.alphaMap,
             directory + "/" + gjMaterial.alphaMap,
             "alphaMap"
         );
-        alphaMap = atex;
+        alphaMap = &atex;
     }
 
     diffuseFallback = glm::vec3(

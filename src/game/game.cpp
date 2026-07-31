@@ -1,4 +1,5 @@
 #include <glad/glad.h>
+#include <iostream>
 #include <string>
 
 #include "game/game.h"
