@@ -16,7 +16,8 @@ public:
 
     ObjectID createObject();
 
-    void reparent(ObjectID childId, ObjectID newParentId);
+    void reparent(ObjectID childId, ObjectID newParentId, int index = -1);
+    bool isDescendant(ObjectID ancestorId, ObjectID id) const;
 
     Object& get(ObjectID id) { return objects[id]; }
     const Object& get(ObjectID id) const { return objects[id]; }

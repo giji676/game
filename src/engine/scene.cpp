@@ -119,20 +119,48 @@ void Scene::initScripts(ObjectID id) {
     }
 }
 
-void Scene::reparent(ObjectID childId, ObjectID newParentId) {
+void Scene::reparent(ObjectID childId, ObjectID newParentId, int index) {
+    if (childId == INVALID_OBJECT || newParentId == INVALID_OBJECT)
+        return;
+    if (childId == newParentId)
+        return;
+    if (childId == rootId)
+        return;
+    if (isDescendant(childId, newParentId))
+        return;
+
     ObjectID oldParentId = objects[childId].parent;
+    auto& oldSiblings = objects[oldParentId].children;
+    auto oldIt = std::find(oldSiblings.begin(), oldSiblings.end(), childId);
+    if (oldIt == oldSiblings.end())
+        return;
 
-    auto& siblings = objects[oldParentId].children;
+    const int oldIndex = static_cast<int>(oldIt - oldSiblings.begin());
+    oldSiblings.erase(oldIt);
 
-    siblings.erase(
-        std::remove(
-            siblings.begin(),
-            siblings.end(),
-            childId),
-        siblings.end());
+    auto& newSiblings = objects[newParentId].children;
+    if (oldParentId == newParentId && oldIndex < index)
+        --index;
 
+    if (index < 0 || index > static_cast<int>(newSiblings.size()))
+        index = static_cast<int>(newSiblings.size());
+
+    newSiblings.insert(newSiblings.begin() + index, childId);
     objects[childId].parent = newParentId;
-    objects[newParentId].children.push_back(childId);
+}
+
+bool Scene::isDescendant(ObjectID ancestorId, ObjectID id) const {
+    if (ancestorId == INVALID_OBJECT || id == INVALID_OBJECT)
+        return false;
+    ObjectID current = id;
+    while (current != rootId && current != INVALID_OBJECT) {
+        if (current == ancestorId)
+            return true;
+        current = objects[current].parent;
+        if (current == objects[current].parent && current == rootId)
+            break;
+    }
+    return false;
 }
 
 ObjectID Scene::createObject() {

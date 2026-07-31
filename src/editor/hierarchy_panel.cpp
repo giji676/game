@@ -3,19 +3,26 @@
 #include "editor/panel.h"
 #include "engine/asset_manager/object.h"
 #include "engine/asset_manager/widgets.h"
+#include "engine/engine.h"
+#include "engine/input.h"
 #include "engine/scene.h"
 #include "engine/ui.h"
 #include "engine/ui/style.h"
+#include "engine/utils/geometry.h"
 
+#include <algorithm>
+#include <cmath>
 #include <functional>
 #include <string>
 
 namespace {
 
-// Font size is the sizing input. Button measureContent derives row height.
 constexpr float kRowFontSize = 28.f;
 constexpr float kLabelPadX = 4.f;
 constexpr float kLabelPadY = 4.f;
+constexpr float kDragThresholdPx = 4.f;
+constexpr float kEdgeBandRatio = 0.25f;
+constexpr float kDropLineHeight = 2.f;
 
 std::string objectLabel(const Object& obj, ObjectID rootId) {
     if (obj.getID() == rootId)
@@ -36,6 +43,18 @@ void HierarchyPanel::bind(UI& ui, EditorPanel& panel) {
     UIElement& content = ui_->get(contentId_);
     content.style.display = Display::Block;
     content.style.gap = Length::px(0.f);
+
+    dropLineId_ = ui_->rect(
+        {0.f, 0.f},
+        {0.f, kDropLineHeight},
+        {0.35f, 0.65f, 1.f, 0.95f});
+    ui_->reparent(dropLineId_, contentId_);
+    UIElement& line = ui_->get(dropLineId_);
+    line.visible = false;
+    line.style.position = PositionMode::Absolute;
+    line.style.display = Display::Block;
+    line.style.width = Length::percent(100.f);
+    line.style.height = Length::px(kDropLineHeight);
 }
 
 void HierarchyPanel::collectEntries(
@@ -95,6 +114,9 @@ uint64_t HierarchyPanel::sceneSignature(Scene& scene) const {
     };
     walk(scene.getRoot());
     mix(static_cast<uint64_t>(selectedId_));
+    mix(static_cast<uint64_t>(draggingId_));
+    mix(static_cast<uint64_t>(activeDrop_.targetId));
+    mix(static_cast<uint64_t>(static_cast<int>(activeDrop_.kind)));
     return hash;
 }
 
@@ -119,9 +141,6 @@ void HierarchyPanel::applyRowMetrics(Row& row) const {
 
     labelBtn->padding = {kLabelPadX, kLabelPadY};
 
-    // Buttons already know how tall they should be for the current fontSize.
-    // Flex row parents do not yet infer height from children, so lift that
-    // measured height onto the row (and match the toggle to it).
     const glm::vec2 measured = labelBtn->measureContent(labelEl, {0.f, 0.f});
     const float rowH = measured.y;
 
@@ -181,6 +200,10 @@ void HierarchyPanel::ensureRowCount(size_t count) {
         rows_.push_back({root, toggle, label, INVALID_OBJECT});
         applyRowMetrics(rows_.back());
     }
+
+    // Keep the drop line above row widgets for visibility.
+    if (dropLineId_ != INVALID_UI_ELEMENT)
+        ui_->reparent(dropLineId_, contentId_);
 }
 
 void HierarchyPanel::styleToggle(UIElementID id, bool hasChildren, bool expanded) const {
@@ -199,20 +222,28 @@ void HierarchyPanel::styleToggle(UIElementID id, bool hasChildren, bool expanded
     btn->disabled = !hasChildren;
 }
 
-void HierarchyPanel::styleLabel(UIElementID id, bool selected) const {
+void HierarchyPanel::styleLabel(UIElementID id, bool selected, bool dropHover) const {
     auto* btn = dynamic_cast<Button*>(ui_->get(id).widget.get());
     if (!btn)
         return;
 
     btn->centerText = false;
-    if (selected) {
+    if (dropHover) {
+        btn->normal.bgColor = {0.18f, 0.42f, 0.28f, 1.f};
+        btn->hoveredStyle.bgColor = {0.22f, 0.5f, 0.34f, 1.f};
+        btn->pressedStyle.bgColor = {0.16f, 0.38f, 0.25f, 1.f};
+        btn->normal.borderColor = {0.45f, 0.9f, 0.6f, 1.f};
+        btn->normal.borderWidth = 2.f;
+    } else if (selected) {
         btn->normal.bgColor = {0.22f, 0.38f, 0.62f, 1.f};
         btn->hoveredStyle.bgColor = {0.28f, 0.46f, 0.72f, 1.f};
         btn->pressedStyle.bgColor = {0.18f, 0.32f, 0.55f, 1.f};
+        btn->normal.borderWidth = 0.f;
     } else {
         btn->normal.bgColor = {0.f, 0.f, 0.f, 0.f};
         btn->hoveredStyle.bgColor = {0.22f, 0.22f, 0.26f, 1.f};
         btn->pressedStyle.bgColor = {0.18f, 0.18f, 0.22f, 1.f};
+        btn->normal.borderWidth = 0.f;
     }
     btn->normal.textColor = {0.88f, 0.88f, 0.9f, 1.f};
     btn->hoveredStyle.textColor = {0.95f, 0.95f, 0.97f, 1.f};
@@ -227,6 +258,202 @@ void HierarchyPanel::syncObjectDebug(Scene& scene) const {
             walk(child);
     };
     walk(scene.getRoot());
+}
+
+int HierarchyPanel::siblingIndex(Scene& scene, ObjectID id) const {
+    const Object& obj = scene.get(id);
+    const auto& siblings = scene.get(obj.parent).children;
+    for (size_t i = 0; i < siblings.size(); ++i) {
+        if (siblings[i] == id)
+            return static_cast<int>(i);
+    }
+    return -1;
+}
+
+bool HierarchyPanel::canDropOn(
+        Scene& scene,
+        ObjectID draggedId,
+        const DropTarget& drop) const
+{
+    if (!drop.valid || drop.kind == DropKind::None || drop.targetId == INVALID_OBJECT)
+        return false;
+    if (draggedId == INVALID_OBJECT || draggedId == scene.getRoot())
+        return false;
+    if (drop.targetId == draggedId)
+        return false;
+
+    if (drop.kind == DropKind::Reparent) {
+        if (scene.isDescendant(draggedId, drop.targetId))
+            return false;
+        return true;
+    }
+
+    // Insert before/after is sibling placement under target's parent.
+    if (drop.targetId == scene.getRoot())
+        return false;
+
+    const ObjectID newParent = scene.get(drop.targetId).parent;
+    if (newParent == draggedId || scene.isDescendant(draggedId, newParent))
+        return false;
+    return true;
+}
+
+HierarchyPanel::DropTarget HierarchyPanel::hitTestDrop(
+        Scene& scene,
+        glm::vec2 mouse) const
+{
+    DropTarget result;
+    const ObjectID rootId = scene.getRoot();
+
+    for (const Row& row : rows_) {
+        if (row.objectId == INVALID_OBJECT)
+            continue;
+        if (!ui_->get(row.rootId).visible)
+            continue;
+
+        const UIElement& rowEl = ui_->get(row.rootId);
+        const glm::vec2 pos = rowEl.transform.position;
+        const glm::vec2 size = rowEl.transform.size;
+        if (size.y <= 0.f)
+            continue;
+        if (!pointInRect(mouse, pos, size))
+            continue;
+
+        const float localY = mouse.y - pos.y;
+        const float edge = size.y * kEdgeBandRatio;
+        DropKind kind = DropKind::Reparent;
+        if (row.objectId == rootId) {
+            // Root only accepts reparent-into (no sibling insert around scene).
+            kind = DropKind::Reparent;
+        } else if (localY >= size.y - edge) {
+            kind = DropKind::InsertBefore;
+        } else if (localY <= edge) {
+            kind = DropKind::InsertAfter;
+        } else {
+            kind = DropKind::Reparent;
+        }
+
+        result.kind = kind;
+        result.targetId = row.objectId;
+        result.valid = true;
+        return result;
+    }
+    return result;
+}
+
+void HierarchyPanel::applyDrop(Scene& scene, ObjectID draggedId, const DropTarget& drop) {
+    if (!canDropOn(scene, draggedId, drop))
+        return;
+
+    if (drop.kind == DropKind::Reparent) {
+        scene.reparent(draggedId, drop.targetId);
+        collapsedIds_.erase(drop.targetId);
+        return;
+    }
+
+    const ObjectID newParent = scene.get(drop.targetId).parent;
+    int index = siblingIndex(scene, drop.targetId);
+    if (index < 0)
+        return;
+    if (drop.kind == DropKind::InsertAfter)
+        ++index;
+
+    scene.reparent(draggedId, newParent, index);
+}
+
+void HierarchyPanel::syncDropPreview(Scene& scene) {
+    if (dropLineId_ == INVALID_UI_ELEMENT)
+        return;
+
+    UIElement& line = ui_->get(dropLineId_);
+    line.visible = false;
+
+    if (draggingId_ == INVALID_OBJECT || !activeDrop_.valid)
+        return;
+
+    if (activeDrop_.kind == DropKind::Reparent)
+        return;
+
+    for (const Row& row : rows_) {
+        if (row.objectId != activeDrop_.targetId)
+            continue;
+
+        const UIElement& rowEl = ui_->get(row.rootId);
+        const UIElement& content = ui_->get(contentId_);
+        float lineY = rowEl.transform.position.y;
+        if (activeDrop_.kind == DropKind::InsertBefore)
+            lineY = rowEl.transform.position.y + rowEl.transform.size.y - kDropLineHeight;
+
+        line.visible = true;
+        line.style.position = PositionMode::Absolute;
+        line.style.inset.left = Length::px(0.f);
+        line.style.inset.right = Length::px(0.f);
+        line.style.inset.bottom = Length::px(
+            std::max(0.f, lineY - content.transform.position.y));
+        line.style.height = Length::px(kDropLineHeight);
+        line.style.width = Length::percent(100.f);
+        return;
+    }
+}
+
+void HierarchyPanel::updateDrag(Scene& scene) {
+    Input& input = Engine::instance().input;
+    const glm::vec2 mouse = input.mousePosition();
+    const ObjectID rootId = scene.getRoot();
+
+    if (input.pressed(MouseAction::Left)) {
+        dragCandidateId_ = INVALID_OBJECT;
+        dragMoved_ = false;
+        for (const Row& row : rows_) {
+            if (row.objectId == INVALID_OBJECT || row.objectId == rootId)
+                continue;
+            if (!ui_->get(row.rootId).visible)
+                continue;
+            const UIElement& labelEl = ui_->get(row.labelId);
+            if (pointInRect(mouse, labelEl.transform.position, labelEl.transform.size)) {
+                dragCandidateId_ = row.objectId;
+                dragStartMouse_ = mouse;
+                break;
+            }
+        }
+    }
+
+    if (dragCandidateId_ != INVALID_OBJECT && input.down(MouseAction::Left)) {
+        const glm::vec2 delta = mouse - dragStartMouse_;
+        if (!dragMoved_ && glm::length(delta) >= kDragThresholdPx) {
+            dragMoved_ = true;
+            draggingId_ = dragCandidateId_;
+            selectedId_ = draggingId_;
+        }
+    }
+
+    if (draggingId_ != INVALID_OBJECT && input.down(MouseAction::Left)) {
+        DropTarget drop = hitTestDrop(scene, mouse);
+        if (!canDropOn(scene, draggingId_, drop))
+            drop = {};
+        activeDrop_ = drop;
+    }
+
+    if (input.released(MouseAction::Left)) {
+        if (draggingId_ != INVALID_OBJECT) {
+            if (activeDrop_.valid)
+                applyDrop(scene, draggingId_, activeDrop_);
+        } else if (dragCandidateId_ != INVALID_OBJECT && !dragMoved_) {
+            selectedId_ = dragCandidateId_;
+        }
+
+        draggingId_ = INVALID_OBJECT;
+        dragCandidateId_ = INVALID_OBJECT;
+        dragMoved_ = false;
+        activeDrop_ = {};
+    }
+
+    if (!input.down(MouseAction::Left) && draggingId_ != INVALID_OBJECT) {
+        draggingId_ = INVALID_OBJECT;
+        dragCandidateId_ = INVALID_OBJECT;
+        dragMoved_ = false;
+        activeDrop_ = {};
+    }
 }
 
 void HierarchyPanel::rebuildRows(Scene& scene) {
@@ -271,23 +498,33 @@ void HierarchyPanel::rebuildRows(Scene& scene) {
             if (entry.hasChildren)
                 label->text += " (" + std::to_string(obj.children.size()) + ")";
 
-            label->onClick = [this, capturedId]() {
-                selectedId_ = capturedId;
-                lastSignature_ = 0;
-            };
+            // Selection / drag are handled in updateDrag to avoid click conflicts.
+            label->onClick = nullptr;
         }
-        styleLabel(rows_[i].labelId, entry.id == selectedId_);
+
+        const bool dropHover =
+            draggingId_ != INVALID_OBJECT &&
+            activeDrop_.valid &&
+            activeDrop_.kind == DropKind::Reparent &&
+            activeDrop_.targetId == entry.id;
+        styleLabel(rows_[i].labelId, entry.id == selectedId_, dropHover);
         applyRowMetrics(rows_[i]);
     }
+
+    syncDropPreview(scene);
 }
 
 void HierarchyPanel::update(Scene& scene) {
     if (!built_ || !ui_ || contentId_ == INVALID_UI_ELEMENT)
         return;
 
+    updateDrag(scene);
+
     const uint64_t signature = sceneSignature(scene);
-    if (signature == lastSignature_)
+    if (signature == lastSignature_) {
+        syncDropPreview(scene);
         return;
+    }
 
     lastSignature_ = signature;
     rebuildRows(scene);
