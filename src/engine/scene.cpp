@@ -84,8 +84,9 @@ void collectRenderCommands(
     }
 }
 
-void Scene::update() {
-    updateScripts(getRoot());
+void Scene::update(bool runScripts) {
+    if (runScripts)
+        updateScripts(getRoot());
 
     PROFILE_SCOPE("updateWorldTransforms");
     updateWorldTransforms(rootId, glm::mat4(1.0f));

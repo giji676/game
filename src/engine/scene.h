@@ -9,7 +9,9 @@ public:
     Scene();
 
     void init();
-    void update();
+    // When updateScripts is false (e.g. paused editor), world matrices still
+    // refresh so inspector transform edits show up immediately.
+    void update(bool updateScripts = true);
     void buildRenderList(
             std::vector<RenderCommand>& out,
             const Frustum& frustum);

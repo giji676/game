@@ -70,8 +70,7 @@ void Engine::run() {
             gameUi.setSurface({viewport.x, viewport.y}, vpSize, vpSize);
 
             game->update();
-            if (!paused)
-                scene.update();
+            scene.update(!paused);
             gameUi.update();
 
             auto gameUiCommands = gameUi.buildRenderList();
