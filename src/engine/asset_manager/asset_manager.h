@@ -1,5 +1,6 @@
 #pragma once
 
+#include <initializer_list>
 #include <string>
 #include <unordered_map>
 #include <memory>
@@ -11,6 +12,12 @@
 
 class Model;
 class MeshRegistry;
+
+struct ModelLoadDesc {
+    const char* name;
+    const char* path;
+    bool flipY = false;
+};
 
 class AssetManager {
 public:
@@ -29,7 +36,11 @@ public:
     Texture& getTexture(const std::string& name);
 
     Model& loadModel(const std::string& name,
-                     const std::string& path);
+                     const std::string& path,
+                     bool flipY = false);
+
+    // Load several models; each entry's flipY is applied to that model's textures.
+    void loadModels(std::initializer_list<ModelLoadDesc> models);
 
     Model& getModel(const std::string& name);
 
@@ -52,6 +63,9 @@ public:
 
     // Upload all meshes registered via loadModel. Call once after models load.
     void uploadMeshes();
+
+    // Decode enqueued textures, upload them, then upload registered meshes.
+    void flushLoads();
 
     Material& getOrCreateMaterial(
             Shader* shader,

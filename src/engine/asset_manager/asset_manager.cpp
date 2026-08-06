@@ -28,6 +28,12 @@ void AssetManager::uploadMeshes()
     meshRegistry_->uploadToGPU();
 }
 
+void AssetManager::flushLoads()
+{
+    processEnqueuedImageLoads();
+    uploadMeshes();
+}
+
 Texture& AssetManager::enqueImageLoad(const std::string& name,
         const std::string& fullPath,
         const std::string& type)
@@ -119,7 +125,8 @@ Texture& AssetManager::getTexture(const std::string& name)
 }
 
 Model& AssetManager::loadModel(const std::string& name,
-                               const std::string& path)
+                               const std::string& path,
+                               bool flipY)
 {
     auto it = models_.find(name);
     if (it != models_.end()) {
@@ -129,13 +136,24 @@ Model& AssetManager::loadModel(const std::string& name,
     if (!meshRegistry_)
         throw std::runtime_error("AssetManager::loadModel: mesh registry not set");
 
+    const bool previousFlip = imageVFlip_;
+    imageVFlip_ = flipY;
+
     auto model = std::make_unique<Model>(path.c_str(), this);
     for (const SubMesh& sub : model->getParts())
         meshRegistry_->addMesh(&sub.mesh);
 
     models_.emplace(name, std::move(model));
 
+    imageVFlip_ = previousFlip;
+
     return *models_.at(name);
+}
+
+void AssetManager::loadModels(std::initializer_list<ModelLoadDesc> models)
+{
+    for (const ModelLoadDesc& desc : models)
+        loadModel(desc.name, desc.path, desc.flipY);
 }
 
 Model& AssetManager::getModel(const std::string& name)

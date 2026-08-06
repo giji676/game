@@ -309,15 +309,12 @@ void Engine::loadAssets() {
 	using Second = std::chrono::duration<double, std::ratio<1> >;
 	std::chrono::time_point<Clock> m_beg = Clock::now();
 
-    // Flip is captured per texture at enqueue time (backpack on, car off).
-    assets.setImageVFlip(true);
-    assets.loadModel("backpack", "assets/backpack/backpack.obj");
-    assets.setImageVFlip(false);
-    assets.loadModel("car", "assets/car/car.obj");
+    assets.loadModels({
+        {"backpack", "assets/backpack/backpack.obj", true},
+        {"car", "assets/car/car.obj", false},
+    });
     assets.loadFont("InterVariable", "assets/fonts/Inter-4.1/InterVariable.ttf");
-
-    assets.processEnqueuedImageLoads();
-    assets.uploadMeshes();
+    assets.flushLoads();
 
     std::cout << "Time elapse: " << 
         std::chrono::duration_cast<Second>(Clock::now() - m_beg).count()
