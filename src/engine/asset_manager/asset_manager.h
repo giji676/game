@@ -19,6 +19,12 @@ struct ModelLoadDesc {
     bool flipY = false;
 };
 
+struct ShaderLoadDesc {
+    const char* name;
+    const char* vsPath;
+    const char* fsPath;
+};
+
 class AssetManager {
 public:
     void init(MeshRegistry* meshRegistry);
@@ -26,6 +32,8 @@ public:
     Shader& loadShader(const std::string& name,
                        const std::string& vsPath,
                        const std::string& fsPath);
+
+    void loadShaders(std::initializer_list<ShaderLoadDesc> shaders);
 
     Shader& getShader(const std::string& name);
 

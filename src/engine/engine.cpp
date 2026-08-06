@@ -275,35 +275,13 @@ void Engine::setupKeyBindings() {
 void Engine::loadAssets() {
     assets.init(&meshRegistry);
 
-    assets.loadShader(
-        "scene",
-        "shaders/scene.v.glsl",
-        "shaders/scene.f.glsl"
-    );
-
-    assets.loadShader(
-        "textured_mat",
-        "shaders/textured_mat.v.glsl",
-        "shaders/textured_mat.f.glsl"
-    );
-
-    assets.loadShader(
-        "debug",
-        "shaders/debug_shader.v.glsl",
-        "shaders/debug_shader.f.glsl"
-    );
-
-    assets.loadShader(
-        "glyph",
-        "shaders/glyph.v.glsl",
-        "shaders/glyph.f.glsl"
-    );
-
-    assets.loadShader(
-        "rect",
-        "shaders/rect.v.glsl",
-        "shaders/rect.f.glsl"
-    );
+    assets.loadShaders({
+        {"scene", "shaders/scene.v.glsl", "shaders/scene.f.glsl"},
+        {"textured_mat", "shaders/textured_mat.v.glsl", "shaders/textured_mat.f.glsl"},
+        {"debug", "shaders/debug_shader.v.glsl", "shaders/debug_shader.f.glsl"},
+        {"glyph", "shaders/glyph.v.glsl", "shaders/glyph.f.glsl"},
+        {"rect", "shaders/rect.v.glsl", "shaders/rect.f.glsl"},
+    });
 
 	using Clock = std::chrono::steady_clock;
 	using Second = std::chrono::duration<double, std::ratio<1> >;

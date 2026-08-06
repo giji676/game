@@ -96,6 +96,12 @@ Shader& AssetManager::loadShader(const std::string& name,
     return *shaders_.at(name);
 }
 
+void AssetManager::loadShaders(std::initializer_list<ShaderLoadDesc> shaders)
+{
+    for (const ShaderLoadDesc& desc : shaders)
+        loadShader(desc.name, desc.vsPath, desc.fsPath);
+}
+
 Shader& AssetManager::getShader(const std::string& name)
 {
     return *shaders_.at(name);
