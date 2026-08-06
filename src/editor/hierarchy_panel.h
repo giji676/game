@@ -20,6 +20,7 @@ public:
 
     ObjectID selectedId() const { return selectedId_; }
     void setSelectedId(ObjectID id) { selectedId_ = id; }
+    bool isDragging() const { return draggingId_ != INVALID_OBJECT; }
 
 private:
     struct Row {

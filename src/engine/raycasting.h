@@ -46,6 +46,12 @@ public:
         float radius,
         float& intersectionDistance);
 
+    static bool testPlaneIntersection(
+        const Ray& ray,
+        const glm::vec3& planePoint,
+        const glm::vec3& planeNormal,
+        glm::vec3& outHit);
+
     static std::optional<TriangleHit> testTriangleIntersection(
         const Ray& ray,
         const triangle3& triangle);

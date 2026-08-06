@@ -2,10 +2,16 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cfloat>
 
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "engine/asset_manager/object.h"
 #include "engine/asset_manager/widgets.h"
+#include "engine/camera.h"
 #include "engine/engine.h"
 #include "engine/input.h"
+#include "engine/scene.h"
 #include "engine/ui.h"
 #include "engine/utils/geometry.h"
 
@@ -37,9 +43,8 @@ void Editor::update() {
     if (input.pressed(Action::ToggleEditor)) {
         // When editor is open but gameplay control is active, F3 should return
         // to editor control instead of closing the editor entirely.
-        if (open_ && !engine_.isPaused()) {
-            engine_.setPaused(true);
-            playState_ = EditorPlayState::Edit;
+        if (open_ && playState_ == EditorPlayState::Play) {
+            setPlayState(EditorPlayState::Edit);
         } else {
             toggleOpen();
         }
@@ -63,8 +68,9 @@ void Editor::update() {
 
     if (open_) {
         hierarchyView_.update(engine_.scene);
+        updateSceneInteraction();
         inspectorView_.setSelectedId(hierarchyView_.selectedId());
-        inspectorView_.setEditable(engine_.isPaused());
+        inspectorView_.setEditable(isEditing());
         inspectorView_.update(engine_.scene);
     }
 
@@ -92,6 +98,8 @@ void Editor::setOpen(bool open) {
         }
     } else {
         viewportDrag_ = ViewportDrag::None;
+        objectDragging_ = false;
+        dragObjectId_ = INVALID_OBJECT;
         engine_.setPaused(wasPausedBeforeOpen_);
         if (!wasPausedBeforeOpen_)
             engine_.gameUi.onUnpause();
@@ -105,6 +113,28 @@ void Editor::setOpen(bool open) {
 
 void Editor::toggleOpen() {
     setOpen(!open_);
+}
+
+void Editor::setPlayState(EditorPlayState state) {
+    playState_ = state;
+    if (!open_)
+        return;
+
+    if (state == EditorPlayState::Edit) {
+        engine_.setPaused(true);
+    } else {
+        objectDragging_ = false;
+        dragObjectId_ = INVALID_OBJECT;
+    }
+}
+
+void Editor::exitEditMode() {
+    if (!open_ || playState_ != EditorPlayState::Edit)
+        return;
+
+    playState_ = EditorPlayState::Play;
+    objectDragging_ = false;
+    dragObjectId_ = INVALID_OBJECT;
 }
 
 void Editor::buildShell() {
@@ -123,7 +153,7 @@ void Editor::buildShell() {
             {0.f, 0.f},
             {0.f, 20.f},
             {0.85f, 0.85f, 0.9f, 1.f},
-            "Editor - F3 to close  |  drag edges to resize, drag center to move");
+            "Editor - F3 to close  |  click-drag objects in viewport to move");
     ui.reparent(placeholderLabelId_, rootId_);
     ui.get(placeholderLabelId_).style.position = PositionMode::Absolute;
     ui.get(placeholderLabelId_).style.inset.left = Length::px(12.f);
@@ -539,6 +569,125 @@ void Editor::updateViewportInteraction() {
 
     if (input.released(MouseAction::Left))
         viewportDrag_ = ViewportDrag::None;
+}
+
+bool Editor::makeViewportRay(glm::vec2 mouse, Ray& outRay) const {
+    const glm::vec4 vp = gameViewportRect();
+    if (vp.z <= 1.f || vp.w <= 1.f)
+        return false;
+    if (!pointInRect(mouse, {vp.x, vp.y}, {vp.z, vp.w}))
+        return false;
+
+    const float ndcX = ((mouse.x - vp.x) / vp.z) * 2.f - 1.f;
+    const float ndcY = ((mouse.y - vp.y) / vp.w) * 2.f - 1.f;
+
+    const Camera& camera = *engine_.getActiveCamera();
+    const glm::mat4 view = glm::lookAt(
+        camera.pos,
+        camera.pos + camera.front,
+        camera.up);
+    const glm::mat4 projection = glm::perspective(
+        glm::radians(45.f),
+        vp.z / vp.w,
+        0.1f,
+        100.0f);
+    const glm::mat4 invVP = glm::inverse(projection * view);
+
+    glm::vec4 nearH = invVP * glm::vec4(ndcX, ndcY, -1.f, 1.f);
+    if (std::abs(nearH.w) < 1e-8f)
+        return false;
+    nearH /= nearH.w;
+
+    const glm::vec3 target(nearH);
+    const glm::vec3 dir = target - camera.pos;
+    if (glm::dot(dir, dir) < 1e-12f)
+        return false;
+
+    outRay.origin = camera.pos;
+    outRay.direction = glm::normalize(dir);
+    outRay.t = FLT_MAX;
+    return true;
+}
+
+void Editor::updateSceneInteraction() {
+    Input& input = engine_.input;
+
+    if (!isEditing() ||
+        hierarchyView_.isDragging() ||
+        activeDragPanelId_ != INVALID_UI_ELEMENT ||
+        activeResizePanelId_ != INVALID_UI_ELEMENT) {
+        objectDragging_ = false;
+        dragObjectId_ = INVALID_OBJECT;
+        return;
+    }
+
+    const glm::vec2 mouse = input.mousePosition();
+    const glm::vec4 vp = gameViewportRect();
+    const bool mouseInViewport = pointInRect(mouse, {vp.x, vp.y}, {vp.z, vp.w});
+
+    if (input.pressed(MouseAction::Left) && mouseInViewport) {
+        Ray ray;
+        if (!makeViewportRay(mouse, ray)) {
+            objectDragging_ = false;
+            dragObjectId_ = INVALID_OBJECT;
+            return;
+        }
+
+        const RaycastHit hit = engine_.raycasting.castRay(ray);
+        if (hit.distance < FLT_MAX &&
+            hit.object != INVALID_OBJECT &&
+            hit.object != engine_.scene.getRoot()) {
+            hierarchyView_.setSelectedId(hit.object);
+            inspectorView_.setSelectedId(hit.object);
+
+            Object& obj = engine_.scene.get(hit.object);
+            const Camera& camera = *engine_.getActiveCamera();
+            dragObjectId_ = hit.object;
+            dragPlanePoint_ = glm::vec3(obj.worldMatrix[3]);
+            dragPlaneNormal_ = glm::normalize(camera.front);
+            objectDragging_ = Raycasting::testPlaneIntersection(
+                ray, dragPlanePoint_, dragPlaneNormal_, dragLastHit_);
+        } else {
+            hierarchyView_.setSelectedId(INVALID_OBJECT);
+            inspectorView_.setSelectedId(INVALID_OBJECT);
+            objectDragging_ = false;
+            dragObjectId_ = INVALID_OBJECT;
+        }
+    }
+
+    if (objectDragging_ &&
+        dragObjectId_ != INVALID_OBJECT &&
+        input.down(MouseAction::Left)) {
+        Ray ray;
+        // Allow drag to continue even if the cursor leaves the viewport.
+        const glm::vec2 clampedMouse = {
+            clampf(mouse.x, vp.x, vp.x + vp.z),
+            clampf(mouse.y, vp.y, vp.y + vp.w),
+        };
+        if (!makeViewportRay(clampedMouse, ray))
+            return;
+
+        glm::vec3 hitPoint;
+        if (!Raycasting::testPlaneIntersection(
+                ray, dragPlanePoint_, dragPlaneNormal_, hitPoint))
+            return;
+
+        const glm::vec3 worldDelta = hitPoint - dragLastHit_;
+        dragLastHit_ = hitPoint;
+        if (glm::dot(worldDelta, worldDelta) < 1e-12f)
+            return;
+
+        Object& obj = engine_.scene.get(dragObjectId_);
+        const Object& parent = engine_.scene.get(obj.parent);
+        const glm::vec3 localDelta = glm::vec3(
+            parent.worldInvMatrix * glm::vec4(worldDelta, 0.f));
+        obj.transform.setPosition(obj.transform.position() + localDelta);
+    }
+
+    if (input.released(MouseAction::Left)) {
+        objectDragging_ = false;
+        dragObjectId_ = INVALID_OBJECT;
+    }
 }
 
 glm::vec4 Editor::gameViewportRect() const {

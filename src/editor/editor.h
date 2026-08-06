@@ -8,6 +8,7 @@
 #include "editor/inspector_panel.h"
 #include "editor/panel.h"
 #include "engine/defines.h"
+#include "engine/raycasting.h"
 
 class Engine;
 
@@ -44,6 +45,13 @@ public:
 
     void setOpen(bool open);
     void toggleOpen();
+    void setPlayState(EditorPlayState state);
+    // Leave editor-tool control without changing engine pause.
+    // Used when ESC opens the in-game pause menu over an open editor.
+    void exitEditMode();
+    bool isEditing() const {
+        return open_ && playState_ == EditorPlayState::Edit;
+    }
 
     // Window-space x, y, w, h the game renders into. While the editor is open
     // this is the floating, resizable sub-window; otherwise it is the whole window.
@@ -63,6 +71,12 @@ private:
     ViewportDrag viewportDrag_ = ViewportDrag::None;
     glm::vec2 dragStartMouse_ = {0.f, 0.f};
     glm::vec4 dragStartRect_ = {0.f, 0.f, 0.f, 0.f};
+
+    bool objectDragging_ = false;
+    ObjectID dragObjectId_ = INVALID_OBJECT;
+    glm::vec3 dragPlanePoint_{0.f};
+    glm::vec3 dragPlaneNormal_{0.f, 0.f, 1.f};
+    glm::vec3 dragLastHit_{0.f};
 
     UIElementID rootId_ = INVALID_UI_ELEMENT;
     UIElementID placeholderLabelId_ = INVALID_UI_ELEMENT;
@@ -94,6 +108,9 @@ private:
     void syncResize();
     void applyLayoutRects();
     void updateViewportInteraction();
+    void updateSceneInteraction();
+
+    bool makeViewportRay(glm::vec2 mouse, Ray& outRay) const;
 
     static ViewportDrag hitTestViewport(glm::vec2 mouse, glm::vec4 rect);
     static glm::vec4 applyViewportDrag(

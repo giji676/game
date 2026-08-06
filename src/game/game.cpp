@@ -133,9 +133,17 @@ void Game::init() {
     constexpr float demoFont = 18.f;
     constexpr float toolbarH = 40.f;
 
+    // All pause-only chrome hangs off this root so visibility is one toggle.
+    pauseMenuRootId = ui.createElement();
+    ui.get(pauseMenuRootId).visible = false;
+    ui.get(pauseMenuRootId).style.inset.left = Length::px(0.f);
+    ui.get(pauseMenuRootId).style.inset.right = Length::px(0.f);
+    ui.get(pauseMenuRootId).style.inset.top = Length::px(0.f);
+    ui.get(pauseMenuRootId).style.inset.bottom = Length::px(0.f);
+
     // --- Flex row + justify-content: space-between (toolbar, paused) ---
     toolbarId = ui.createElement();
-    ui.get(toolbarId).visible = false;
+    ui.reparent(toolbarId, pauseMenuRootId);
     ui.get(toolbarId).style.inset.left = Length::px(0.f);
     ui.get(toolbarId).style.inset.right = Length::px(0.f);
     ui.get(toolbarId).style.inset.top = Length::px(0.f);
@@ -167,7 +175,7 @@ void Game::init() {
 
     // --- Block layout: vertical stack + gap + padding (paused) ---
     pausePanelId = ui.createElement();
-    ui.get(pausePanelId).visible = false;
+    ui.reparent(pausePanelId, pauseMenuRootId);
     ui.get(pausePanelId).style.inset.left = Length::percent(3.f);
     ui.get(pausePanelId).style.inset.top = Length::px(toolbarH + 8.f);
     ui.get(pausePanelId).style.width = Length::percent(42.f);
@@ -241,7 +249,7 @@ void Game::init() {
 
     // --- Flex row + justify-content: center (paused) ---
     flexRowDemoId = ui.createElement();
-    ui.get(flexRowDemoId).visible = false;
+    ui.reparent(flexRowDemoId, pauseMenuRootId);
     ui.get(flexRowDemoId).style.inset.right = Length::percent(3.f);
     ui.get(flexRowDemoId).style.inset.top = Length::px(toolbarH + 8.f);
     ui.get(flexRowDemoId).style.width = Length::percent(48.f);
@@ -270,7 +278,7 @@ void Game::init() {
 
     // --- Flex column + justify-content: end (paused) ---
     flexColDemoId = ui.createElement();
-    ui.get(flexColDemoId).visible = false;
+    ui.reparent(flexColDemoId, pauseMenuRootId);
     ui.get(flexColDemoId).style.inset.right = Length::percent(3.f);
     ui.get(flexColDemoId).style.inset.top = Length::px(toolbarH + 96.f);
     ui.get(flexColDemoId).style.width = Length::percent(30.f);
@@ -300,7 +308,7 @@ void Game::init() {
 
     // --- Nested absolute positioning inside a flow container (paused) ---
     absoluteDemoId = ui.createElement();
-    ui.get(absoluteDemoId).visible = false;
+    ui.reparent(absoluteDemoId, pauseMenuRootId);
     ui.get(absoluteDemoId).style.inset.right = Length::percent(3.f);
     ui.get(absoluteDemoId).style.inset.bottom = Length::percent(5.f);
     ui.get(absoluteDemoId).style.width = Length::percent(48.f);
@@ -330,7 +338,7 @@ void Game::init() {
 
     // --- Flex row + flex-grow: 1 (paused) ---
     flexGrowDemoId = ui.createElement();
-    ui.get(flexGrowDemoId).visible = false;
+    ui.reparent(flexGrowDemoId, pauseMenuRootId);
     ui.get(flexGrowDemoId).style.inset.left = Length::percent(3.f);
     ui.get(flexGrowDemoId).style.inset.bottom = Length::percent(5.f);
     ui.get(flexGrowDemoId).style.width = Length::percent(42.f);
@@ -378,7 +386,7 @@ void Game::init() {
 
     // --- Flex row: grow 3 / grow 2 / auto (paused) ---
     flexGrowRatioDemoId = ui.createElement();
-    ui.get(flexGrowRatioDemoId).visible = false;
+    ui.reparent(flexGrowRatioDemoId, pauseMenuRootId);
     ui.get(flexGrowRatioDemoId).style.inset.left = Length::percent(3.f);
     ui.get(flexGrowRatioDemoId).style.inset.bottom = Length::percent(10.f);
     ui.get(flexGrowRatioDemoId).style.width = Length::percent(42.f);
@@ -541,20 +549,24 @@ void Game::update() {
 
     Input& input = engine.input;
 
+    auto setPauseMenuVisible = [&](bool visible) {
+        engine.gameUi.get(pauseMenuRootId).visible = visible;
+    };
+
     // -------------------------
     // 1. ALWAYS RUN (control input)
     // -------------------------
     if (input.pressed(Action::Pause)) {
-        bool nowPaused = !engine.isPaused();
-        engine.setPaused(nowPaused);
-        engine.gameUi.get(pausePanelId).visible = nowPaused;
-        engine.gameUi.get(toolbarId).visible = nowPaused;
-        engine.gameUi.get(flexRowDemoId).visible = nowPaused;
-        engine.gameUi.get(flexColDemoId).visible = nowPaused;
-        engine.gameUi.get(absoluteDemoId).visible = nowPaused;
-        engine.gameUi.get(flexGrowDemoId).visible = nowPaused;
-        engine.gameUi.get(flexGrowRatioDemoId).visible = nowPaused;
+        if (engine.editor.isEditing()) {
+            // Leave editor-tool control; stay paused so the game pause UI can show.
+            engine.editor.exitEditMode();
+        } else {
+            engine.setPaused(!engine.isPaused());
+        }
     }
+
+    // Editor Edit mode owns the paused session without the in-game pause chrome.
+    setPauseMenuVisible(engine.isPaused() && !engine.editor.isEditing());
 
     if (input.pressed(Action::ToggleScreen))
         engine.app.toggleWindow();

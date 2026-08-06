@@ -119,6 +119,24 @@ bool Raycasting::testSphereIntersection(
     return false;
 }
 
+bool Raycasting::testPlaneIntersection(
+        const Ray& ray,
+        const glm::vec3& planePoint,
+        const glm::vec3& planeNormal,
+        glm::vec3& outHit)
+{
+    const float denom = glm::dot(ray.direction, planeNormal);
+    if (std::abs(denom) < 1e-6f)
+        return false;
+
+    const float t = glm::dot(planePoint - ray.origin, planeNormal) / denom;
+    if (t < 0.f)
+        return false;
+
+    outHit = ray.origin + ray.direction * t;
+    return true;
+}
+
 std::optional<TriangleHit> Raycasting::testTriangleIntersection(
         const Ray& ray,
         const triangle3& triangle)
