@@ -1,16 +1,32 @@
 #include "asset_manager.h"
 
+#include "mesh_registry.h"
 #include "shader.h"
 #include "model.h"
 #include "texture.h"
 
 #include "gj_image/gj_image.h"
 
+#include <stdexcept>
 #include <thread>
 
 // enque function for loading multiple assets in parallel
 // once all assets are loaded a signal is emitted to notify 
 // the engine that the assets are ready
+
+void AssetManager::init(MeshRegistry* meshRegistry)
+{
+    meshRegistry_ = meshRegistry;
+    if (meshRegistry_)
+        meshRegistry_->init();
+}
+
+void AssetManager::uploadMeshes()
+{
+    if (!meshRegistry_)
+        throw std::runtime_error("AssetManager::uploadMeshes: mesh registry not set");
+    meshRegistry_->uploadToGPU();
+}
 
 Texture& AssetManager::enqueImageLoad(const std::string& name,
         const std::string& fullPath,
@@ -110,7 +126,13 @@ Model& AssetManager::loadModel(const std::string& name,
         return *it->second;
     }
 
+    if (!meshRegistry_)
+        throw std::runtime_error("AssetManager::loadModel: mesh registry not set");
+
     auto model = std::make_unique<Model>(path.c_str(), this);
+    for (const SubMesh& sub : model->getParts())
+        meshRegistry_->addMesh(&sub.mesh);
+
     models_.emplace(name, std::move(model));
 
     return *models_.at(name);

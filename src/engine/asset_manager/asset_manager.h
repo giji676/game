@@ -10,10 +10,11 @@
 #include "texture.h"
 
 class Model;
+class MeshRegistry;
 
 class AssetManager {
 public:
-    void init();
+    void init(MeshRegistry* meshRegistry);
 
     Shader& loadShader(const std::string& name,
                        const std::string& vsPath,
@@ -49,6 +50,9 @@ public:
     void processEnqueuedImageLoads();
     //
 
+    // Upload all meshes registered via loadModel. Call once after models load.
+    void uploadMeshes();
+
     Material& getOrCreateMaterial(
             Shader* shader,
             Texture* diffuse,
@@ -71,6 +75,7 @@ private:
 
     std::unordered_map<std::string, std::unique_ptr<Texture>> enquedTextures_;
 
+    MeshRegistry* meshRegistry_ = nullptr;
     bool imageVFlip_ = false;
 
     uint32_t nextMaterialId_ = 1;

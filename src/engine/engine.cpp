@@ -273,6 +273,8 @@ void Engine::setupKeyBindings() {
 }
 
 void Engine::loadAssets() {
+    assets.init(&meshRegistry);
+
     assets.loadShader(
         "scene",
         "shaders/scene.v.glsl",
@@ -315,21 +317,7 @@ void Engine::loadAssets() {
     assets.loadFont("InterVariable", "assets/fonts/Inter-4.1/InterVariable.ttf");
 
     assets.processEnqueuedImageLoads();
-
-    // TODO: make this automatic through assets loader
-    meshRegistry.init();
-
-    Model& car = assets.getModel("car");
-    for (const SubMesh& sub : car.getParts()) {
-        meshRegistry.addMesh(&sub.mesh);
-    }
-
-    Model& backpack = assets.getModel("backpack");
-    for (const SubMesh& sub : backpack.getParts()) {
-        meshRegistry.addMesh(&sub.mesh);
-    }
-
-    meshRegistry.uploadToGPU();
+    assets.uploadMeshes();
 
     std::cout << "Time elapse: " << 
         std::chrono::duration_cast<Second>(Clock::now() - m_beg).count()
