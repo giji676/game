@@ -137,6 +137,53 @@ bool Raycasting::testPlaneIntersection(
     return true;
 }
 
+bool Raycasting::testRaySegmentDistance(
+        const Ray& ray,
+        const glm::vec3& a,
+        const glm::vec3& b,
+        float& outDistance,
+        float& outRayT)
+{
+    const glm::vec3 d1 = ray.direction;
+    const glm::vec3 d2 = b - a;
+    const glm::vec3 r = ray.origin - a;
+
+    const float aa = glm::dot(d1, d1);
+    const float bb = glm::dot(d1, d2);
+    const float cc = glm::dot(d2, d2);
+    const float dd = glm::dot(d1, r);
+    const float ee = glm::dot(d2, r);
+
+    if (aa < 1e-12f || cc < 1e-12f)
+        return false;
+
+    const float denom = aa * cc - bb * bb;
+    float rayT;
+    float segT;
+
+    if (denom < 1e-8f) {
+        segT = 0.f;
+        rayT = -dd / aa;
+    } else {
+        rayT = (bb * ee - cc * dd) / denom;
+        segT = (aa * ee - bb * dd) / denom;
+    }
+
+    segT = std::clamp(segT, 0.f, 1.f);
+    rayT = (bb * segT - dd) / aa;
+
+    if (rayT < 0.f) {
+        rayT = 0.f;
+        segT = std::clamp(ee / cc, 0.f, 1.f);
+    }
+
+    const glm::vec3 closestRay = ray.origin + d1 * rayT;
+    const glm::vec3 closestSeg = a + d2 * segT;
+    outDistance = glm::length(closestRay - closestSeg);
+    outRayT = rayT;
+    return true;
+}
+
 std::optional<TriangleHit> Raycasting::testTriangleIntersection(
         const Ray& ray,
         const triangle3& triangle)

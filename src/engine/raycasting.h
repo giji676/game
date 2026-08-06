@@ -52,6 +52,15 @@ public:
         const glm::vec3& planeNormal,
         glm::vec3& outHit);
 
+    // Closest distance between a ray and a finite segment [a, b].
+    // outRayT is the ray parameter of the closest point (must be >= 0).
+    static bool testRaySegmentDistance(
+        const Ray& ray,
+        const glm::vec3& a,
+        const glm::vec3& b,
+        float& outDistance,
+        float& outRayT);
+
     static std::optional<TriangleHit> testTriangleIntersection(
         const Ray& ray,
         const triangle3& triangle);

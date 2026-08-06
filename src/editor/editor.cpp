@@ -11,6 +11,7 @@
 #include "engine/camera.h"
 #include "engine/engine.h"
 #include "engine/input.h"
+#include "engine/renderer/debug.h"
 #include "engine/scene.h"
 #include "engine/ui.h"
 #include "engine/utils/geometry.h"
@@ -21,6 +22,67 @@ constexpr float kDefaultViewportScale = 0.6f;
 constexpr float kMinViewportW = 192.f;
 constexpr float kMinViewportH = 108.f;
 constexpr float kResizeHandle = 10.f;
+
+constexpr float kGizmoScreenFactor = 0.12f;
+constexpr float kGizmoPlanePadStart = 0.2f;
+constexpr float kGizmoPlanePadEnd = 0.45f;
+constexpr float kGizmoAxisPickRadius = 0.1f;
+
+constexpr glm::vec3 kGizmoColorX{1.f, 0.2f, 0.2f};
+constexpr glm::vec3 kGizmoColorY{0.2f, 1.f, 0.2f};
+constexpr glm::vec3 kGizmoColorZ{0.25f, 0.45f, 1.f};
+constexpr glm::vec3 kGizmoColorHighlight{1.f, 1.f, 0.25f};
+
+glm::vec3 gizmoAxisVector(GizmoHandle handle) {
+    switch (handle) {
+    case GizmoHandle::AxisX: return {1.f, 0.f, 0.f};
+    case GizmoHandle::AxisY: return {0.f, 1.f, 0.f};
+    case GizmoHandle::AxisZ: return {0.f, 0.f, 1.f};
+    default: return {0.f, 0.f, 0.f};
+    }
+}
+
+glm::vec3 gizmoPlaneNormal(GizmoHandle handle) {
+    switch (handle) {
+    case GizmoHandle::PlaneXY: return {0.f, 0.f, 1.f};
+    case GizmoHandle::PlaneXZ: return {0.f, 1.f, 0.f};
+    case GizmoHandle::PlaneYZ: return {1.f, 0.f, 0.f};
+    default: return {0.f, 0.f, 1.f};
+    }
+}
+
+void gizmoPlaneAxes(GizmoHandle handle, glm::vec3& u, glm::vec3& v) {
+    switch (handle) {
+    case GizmoHandle::PlaneXY:
+        u = {1.f, 0.f, 0.f};
+        v = {0.f, 1.f, 0.f};
+        break;
+    case GizmoHandle::PlaneXZ:
+        u = {1.f, 0.f, 0.f};
+        v = {0.f, 0.f, 1.f};
+        break;
+    case GizmoHandle::PlaneYZ:
+        u = {0.f, 1.f, 0.f};
+        v = {0.f, 0.f, 1.f};
+        break;
+    default:
+        u = {1.f, 0.f, 0.f};
+        v = {0.f, 1.f, 0.f};
+        break;
+    }
+}
+
+bool isAxisHandle(GizmoHandle handle) {
+    return handle == GizmoHandle::AxisX ||
+           handle == GizmoHandle::AxisY ||
+           handle == GizmoHandle::AxisZ;
+}
+
+bool isPlaneHandle(GizmoHandle handle) {
+    return handle == GizmoHandle::PlaneXY ||
+           handle == GizmoHandle::PlaneXZ ||
+           handle == GizmoHandle::PlaneYZ;
+}
 
 } // namespace
 
@@ -72,6 +134,17 @@ void Editor::update() {
         inspectorView_.setSelectedId(hierarchyView_.selectedId());
         inspectorView_.setEditable(isEditing());
         inspectorView_.update(engine_.scene);
+
+        if (isEditing()) {
+            const ObjectID selectedId = hierarchyView_.selectedId();
+            if (selectedId != INVALID_OBJECT &&
+                selectedId != engine_.scene.getRoot()) {
+                const Object& obj = engine_.scene.get(selectedId);
+                const glm::vec3 origin = glm::vec3(obj.worldMatrix[3]);
+                const float size = gizmoWorldSize(origin);
+                drawTranslateGizmo(origin, size);
+            }
+        }
     }
 
     syncResize();
@@ -98,8 +171,7 @@ void Editor::setOpen(bool open) {
         }
     } else {
         viewportDrag_ = ViewportDrag::None;
-        objectDragging_ = false;
-        dragObjectId_ = INVALID_OBJECT;
+        clearGizmoDrag();
         engine_.setPaused(wasPausedBeforeOpen_);
         if (!wasPausedBeforeOpen_)
             engine_.gameUi.onUnpause();
@@ -123,8 +195,7 @@ void Editor::setPlayState(EditorPlayState state) {
     if (state == EditorPlayState::Edit) {
         engine_.setPaused(true);
     } else {
-        objectDragging_ = false;
-        dragObjectId_ = INVALID_OBJECT;
+        clearGizmoDrag();
     }
 }
 
@@ -133,8 +204,7 @@ void Editor::exitEditMode() {
         return;
 
     playState_ = EditorPlayState::Play;
-    objectDragging_ = false;
-    dragObjectId_ = INVALID_OBJECT;
+    clearGizmoDrag();
 }
 
 void Editor::buildShell() {
@@ -153,7 +223,7 @@ void Editor::buildShell() {
             {0.f, 0.f},
             {0.f, 20.f},
             {0.85f, 0.85f, 0.9f, 1.f},
-            "Editor - F3 to close  |  click-drag objects in viewport to move");
+            "Editor - F3 to close  |  drag translate gizmo to move");
     ui.reparent(placeholderLabelId_, rootId_);
     ui.get(placeholderLabelId_).style.position = PositionMode::Absolute;
     ui.get(placeholderLabelId_).style.inset.left = Length::px(12.f);
@@ -606,6 +676,165 @@ bool Editor::makeViewportRay(glm::vec2 mouse, Ray& outRay) const {
     return true;
 }
 
+void Editor::clearGizmoDrag() {
+    objectDragging_ = false;
+    dragObjectId_ = INVALID_OBJECT;
+    gizmoActiveHandle_ = GizmoHandle::None;
+    dragAxis_ = {0.f, 0.f, 0.f};
+}
+
+float Editor::gizmoWorldSize(const glm::vec3& origin) const {
+    const Camera* camera = engine_.getActiveCamera();
+    if (!camera)
+        return 1.f;
+    const float dist = glm::length(camera->pos - origin);
+    return std::max(0.05f, dist * kGizmoScreenFactor);
+}
+
+GizmoHandle Editor::pickGizmoHandle(
+    const Ray& ray,
+    const glm::vec3& origin,
+    float size) const
+{
+    const float pad0 = size * kGizmoPlanePadStart;
+    const float pad1 = size * kGizmoPlanePadEnd;
+
+    GizmoHandle bestPlane = GizmoHandle::None;
+    float bestPlaneT = FLT_MAX;
+
+    const GizmoHandle planes[] = {
+        GizmoHandle::PlaneXY,
+        GizmoHandle::PlaneXZ,
+        GizmoHandle::PlaneYZ,
+    };
+    for (GizmoHandle handle : planes) {
+        glm::vec3 u, v;
+        gizmoPlaneAxes(handle, u, v);
+        const glm::vec3 normal = gizmoPlaneNormal(handle);
+
+        glm::vec3 hit;
+        if (!Raycasting::testPlaneIntersection(ray, origin, normal, hit))
+            continue;
+
+        const glm::vec3 rel = hit - origin;
+        const float du = glm::dot(rel, u);
+        const float dv = glm::dot(rel, v);
+        if (du < pad0 || du > pad1 || dv < pad0 || dv > pad1)
+            continue;
+
+        const float t = glm::length(hit - ray.origin);
+        if (t < bestPlaneT) {
+            bestPlaneT = t;
+            bestPlane = handle;
+        }
+    }
+    if (bestPlane != GizmoHandle::None)
+        return bestPlane;
+
+    GizmoHandle bestAxis = GizmoHandle::None;
+    float bestAxisDist = size * kGizmoAxisPickRadius;
+    float bestAxisT = FLT_MAX;
+    const float pickRadius = size * kGizmoAxisPickRadius;
+
+    const GizmoHandle axes[] = {
+        GizmoHandle::AxisX,
+        GizmoHandle::AxisY,
+        GizmoHandle::AxisZ,
+    };
+    for (GizmoHandle handle : axes) {
+        const glm::vec3 axis = gizmoAxisVector(handle);
+        const glm::vec3 tip = origin + axis * size;
+        float dist = 0.f;
+        float rayT = 0.f;
+        if (!Raycasting::testRaySegmentDistance(ray, origin, tip, dist, rayT))
+            continue;
+        if (dist > pickRadius)
+            continue;
+        if (dist < bestAxisDist - 1e-6f ||
+            (std::abs(dist - bestAxisDist) < 1e-6f && rayT < bestAxisT)) {
+            bestAxisDist = dist;
+            bestAxisT = rayT;
+            bestAxis = handle;
+        }
+    }
+    return bestAxis;
+}
+
+bool Editor::beginGizmoDrag(
+    GizmoHandle handle,
+    const Ray& ray,
+    ObjectID id,
+    const glm::vec3& origin)
+{
+    const Camera* camera = engine_.getActiveCamera();
+    if (!camera)
+        return false;
+
+    dragObjectId_ = id;
+    gizmoActiveHandle_ = handle;
+    dragPlanePoint_ = origin;
+    dragAxis_ = {0.f, 0.f, 0.f};
+
+    if (isAxisHandle(handle)) {
+        const glm::vec3 axis = gizmoAxisVector(handle);
+        dragAxis_ = axis;
+        const glm::vec3 camDir = glm::normalize(camera->front);
+        glm::vec3 planeNormal = glm::cross(axis, glm::cross(axis, camDir));
+        if (glm::dot(planeNormal, planeNormal) < 1e-8f) {
+            const glm::vec3 fallback =
+                (std::abs(axis.y) < 0.9f)
+                    ? glm::vec3(0.f, 1.f, 0.f)
+                    : glm::vec3(1.f, 0.f, 0.f);
+            planeNormal = glm::cross(axis, fallback);
+        }
+        dragPlaneNormal_ = glm::normalize(planeNormal);
+    } else if (isPlaneHandle(handle)) {
+        dragPlaneNormal_ = gizmoPlaneNormal(handle);
+    } else {
+        return false;
+    }
+
+    objectDragging_ = Raycasting::testPlaneIntersection(
+        ray, dragPlanePoint_, dragPlaneNormal_, dragLastHit_);
+    if (!objectDragging_) {
+        clearGizmoDrag();
+        return false;
+    }
+    return true;
+}
+
+void Editor::drawTranslateGizmo(const glm::vec3& origin, float size) {
+    DebugRenderer& debug = engine_.debugRenderer;
+
+    const auto colorFor = [this](GizmoHandle handle, const glm::vec3& base) {
+        if (handle == gizmoActiveHandle_ || handle == gizmoHoveredHandle_)
+            return kGizmoColorHighlight;
+        return base;
+    };
+
+    // depthTest=false: gizmo always draws in front of scene geometry
+    debug.arrow(origin, {1.f, 0.f, 0.f}, size, colorFor(GizmoHandle::AxisX, kGizmoColorX), false);
+    debug.arrow(origin, {0.f, 1.f, 0.f}, size, colorFor(GizmoHandle::AxisY, kGizmoColorY), false);
+    debug.arrow(origin, {0.f, 0.f, 1.f}, size, colorFor(GizmoHandle::AxisZ, kGizmoColorZ), false);
+
+    const float pad0 = size * kGizmoPlanePadStart;
+    const float pad1 = size * kGizmoPlanePadEnd;
+
+    const auto drawPad = [&](GizmoHandle handle, const glm::vec3& baseColor) {
+        glm::vec3 u, v;
+        gizmoPlaneAxes(handle, u, v);
+        const glm::vec3 a = origin + u * pad0 + v * pad0;
+        const glm::vec3 b = origin + u * pad1 + v * pad0;
+        const glm::vec3 c = origin + u * pad1 + v * pad1;
+        const glm::vec3 d = origin + u * pad0 + v * pad1;
+        debug.quadOutline(a, b, c, d, colorFor(handle, baseColor), false);
+    };
+
+    drawPad(GizmoHandle::PlaneXY, glm::mix(kGizmoColorX, kGizmoColorY, 0.5f));
+    drawPad(GizmoHandle::PlaneXZ, glm::mix(kGizmoColorX, kGizmoColorZ, 0.5f));
+    drawPad(GizmoHandle::PlaneYZ, glm::mix(kGizmoColorY, kGizmoColorZ, 0.5f));
+}
+
 void Editor::updateSceneInteraction() {
     Input& input = engine_.input;
 
@@ -613,8 +842,8 @@ void Editor::updateSceneInteraction() {
         hierarchyView_.isDragging() ||
         activeDragPanelId_ != INVALID_UI_ELEMENT ||
         activeResizePanelId_ != INVALID_UI_ELEMENT) {
-        objectDragging_ = false;
-        dragObjectId_ = INVALID_OBJECT;
+        clearGizmoDrag();
+        gizmoHoveredHandle_ = GizmoHandle::None;
         return;
     }
 
@@ -622,12 +851,42 @@ void Editor::updateSceneInteraction() {
     const glm::vec4 vp = gameViewportRect();
     const bool mouseInViewport = pointInRect(mouse, {vp.x, vp.y}, {vp.z, vp.w});
 
+    const ObjectID selectedId = hierarchyView_.selectedId();
+    const bool hasSelection =
+        selectedId != INVALID_OBJECT &&
+        selectedId != engine_.scene.getRoot();
+
+    glm::vec3 gizmoOrigin{0.f};
+    float gizmoSize = 1.f;
+    if (hasSelection) {
+        gizmoOrigin = glm::vec3(engine_.scene.get(selectedId).worldMatrix[3]);
+        gizmoSize = gizmoWorldSize(gizmoOrigin);
+    }
+
+    if (!objectDragging_) {
+        gizmoHoveredHandle_ = GizmoHandle::None;
+        if (hasSelection && mouseInViewport) {
+            Ray hoverRay;
+            if (makeViewportRay(mouse, hoverRay))
+                gizmoHoveredHandle_ = pickGizmoHandle(hoverRay, gizmoOrigin, gizmoSize);
+        }
+    } else {
+        gizmoHoveredHandle_ = gizmoActiveHandle_;
+    }
+
     if (input.pressed(MouseAction::Left) && mouseInViewport) {
         Ray ray;
         if (!makeViewportRay(mouse, ray)) {
-            objectDragging_ = false;
-            dragObjectId_ = INVALID_OBJECT;
+            clearGizmoDrag();
             return;
+        }
+
+        if (hasSelection) {
+            const GizmoHandle handle = pickGizmoHandle(ray, gizmoOrigin, gizmoSize);
+            if (handle != GizmoHandle::None) {
+                beginGizmoDrag(handle, ray, selectedId, gizmoOrigin);
+                return;
+            }
         }
 
         const RaycastHit hit = engine_.raycasting.castRay(ray);
@@ -636,27 +895,19 @@ void Editor::updateSceneInteraction() {
             hit.object != engine_.scene.getRoot()) {
             hierarchyView_.setSelectedId(hit.object);
             inspectorView_.setSelectedId(hit.object);
-
-            Object& obj = engine_.scene.get(hit.object);
-            const Camera& camera = *engine_.getActiveCamera();
-            dragObjectId_ = hit.object;
-            dragPlanePoint_ = glm::vec3(obj.worldMatrix[3]);
-            dragPlaneNormal_ = glm::normalize(camera.front);
-            objectDragging_ = Raycasting::testPlaneIntersection(
-                ray, dragPlanePoint_, dragPlaneNormal_, dragLastHit_);
+            clearGizmoDrag();
         } else {
             hierarchyView_.setSelectedId(INVALID_OBJECT);
             inspectorView_.setSelectedId(INVALID_OBJECT);
-            objectDragging_ = false;
-            dragObjectId_ = INVALID_OBJECT;
+            clearGizmoDrag();
         }
     }
 
     if (objectDragging_ &&
         dragObjectId_ != INVALID_OBJECT &&
+        gizmoActiveHandle_ != GizmoHandle::None &&
         input.down(MouseAction::Left)) {
         Ray ray;
-        // Allow drag to continue even if the cursor leaves the viewport.
         const glm::vec2 clampedMouse = {
             clampf(mouse.x, vp.x, vp.x + vp.z),
             clampf(mouse.y, vp.y, vp.y + vp.w),
@@ -669,8 +920,14 @@ void Editor::updateSceneInteraction() {
                 ray, dragPlanePoint_, dragPlaneNormal_, hitPoint))
             return;
 
-        const glm::vec3 worldDelta = hitPoint - dragLastHit_;
+        glm::vec3 worldDelta = hitPoint - dragLastHit_;
         dragLastHit_ = hitPoint;
+
+        if (isAxisHandle(gizmoActiveHandle_)) {
+            const float along = glm::dot(worldDelta, dragAxis_);
+            worldDelta = dragAxis_ * along;
+        }
+
         if (glm::dot(worldDelta, worldDelta) < 1e-12f)
             return;
 
@@ -681,10 +938,8 @@ void Editor::updateSceneInteraction() {
         obj.transform.setPosition(obj.transform.position() + localDelta);
     }
 
-    if (input.released(MouseAction::Left)) {
-        objectDragging_ = false;
-        dragObjectId_ = INVALID_OBJECT;
-    }
+    if (input.released(MouseAction::Left))
+        clearGizmoDrag();
 }
 
 glm::vec4 Editor::gameViewportRect() const {

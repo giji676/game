@@ -13,6 +13,7 @@ struct DebugLine {
     glm::vec3 start;
     glm::vec3 end;
     glm::vec3 color;
+    bool depthTest = true;
 };
 
 class DebugRenderer {
@@ -29,7 +30,23 @@ public:
     void line(
         const glm::vec3& start,
         const glm::vec3& end,
-        const glm::vec3& color);
+        const glm::vec3& color,
+        bool depthTest = true);
+
+    void arrow(
+        const glm::vec3& origin,
+        const glm::vec3& direction,
+        float length,
+        const glm::vec3& color,
+        bool depthTest = true);
+
+    void quadOutline(
+        const glm::vec3& a,
+        const glm::vec3& b,
+        const glm::vec3& c,
+        const glm::vec3& d,
+        const glm::vec3& color,
+        bool depthTest = true);
 
     void box(
         const glm::mat4& world,

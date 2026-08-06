@@ -30,6 +30,16 @@ enum class ViewportDrag {
     TopRight,
 };
 
+enum class GizmoHandle {
+    None,
+    AxisX,
+    AxisY,
+    AxisZ,
+    PlaneXY,
+    PlaneXZ,
+    PlaneYZ,
+};
+
 // Edit - scene frozen, editor chrome visible (default when editor is open).
 // Play - game sim runs while editor shell stays open (will be added later).
 class Editor {
@@ -74,8 +84,11 @@ private:
 
     bool objectDragging_ = false;
     ObjectID dragObjectId_ = INVALID_OBJECT;
+    GizmoHandle gizmoActiveHandle_ = GizmoHandle::None;
+    GizmoHandle gizmoHoveredHandle_ = GizmoHandle::None;
     glm::vec3 dragPlanePoint_{0.f};
     glm::vec3 dragPlaneNormal_{0.f, 0.f, 1.f};
+    glm::vec3 dragAxis_{0.f};
     glm::vec3 dragLastHit_{0.f};
 
     UIElementID rootId_ = INVALID_UI_ELEMENT;
@@ -111,6 +124,18 @@ private:
     void updateSceneInteraction();
 
     bool makeViewportRay(glm::vec2 mouse, Ray& outRay) const;
+    float gizmoWorldSize(const glm::vec3& origin) const;
+    GizmoHandle pickGizmoHandle(
+        const Ray& ray,
+        const glm::vec3& origin,
+        float size) const;
+    bool beginGizmoDrag(
+        GizmoHandle handle,
+        const Ray& ray,
+        ObjectID id,
+        const glm::vec3& origin);
+    void drawTranslateGizmo(const glm::vec3& origin, float size);
+    void clearGizmoDrag();
 
     static ViewportDrag hitTestViewport(glm::vec2 mouse, glm::vec4 rect);
     static glm::vec4 applyViewportDrag(

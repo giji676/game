@@ -76,8 +76,6 @@ void DebugRenderer::render(
     const glm::mat4& projection)
 {
     PROFILE_SCOPE("DebugRenderer::render");
-    glEnable(GL_DEPTH_TEST);
-    upload();
 
     Shader& shader = Engine::instance().assets.getShader("debug");
     shader.use();
@@ -86,11 +84,35 @@ void DebugRenderer::render(
 
     glBindVertexArray(vao);
 
-    glDrawArrays(
-        GL_LINES,
-        0,
-        vertices_.size()
-    );
+    auto drawPass = [&](bool depthTest) {
+        vertices_.clear();
+        for (const DebugLine& line : lines_) {
+            if (line.depthTest != depthTest)
+                continue;
+            vertices_.push_back({line.start, line.color});
+            vertices_.push_back({line.end, line.color});
+        }
+        if (vertices_.empty())
+            return;
+
+        if (depthTest)
+            glEnable(GL_DEPTH_TEST);
+        else
+            glDisable(GL_DEPTH_TEST);
+
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            vertices_.size() * sizeof(DebugVertex),
+            vertices_.data(),
+            GL_DYNAMIC_DRAW
+        );
+
+        glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertices_.size()));
+    };
+
+    drawPass(true);
+    drawPass(false);
 
     clear();
 }
@@ -142,13 +164,60 @@ void DebugRenderer::makeVertices(const std::vector<DebugLine>& lines) {
 void DebugRenderer::line(
     const glm::vec3& start,
     const glm::vec3& end,
-    const glm::vec3& color)
+    const glm::vec3& color,
+    bool depthTest)
 {
     lines_.push_back({
         start,
         end,
-        color
+        color,
+        depthTest
     });
+}
+
+void DebugRenderer::arrow(
+    const glm::vec3& origin,
+    const glm::vec3& direction,
+    float length,
+    const glm::vec3& color,
+    bool depthTest)
+{
+    if (length <= 0.f)
+        return;
+
+    const float dirLen2 = glm::dot(direction, direction);
+    if (dirLen2 < 1e-12f)
+        return;
+
+    const glm::vec3 dir = direction * (1.f / std::sqrt(dirLen2));
+    const glm::vec3 tip = origin + dir * length;
+    const float tipLen = length * 0.2f;
+    const glm::vec3 shaftEnd = tip - dir * tipLen;
+
+    line(origin, tip, color, depthTest);
+
+    glm::vec3 up = (std::abs(dir.y) < 0.99f)
+        ? glm::vec3(0.f, 1.f, 0.f)
+        : glm::vec3(1.f, 0.f, 0.f);
+    const glm::vec3 right = glm::normalize(glm::cross(dir, up));
+    const glm::vec3 side = right * (length * 0.08f);
+
+    line(tip, shaftEnd + side, color, depthTest);
+    line(tip, shaftEnd - side, color, depthTest);
+}
+
+void DebugRenderer::quadOutline(
+    const glm::vec3& a,
+    const glm::vec3& b,
+    const glm::vec3& c,
+    const glm::vec3& d,
+    const glm::vec3& color,
+    bool depthTest)
+{
+    line(a, b, color, depthTest);
+    line(b, c, color, depthTest);
+    line(c, d, color, depthTest);
+    line(d, a, color, depthTest);
 }
 
 void DebugRenderer::axis(
