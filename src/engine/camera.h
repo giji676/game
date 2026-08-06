@@ -1,6 +1,7 @@
 #pragma once
 
-#include "glm/ext/vector_float3.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 class Camera {
 public:
@@ -11,5 +12,8 @@ public:
 
     float yaw = -90.f;
     float pitch;
-private:
+
+    glm::mat4 view() const {
+        return glm::lookAt(pos, pos + front, up);
+    }
 };

@@ -119,11 +119,7 @@ void Engine::callRenderer(
 
     Camera& camera = *getActiveCamera();
 
-    glm::mat4 view = glm::lookAt(
-        camera.pos,
-        camera.pos + camera.front,
-        camera.up
-    );
+    glm::mat4 view = camera.view();
 
     glm::mat4 projection = glm::perspective(
         glm::radians(45.f),

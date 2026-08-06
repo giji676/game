@@ -582,10 +582,7 @@ bool Editor::makeViewportRay(glm::vec2 mouse, Ray& outRay) const {
     const float ndcY = ((mouse.y - vp.y) / vp.w) * 2.f - 1.f;
 
     const Camera& camera = *engine_.getActiveCamera();
-    const glm::mat4 view = glm::lookAt(
-        camera.pos,
-        camera.pos + camera.front,
-        camera.up);
+    const glm::mat4 view = camera.view();
     const glm::mat4 projection = glm::perspective(
         glm::radians(45.f),
         vp.z / vp.w,
