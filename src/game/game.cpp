@@ -5,9 +5,9 @@
 #include "game/game.h"
 #include "engine/defines.h"
 #include "engine/profilers/profile_scope.h"
-#include "engine/raycasting.h"
 #include "game/perlin.h"
 #include "game/scripts/test.h"
+#include "game/scripts/player_controller.h"
 
 #include "engine/engine.h"
 #include "engine/asset_manager/widgets.h"
@@ -49,15 +49,6 @@ void setPanelBackground(UI& ui, UIElementID id, glm::vec4 color,
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale);
 
-void clearDebug(ObjectID id) {
-    Object& obj = Engine::instance().scene.get(id);
-
-    obj.debug = false;
-
-    for (ObjectID child : obj.children)
-        clearDebug(child);
-}
-
 Game::Game(Engine& engine)
     : engine(engine)
 {}
@@ -66,9 +57,7 @@ void Game::init() {
     Scene& scene = engine.scene;
     UI& ui = engine.gameUi;
     setupTerrain();
-
-    player.pos = glm::vec3(0.f);
-    player.velocity = glm::vec3(0.f);
+    setupPlayer();
 
     light.pos = glm::vec3(0.f, 3.f, 0.f);
     light.color = glm::vec3(1.f);
@@ -461,6 +450,16 @@ void Game::setupTerrain() {
     glBindVertexArray(0);
 }
 
+void Game::setupPlayer() {
+    Scene& scene = engine.scene;
+    ObjectID id = scene.createObject();
+    Object& obj = scene.get(id);
+    obj.name = "Player";
+    obj.addComponent<Camera>();
+    obj.addScript<PlayerController>(&world);
+    engine.activeCameraObject = id;
+}
+
 Terrain generateTerrain(int width, int height, float scale, float heightScale) {
     Terrain t;
 
@@ -570,81 +569,6 @@ void Game::update() {
 
     if (input.pressed(Action::ToggleScreen))
         engine.app.toggleWindow();
-
-    if (!engine.isPaused())
-    {
-        Camera* camera = engine.getActiveCamera();
-        if (camera) {
-            Object& camObj = engine.scene.get(camera->object);
-            float dt = engine.app.deltaTime;
-            float cameraSpeed = player.speed * dt;
-
-            if (input.down(Action::MoveForward))
-                player.pos += cameraSpeed * camera->front;
-
-            if (input.down(Action::MoveBackward))
-                player.pos -= cameraSpeed * camera->front;
-
-            if (input.down(Action::MoveLeft))
-                player.pos -= glm::normalize(glm::cross(camera->front, camera->up)) * cameraSpeed;
-
-            if (input.down(Action::MoveRight))
-                player.pos += glm::normalize(glm::cross(camera->front, camera->up)) * cameraSpeed;
-
-            if (input.pressed(Action::Jump) && player.grounded)
-                player.velocity.y = player.jumpForce;
-
-            player.velocity.y += -engine.G * dt;
-            player.pos.y += player.velocity.y * dt;
-
-            // collision
-            float halfW = (world.width - 1) * world.scale * 0.5f;
-            float halfH = (world.height - 1) * world.scale * 0.5f;
-
-            int x = floor((player.pos.x + halfW) / world.scale);
-            int z = floor((player.pos.z + halfH) / world.scale);
-
-            int idx = z * world.width + x;
-            float groundY = world.terrain.vertices[idx * 6 + 1];
-
-            if (player.pos.y <= groundY) {
-                player.velocity.y = 0.f;
-                player.pos.y = groundY;
-                player.grounded = true;
-            } else {
-                player.grounded = false;
-            }
-
-            float xoffset = input.mouseDeltaX;
-            float yoffset = input.mouseDeltaY;
-
-            const float sensitivity = 0.1f;
-
-            camera->yaw -= xoffset * sensitivity;
-            camera->pitch -= yoffset * sensitivity;
-            camera->pitch = glm::clamp(camera->pitch, -89.0f, 89.0f);
-
-            // Writers push pose into the object transform. Camera::lateUpdate
-            // pulls worldMatrix after the hierarchy update.
-            camObj.transform.setPosition(player.pos);
-            camObj.transform.setRotation({camera->pitch, camera->yaw, 0.f});
-
-            clearDebug(engine.scene.getRoot());
-
-            Ray ray{
-                .origin = player.pos,
-                .direction = glm::normalize(glm::vec3(
-                    -sin(glm::radians(camera->yaw)) * cos(glm::radians(camera->pitch)),
-                     sin(glm::radians(camera->pitch)),
-                    -cos(glm::radians(camera->yaw)) * cos(glm::radians(camera->pitch)))),
-            };
-
-            RaycastHit hit = engine.raycasting.castRay(ray);
-            if (hit.object != INVALID_OBJECT_ID) {
-                engine.scene.get(hit.object).debug = true;
-            }
-        }
-    }
 
     // -------------------------
     // 3. UI (always runs)

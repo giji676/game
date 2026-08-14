@@ -24,7 +24,6 @@ void Engine::init(Game *g) {
 
     setupKeyBindings();
     loadAssets();
-    setupCamera();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
@@ -299,14 +298,6 @@ Camera* Engine::getActiveCamera() {
     if (activeCameraObject == INVALID_OBJECT)
         return nullptr;
     return scene.get(activeCameraObject).getComponent<Camera>();
-}
-
-void Engine::setupCamera() {
-    ObjectID id = scene.createObject();
-    Object& obj = scene.get(id);
-    obj.name = "Camera";
-    obj.addComponent<Camera>();
-    activeCameraObject = id;
 }
 
 void Engine::setPaused(bool value) {

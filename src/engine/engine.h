@@ -65,7 +65,6 @@ private:
     void getInput(SDL_Event &event);
     void setupKeyBindings();
     void loadAssets();
-    void setupCamera();
     void callRenderer(
         std::vector<UIRenderCommand>& gameUiQue,
         std::vector<UIRenderCommand>& editorUiQue,

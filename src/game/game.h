@@ -3,21 +3,9 @@
 #include <vector>
 
 #include "engine/engine.h"
-#include "game/player.h"
+#include "game/world.h"
 
 #include "engine/defines.h"
-
-typedef struct {
-    std::vector<float> vertices;   // x y z nx ny nz
-    std::vector<unsigned int> indices;
-} Terrain;
-
-typedef struct {
-    Terrain terrain;
-    int width;
-    int height;
-    float scale;
-} World;
 
 typedef struct {
     glm::vec3 pos;
@@ -37,7 +25,6 @@ public:
 
 private:
     Engine& engine;
-    Player player;
     World world;
     Light light;
 
@@ -59,4 +46,5 @@ private:
     unsigned int planeVBO, planeVAO, planeEBO;
 
     void setupTerrain();
+    void setupPlayer();
 };
