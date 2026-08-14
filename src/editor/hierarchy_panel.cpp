@@ -400,6 +400,7 @@ void HierarchyPanel::updateDrag(Scene& scene) {
     Input& input = Engine::instance().input;
     const glm::vec2 mouse = input.mousePosition();
     const ObjectID rootId = scene.getRoot();
+    releasedDragId_ = INVALID_OBJECT;
 
     if (input.pressed(MouseAction::Left)) {
         dragCandidateId_ = INVALID_OBJECT;
@@ -423,7 +424,6 @@ void HierarchyPanel::updateDrag(Scene& scene) {
         if (!dragMoved_ && glm::length(delta) >= kDragThresholdPx) {
             dragMoved_ = true;
             draggingId_ = dragCandidateId_;
-            selectedId_ = draggingId_;
         }
     }
 
@@ -436,7 +436,11 @@ void HierarchyPanel::updateDrag(Scene& scene) {
 
     if (input.released(MouseAction::Left)) {
         if (draggingId_ != INVALID_OBJECT) {
-            if (activeDrop_.valid)
+            releasedDragId_ = draggingId_;
+            const UIElement& content = ui_->get(contentId_);
+            const bool overHierarchy = pointInRect(
+                mouse, content.transform.position, content.transform.size);
+            if (overHierarchy && activeDrop_.valid)
                 applyDrop(scene, draggingId_, activeDrop_);
         } else if (dragCandidateId_ != INVALID_OBJECT && !dragMoved_) {
             selectedId_ = dragCandidateId_;

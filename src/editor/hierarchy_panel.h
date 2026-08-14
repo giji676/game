@@ -21,6 +21,8 @@ public:
     ObjectID selectedId() const { return selectedId_; }
     void setSelectedId(ObjectID id) { selectedId_ = id; }
     bool isDragging() const { return draggingId_ != INVALID_OBJECT; }
+    ObjectID draggingId() const { return draggingId_; }
+    ObjectID releasedDragId() const { return releasedDragId_; }
 
 private:
     struct Row {
@@ -86,6 +88,7 @@ private:
 
     ObjectID dragCandidateId_ = INVALID_OBJECT;
     ObjectID draggingId_ = INVALID_OBJECT;
+    ObjectID releasedDragId_ = INVALID_OBJECT;
     glm::vec2 dragStartMouse_ = {0.f, 0.f};
     bool dragMoved_ = false;
     DropTarget activeDrop_;

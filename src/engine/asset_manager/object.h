@@ -91,6 +91,28 @@ public:
         return nullptr;
     }
 
+    template <typename T>
+    T* getScript() {
+        static_assert(std::is_base_of<IScript, T>::value,
+                      "T must inherit IScript");
+        for (auto& script : scripts) {
+            if (T* typed = dynamic_cast<T*>(script.get()))
+                return typed;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    const T* getScript() const {
+        static_assert(std::is_base_of<IScript, T>::value,
+                      "T must inherit IScript");
+        for (const auto& script : scripts) {
+            if (const T* typed = dynamic_cast<const T*>(script.get()))
+                return typed;
+        }
+        return nullptr;
+    }
+
     Object() = default;
 
     Object(const Object&) = delete;

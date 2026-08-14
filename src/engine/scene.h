@@ -23,6 +23,11 @@ public:
 
     Object& get(ObjectID id) { return objects[id]; }
     const Object& get(ObjectID id) const { return objects[id]; }
+    bool valid(ObjectID id) const {
+        return id != INVALID_OBJECT &&
+               id >= 0 &&
+               static_cast<size_t>(id) < objects.size();
+    }
 
     ObjectID getRoot() const { return rootId; }
     Object& root() { return objects[rootId]; }

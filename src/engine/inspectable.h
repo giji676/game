@@ -1,17 +1,24 @@
 #pragma once
 
+#include <typeinfo>
 #include <vector>
+
+#include "engine/object_ref.h"
 
 enum class InspectType {
     Bool,
     Int,
     Float,
+    Object,
+    Component,
+    Script,
 };
 
 struct InspectField {
     const char* name = "";
     InspectType type = InspectType::Bool;
     void* ptr = nullptr;
+    const std::type_info* requiredType = nullptr;
 };
 
 // C++ stand-in for Unity serialized public fields. Scripts and components call
@@ -30,12 +37,32 @@ protected:
     void expose(const char* name, float& value) {
         add(name, InspectType::Float, &value);
     }
+    void expose(const char* name, ObjectRef& value) {
+        add(name, InspectType::Object, &value.id);
+    }
+    void expose(const char* name, ObjectID& value) {
+        add(name, InspectType::Object, &value);
+    }
+
+    template <typename T>
+    void expose(const char* name, ComponentRef<T>& value) {
+        add(name, InspectType::Component, &value.id, &typeid(T));
+    }
+
+    template <typename T>
+    void expose(const char* name, ScriptRef<T>& value) {
+        add(name, InspectType::Script, &value.id, &typeid(T));
+    }
 
 private:
     std::vector<InspectField> fields_;
 
-    void add(const char* name, InspectType type, void* ptr) {
-        fields_.push_back({name, type, ptr});
+    void add(
+            const char* name,
+            InspectType type,
+            void* ptr,
+            const std::type_info* requiredType = nullptr) {
+        fields_.push_back({name, type, ptr, requiredType});
     }
 };
 

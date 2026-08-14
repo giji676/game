@@ -19,7 +19,12 @@ class UI;
 class BehaviourListView {
 public:
     void bind(UI& ui, UIElementID parentId, const char* title);
-    void update(const std::vector<IBehaviour*>& items, bool editable);
+    void update(
+        Scene& scene,
+        const std::vector<IBehaviour*>& items,
+        bool editable,
+        ObjectID draggingId,
+        ObjectID droppedId);
     void setVisible(bool visible);
 
 private:
@@ -27,6 +32,7 @@ private:
         UIElementID rootId = INVALID_UI_ELEMENT;
         UIElementID labelId = INVALID_UI_ELEMENT;
         UIElementID controlId = INVALID_UI_ELEMENT;
+        UIElementID clearId = INVALID_UI_ELEMENT;
         InspectType type = InspectType::Bool;
         bool wasFocused = false;
     };
@@ -41,8 +47,20 @@ private:
     void ensureCardCount(size_t count);
     void ensureFieldCount(Card& card, size_t count);
     void setElementInFlow(UIElementID id, bool inFlow, float heightPx) const;
-    void syncCard(Card& card, IBehaviour& behaviour, bool editable);
-    void syncFieldRow(FieldRow& row, const InspectField& field, bool editable);
+    void syncCard(
+        Card& card,
+        IBehaviour& behaviour,
+        Scene& scene,
+        bool editable,
+        ObjectID draggingId,
+        ObjectID droppedId);
+    void syncFieldRow(
+        FieldRow& row,
+        const InspectField& field,
+        Scene& scene,
+        bool editable,
+        ObjectID draggingId,
+        ObjectID droppedId);
     float cardHeight(size_t fieldCount) const;
     float fieldsHeight(size_t fieldCount) const;
     float listHeight(const std::vector<IBehaviour*>& items) const;
@@ -92,6 +110,10 @@ public:
     void bind(UI& ui, EditorPanel& panel);
     void setSelectedId(ObjectID id) { selectedId_ = id; }
     void setEditable(bool editable) { editable_ = editable; }
+    void setObjectDrag(ObjectID draggingId, ObjectID droppedId) {
+        draggingObjectId_ = draggingId;
+        droppedObjectId_ = droppedId;
+    }
     void update(Scene& scene);
 
 private:
@@ -102,6 +124,8 @@ private:
     UI* ui_ = nullptr;
     UIElementID contentId_ = INVALID_UI_ELEMENT;
     ObjectID selectedId_ = INVALID_OBJECT;
+    ObjectID draggingObjectId_ = INVALID_OBJECT;
+    ObjectID droppedObjectId_ = INVALID_OBJECT;
     bool editable_ = true;
     bool built_ = false;
 

@@ -16,6 +16,9 @@
 #include "engine/scene.h"
 #include "engine/ui.h"
 #include "engine/ui/style.h"
+#include "engine/utils/geometry.h"
+
+#include <typeinfo>
 
 namespace {
 
@@ -33,6 +36,7 @@ constexpr float kCardHeaderH = kRowFontSize + 12.f;
 constexpr float kFieldRowH = kAxisRowH;
 constexpr float kFieldGap = 4.f;
 constexpr float kCheckboxSize = 20.f;
+constexpr float kClearBtnW = 22.f;
 
 std::string formatFloat(float v) {
     char buffer[96];
@@ -102,6 +106,107 @@ bool tryParseFloat(const std::string& text, float& out) {
 bool parseInt(const std::string& text, int& out) {
     char tail = '\0';
     return std::sscanf(text.c_str(), " %d %c", &out, &tail) == 1;
+}
+
+bool isRefType(InspectType type) {
+    return type == InspectType::Object ||
+           type == InspectType::Component ||
+           type == InspectType::Script;
+}
+
+const char* refTypeLabel(InspectType type) {
+    switch (type) {
+        case InspectType::Component: return "Component";
+        case InspectType::Script: return "Script";
+        default: return "Object";
+    }
+}
+
+bool acceptsRef(const Object& obj, const InspectField& field) {
+    if (field.type == InspectType::Object)
+        return true;
+    if (!field.requiredType)
+        return false;
+    if (field.type == InspectType::Component) {
+        for (const auto& component : obj.components) {
+            if (component && typeid(*component) == *field.requiredType)
+                return true;
+        }
+        return false;
+    }
+    if (field.type == InspectType::Script) {
+        for (const auto& script : obj.scripts) {
+            if (script && typeid(*script) == *field.requiredType)
+                return true;
+        }
+        return false;
+    }
+    return false;
+}
+
+std::string objectDisplayName(const Object& obj, ObjectID id) {
+    if (!obj.name.empty())
+        return obj.name;
+    return "Object " + std::to_string(id);
+}
+
+void styleObjectSlot(Button* btn, bool dropHover, bool dropValid, bool missing) {
+    if (!btn)
+        return;
+    btn->centerText = false;
+    btn->padding = {8.f, 4.f};
+    btn->cornerRadii = {4.f, 4.f, 4.f, 4.f};
+    btn->normal.textColor = missing
+        ? glm::vec4{0.85f, 0.45f, 0.45f, 1.f}
+        : glm::vec4{0.9f, 0.9f, 0.95f, 1.f};
+    btn->hoveredStyle.textColor = btn->normal.textColor;
+    btn->pressedStyle.textColor = btn->normal.textColor;
+    btn->disabledStyle.textColor = {0.62f, 0.62f, 0.68f, 1.f};
+    btn->normal.bgColor = {0.13f, 0.13f, 0.15f, 1.f};
+    btn->hoveredStyle.bgColor = {0.16f, 0.16f, 0.19f, 1.f};
+    btn->pressedStyle.bgColor = {0.1f, 0.1f, 0.12f, 1.f};
+    btn->disabledStyle.bgColor = {0.09f, 0.09f, 0.11f, 1.f};
+    btn->normal.borderWidth = 1.f;
+    btn->hoveredStyle.borderWidth = 1.f;
+    btn->pressedStyle.borderWidth = 1.f;
+    btn->disabledStyle.borderWidth = 1.f;
+    btn->normal.borderColor = {0.28f, 0.28f, 0.34f, 1.f};
+    btn->hoveredStyle.borderColor = {0.42f, 0.42f, 0.52f, 1.f};
+    btn->pressedStyle.borderColor = {0.28f, 0.28f, 0.34f, 1.f};
+    btn->disabledStyle.borderColor = {0.2f, 0.2f, 0.24f, 1.f};
+    if (dropHover) {
+        const glm::vec4 bg = dropValid
+            ? glm::vec4{0.16f, 0.28f, 0.22f, 1.f}
+            : glm::vec4{0.28f, 0.16f, 0.16f, 1.f};
+        const glm::vec4 border = dropValid
+            ? glm::vec4{0.45f, 0.9f, 0.6f, 1.f}
+            : glm::vec4{0.9f, 0.4f, 0.4f, 1.f};
+        btn->normal.bgColor = bg;
+        btn->hoveredStyle.bgColor = bg;
+        btn->pressedStyle.bgColor = bg;
+        btn->normal.borderColor = border;
+        btn->hoveredStyle.borderColor = border;
+        btn->pressedStyle.borderColor = border;
+        btn->normal.borderWidth = 2.f;
+        btn->hoveredStyle.borderWidth = 2.f;
+        btn->pressedStyle.borderWidth = 2.f;
+    }
+}
+
+void styleClearButton(Button* btn) {
+    if (!btn)
+        return;
+    btn->text = "x";
+    btn->centerText = true;
+    btn->padding = {0.f, 0.f};
+    btn->cornerRadii = {4.f, 4.f, 4.f, 4.f};
+    btn->normal.bgColor = {0.22f, 0.16f, 0.16f, 1.f};
+    btn->hoveredStyle.bgColor = {0.42f, 0.22f, 0.22f, 1.f};
+    btn->pressedStyle.bgColor = {0.32f, 0.14f, 0.14f, 1.f};
+    btn->normal.textColor = {0.9f, 0.75f, 0.75f, 1.f};
+    btn->hoveredStyle.textColor = {1.f, 0.9f, 0.9f, 1.f};
+    btn->disabledStyle.bgColor = {0.12f, 0.12f, 0.14f, 1.f};
+    btn->disabledStyle.textColor = {0.45f, 0.45f, 0.5f, 1.f};
 }
 
 } // namespace
@@ -359,13 +464,15 @@ void InspectorPanel::update(Scene& scene) {
     components.reserve(editableObj.components.size());
     for (auto& component : editableObj.components)
         components.push_back(component.get());
-    componentsView_.update(components, editable_);
+    componentsView_.update(
+        scene, components, editable_, draggingObjectId_, droppedObjectId_);
 
     std::vector<IBehaviour*> scripts;
     scripts.reserve(editableObj.scripts.size());
     for (auto& script : editableObj.scripts)
         scripts.push_back(script.get());
-    scriptsView_.update(scripts, editable_);
+    scriptsView_.update(
+        scene, scripts, editable_, draggingObjectId_, droppedObjectId_);
 }
 
 void BehaviourListView::bind(UI& ui, UIElementID parentId, const char* title) {
@@ -526,14 +633,27 @@ void BehaviourListView::ensureFieldCount(Card& card, size_t count) {
         controlEl.style.position = PositionMode::Relative;
         controlEl.style.height = Length::percent(100.f);
 
-        card.fields.push_back({row, labelId, controlId});
+        UIElementID clearId = ui_->button({0.f, 0.f}, kAxisFontSize, "x", nullptr);
+        ui_->reparent(clearId, row);
+        UIElement& clearEl = ui_->get(clearId);
+        clearEl.style.position = PositionMode::Relative;
+        clearEl.style.width = Length::px(kClearBtnW);
+        clearEl.style.height = Length::px(kClearBtnW);
+        clearEl.style.flexGrow = 0.f;
+        clearEl.transform.fontSize = kAxisFontSize;
+        styleClearButton(dynamic_cast<Button*>(clearEl.widget.get()));
+
+        card.fields.push_back({row, labelId, controlId, clearId});
     }
 }
 
 void BehaviourListView::syncFieldRow(
         FieldRow& row,
         const InspectField& field,
-        bool editable)
+        Scene& scene,
+        bool editable,
+        ObjectID draggingId,
+        ObjectID droppedId)
 {
     setElementInFlow(row.rootId, true, kFieldRowH);
 
@@ -544,6 +664,9 @@ void BehaviourListView::syncFieldRow(
     const bool typeChanged = !controlEl.widget || row.type != field.type;
     if (typeChanged)
         row.type = field.type;
+
+    const bool refField = isRefType(field.type);
+    setElementInFlow(row.clearId, refField, kClearBtnW);
 
     if (field.type == InspectType::Bool) {
         if (typeChanged)
@@ -563,6 +686,65 @@ void BehaviourListView::syncFieldRow(
             if (value)
                 *value = checked;
         };
+        return;
+    }
+
+    if (refField) {
+        if (typeChanged) {
+            auto& btn = controlEl.addWidget<Button>();
+            btn.font = &Engine::instance().assets.getFont("InterVariable");
+        }
+        controlEl.style.width = Length::px(0.f);
+        controlEl.style.flexGrow = 1.f;
+        controlEl.style.flexBasis = Length::px(0.f);
+        controlEl.style.height = Length::percent(100.f);
+        controlEl.transform.fontSize = kAxisFontSize;
+
+        auto* slot = dynamic_cast<Button*>(controlEl.widget.get());
+        auto* clear = dynamic_cast<Button*>(ui_->get(row.clearId).widget.get());
+        ObjectID* value = static_cast<ObjectID*>(field.ptr);
+        if (!slot || !value)
+            return;
+
+        const glm::vec2 mouse = Engine::instance().input.mousePosition();
+        const bool hovered = pointInRect(
+            mouse, controlEl.transform.position, controlEl.transform.size);
+        bool dropValid = false;
+        if (draggingId != INVALID_OBJECT && scene.valid(draggingId))
+            dropValid = acceptsRef(scene.get(draggingId), field);
+        const bool dropHover = editable && hovered && draggingId != INVALID_OBJECT;
+
+        if (editable && hovered && droppedId != INVALID_OBJECT && scene.valid(droppedId) &&
+            acceptsRef(scene.get(droppedId), field)) {
+            *value = droppedId;
+        }
+
+        bool missing = false;
+        if (*value == INVALID_OBJECT) {
+            slot->text = std::string("None (") + refTypeLabel(field.type) + ")";
+        } else if (!scene.valid(*value)) {
+            missing = true;
+            slot->text = "Missing";
+        } else if (!acceptsRef(scene.get(*value), field)) {
+            missing = true;
+            slot->text = "Missing";
+        } else {
+            slot->text = objectDisplayName(scene.get(*value), *value);
+        }
+
+        slot->disabled = !editable;
+        styleObjectSlot(slot, dropHover, dropValid, missing);
+        slot->onClick = nullptr;
+
+        styleClearButton(clear);
+        if (clear) {
+            clear->disabled = !editable || *value == INVALID_OBJECT;
+            ObjectID* clearValue = value;
+            clear->onClick = [clearValue, editable]() {
+                if (editable && clearValue)
+                    *clearValue = INVALID_OBJECT;
+            };
+        }
         return;
     }
 
@@ -622,7 +804,14 @@ void BehaviourListView::syncFieldRow(
     input->caretPos = std::min(input->caretPos, input->text.size());
 }
 
-void BehaviourListView::syncCard(Card& card, IBehaviour& behaviour, bool editable) {
+void BehaviourListView::syncCard(
+        Card& card,
+        IBehaviour& behaviour,
+        Scene& scene,
+        bool editable,
+        ObjectID draggingId,
+        ObjectID droppedId)
+{
     const auto& fields = behaviour.inspectFields();
     setElementInFlow(card.rootId, true, cardHeight(fields.size()));
 
@@ -643,14 +832,29 @@ void BehaviourListView::syncCard(Card& card, IBehaviour& behaviour, bool editabl
                 ui_->get(card.fields[i].controlId).widget.get());
             if (input)
                 input->onSubmit = nullptr;
+            auto* slot = dynamic_cast<Button*>(
+                ui_->get(card.fields[i].controlId).widget.get());
+            if (slot)
+                slot->onClick = nullptr;
+            auto* clear = dynamic_cast<Button*>(
+                ui_->get(card.fields[i].clearId).widget.get());
+            if (clear)
+                clear->onClick = nullptr;
             setElementInFlow(card.fields[i].rootId, false, 0.f);
             continue;
         }
-        syncFieldRow(card.fields[i], fields[i], editable);
+        syncFieldRow(
+            card.fields[i], fields[i], scene, editable, draggingId, droppedId);
     }
 }
 
-void BehaviourListView::update(const std::vector<IBehaviour*>& items, bool editable) {
+void BehaviourListView::update(
+        Scene& scene,
+        const std::vector<IBehaviour*>& items,
+        bool editable,
+        ObjectID draggingId,
+        ObjectID droppedId)
+{
     if (!ui_ || rootId_ == INVALID_UI_ELEMENT)
         return;
 
@@ -665,6 +869,6 @@ void BehaviourListView::update(const std::vector<IBehaviour*>& items, bool edita
             setElementInFlow(cards_[i].rootId, false, 0.f);
             continue;
         }
-        syncCard(cards_[i], *items[i], editable);
+        syncCard(cards_[i], *items[i], scene, editable, draggingId, droppedId);
     }
 }

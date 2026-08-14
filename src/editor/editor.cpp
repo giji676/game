@@ -133,6 +133,9 @@ void Editor::update() {
         updateSceneInteraction();
         inspectorView_.setSelectedId(hierarchyView_.selectedId());
         inspectorView_.setEditable(isEditing());
+        inspectorView_.setObjectDrag(
+            hierarchyView_.draggingId(),
+            hierarchyView_.releasedDragId());
         inspectorView_.update(engine_.scene);
 
         if (isEditing()) {
