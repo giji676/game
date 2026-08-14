@@ -36,8 +36,7 @@ public:
     MeshRegistry meshRegistry;
     Editor editor;
 
-    unsigned int activeCamera = 0;
-    std::vector<Camera> cameras;
+    ObjectID activeCameraObject = INVALID_OBJECT;
 
     float G = 9.81;
     float fps = 0.0f;
@@ -48,9 +47,7 @@ public:
     void init(Game* g);
     void run();
 
-    Camera* getActiveCamera() { return &cameras[activeCamera]; }
-
-    Camera* getCamera(unsigned int camera) { return &cameras[camera]; }
+    Camera* getActiveCamera();
 
 private:
     Game* game;

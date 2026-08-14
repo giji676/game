@@ -34,8 +34,11 @@ private:
     size_t lastRenderListSize = 0;
 
     ObjectID createObjectInternal();
+    void initBehaviours(ObjectID id);
     void updateScripts(ObjectID id);
-    void initScripts(ObjectID id);
+    void updateComponents(ObjectID id);
+    void lateUpdateScripts(ObjectID id);
+    void lateUpdateComponents(ObjectID id);
     void recurseRender(
         const ObjectID objId,
         const glm::mat4& parentMatrix);

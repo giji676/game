@@ -1,13 +1,8 @@
 #pragma once
 
-#include "defines.h"
+#include "ibehaviour.h"
 
-class IScript {
+class IScript : public IBehaviour {
 public:
-    ObjectID object;
-
-    IScript(){}
-    virtual ~IScript(){}
-    virtual void init() = 0;
-    virtual void update() = 0;
+    virtual ~IScript() = default;
 };

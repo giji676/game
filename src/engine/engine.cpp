@@ -34,6 +34,7 @@ void Engine::init(Game *g) {
     
     game = g;
     game->init();
+    scene.init();
     editor.init();
     renderer.init(&meshRegistry);
     uiRenderer.init();
@@ -117,9 +118,8 @@ void Engine::callRenderer(
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    Camera& camera = *getActiveCamera();
-
-    glm::mat4 view = camera.view();
+    Camera* camera = getActiveCamera();
+    glm::mat4 view = camera ? camera->view() : glm::mat4(1.f);
 
     glm::mat4 projection = glm::perspective(
         glm::radians(45.f),
@@ -295,9 +295,18 @@ void Engine::loadAssets() {
     // 6.4 seconds
 }
 
+Camera* Engine::getActiveCamera() {
+    if (activeCameraObject == INVALID_OBJECT)
+        return nullptr;
+    return scene.get(activeCameraObject).getComponent<Camera>();
+}
+
 void Engine::setupCamera() {
-    cameras.emplace_back(Camera());
-    activeCamera = 0;
+    ObjectID id = scene.createObject();
+    Object& obj = scene.get(id);
+    obj.name = "Camera";
+    obj.addComponent<Camera>();
+    activeCameraObject = id;
 }
 
 void Engine::setPaused(bool value) {

@@ -84,12 +84,18 @@ void collectRenderCommands(
     }
 }
 
-void Scene::update(bool runScripts) {
-    if (runScripts)
+void Scene::update(bool runBehaviours) {
+    if (runBehaviours) {
         updateScripts(getRoot());
+        updateComponents(getRoot());
+    }
 
     PROFILE_SCOPE("updateWorldTransforms");
     updateWorldTransforms(rootId, glm::mat4(1.0f));
+
+    // Readers (camera, etc.) pull world pose after hierarchy update.
+    lateUpdateComponents(getRoot());
+    lateUpdateScripts(getRoot());
 }
 
 void Scene::updateScripts(ObjectID id) {
@@ -104,19 +110,58 @@ void Scene::updateScripts(ObjectID id) {
     }
 }
 
-void Scene::init() {
-    initScripts(getRoot());
-}
-
-void Scene::initScripts(ObjectID id) {
+void Scene::updateComponents(ObjectID id) {
     Object& obj = get(id);
 
+    for (auto& component : obj.components) {
+        component->update();
+    }
+
+    for (ObjectID child : obj.children) {
+        updateComponents(child);
+    }
+}
+
+void Scene::lateUpdateScripts(ObjectID id) {
+    Object& obj = get(id);
+
+    for (auto& script : obj.scripts) {
+        script->lateUpdate();
+    }
+
+    for (ObjectID child : obj.children) {
+        lateUpdateScripts(child);
+    }
+}
+
+void Scene::lateUpdateComponents(ObjectID id) {
+    Object& obj = get(id);
+
+    for (auto& component : obj.components) {
+        component->lateUpdate();
+    }
+
+    for (ObjectID child : obj.children) {
+        lateUpdateComponents(child);
+    }
+}
+
+void Scene::init() {
+    initBehaviours(getRoot());
+}
+
+void Scene::initBehaviours(ObjectID id) {
+    Object& obj = get(id);
+
+    for (auto& component : obj.components) {
+        component->init();
+    }
     for (auto& script : obj.scripts) {
         script->init();
     }
 
     for (ObjectID child : obj.children) {
-        initScripts(child);
+        initBehaviours(child);
     }
 }
 

@@ -573,74 +573,76 @@ void Game::update() {
 
     if (!engine.isPaused())
     {
-        Camera& camera = *engine.getActiveCamera();
-        float dt = engine.app.deltaTime;
-        float cameraSpeed = player.speed * dt;
+        Camera* camera = engine.getActiveCamera();
+        if (camera) {
+            Object& camObj = engine.scene.get(camera->object);
+            float dt = engine.app.deltaTime;
+            float cameraSpeed = player.speed * dt;
 
-        if (input.down(Action::MoveForward))
-            player.pos += cameraSpeed * camera.front;
+            if (input.down(Action::MoveForward))
+                player.pos += cameraSpeed * camera->front;
 
-        if (input.down(Action::MoveBackward))
-            player.pos -= cameraSpeed * camera.front;
+            if (input.down(Action::MoveBackward))
+                player.pos -= cameraSpeed * camera->front;
 
-        if (input.down(Action::MoveLeft))
-            player.pos -= glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
+            if (input.down(Action::MoveLeft))
+                player.pos -= glm::normalize(glm::cross(camera->front, camera->up)) * cameraSpeed;
 
-        if (input.down(Action::MoveRight))
-            player.pos += glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
+            if (input.down(Action::MoveRight))
+                player.pos += glm::normalize(glm::cross(camera->front, camera->up)) * cameraSpeed;
 
-        if (input.pressed(Action::Jump) && player.grounded)
-            player.velocity.y = player.jumpForce;
+            if (input.pressed(Action::Jump) && player.grounded)
+                player.velocity.y = player.jumpForce;
 
-        player.velocity.y += -engine.G * dt;
-        player.pos.y += player.velocity.y * dt;
+            player.velocity.y += -engine.G * dt;
+            player.pos.y += player.velocity.y * dt;
 
-        // collision
-        float halfW = (world.width - 1) * world.scale * 0.5f;
-        float halfH = (world.height - 1) * world.scale * 0.5f;
+            // collision
+            float halfW = (world.width - 1) * world.scale * 0.5f;
+            float halfH = (world.height - 1) * world.scale * 0.5f;
 
-        int x = floor((camera.pos.x + halfW) / world.scale);
-        int z = floor((camera.pos.z + halfH) / world.scale);
+            int x = floor((player.pos.x + halfW) / world.scale);
+            int z = floor((player.pos.z + halfH) / world.scale);
 
-        int idx = z * world.width + x;
-        float groundY = world.terrain.vertices[idx * 6 + 1];
+            int idx = z * world.width + x;
+            float groundY = world.terrain.vertices[idx * 6 + 1];
 
-        if (player.pos.y <= groundY) {
-            player.velocity.y = 0.f;
-            player.pos.y = groundY;
-            player.grounded = true;
-        } else {
-            player.grounded = false;
-        }
+            if (player.pos.y <= groundY) {
+                player.velocity.y = 0.f;
+                player.pos.y = groundY;
+                player.grounded = true;
+            } else {
+                player.grounded = false;
+            }
 
-        // camera
-        float xoffset = input.mouseDeltaX;
-        float yoffset = input.mouseDeltaY;
+            float xoffset = input.mouseDeltaX;
+            float yoffset = input.mouseDeltaY;
 
-        const float sensitivity = 0.1f;
+            const float sensitivity = 0.1f;
 
-        camera.yaw += xoffset * sensitivity;
-        camera.pitch -= yoffset * sensitivity;
-        camera.pitch = glm::clamp(camera.pitch, -89.0f, 89.0f);
+            camera->yaw -= xoffset * sensitivity;
+            camera->pitch -= yoffset * sensitivity;
+            camera->pitch = glm::clamp(camera->pitch, -89.0f, 89.0f);
 
-        glm::vec3 direction;
-        direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-        direction.y = sin(glm::radians(camera.pitch));
-        direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+            // Writers push pose into the object transform. Camera::lateUpdate
+            // pulls worldMatrix after the hierarchy update.
+            camObj.transform.setPosition(player.pos);
+            camObj.transform.setRotation({camera->pitch, camera->yaw, 0.f});
 
-        camera.front = glm::normalize(direction);
-        camera.pos = player.pos;
+            clearDebug(engine.scene.getRoot());
 
-        clearDebug(engine.scene.getRoot());
+            Ray ray{
+                .origin = player.pos,
+                .direction = glm::normalize(glm::vec3(
+                    -sin(glm::radians(camera->yaw)) * cos(glm::radians(camera->pitch)),
+                     sin(glm::radians(camera->pitch)),
+                    -cos(glm::radians(camera->yaw)) * cos(glm::radians(camera->pitch)))),
+            };
 
-        Ray ray{
-            .origin = camera.pos,
-            .direction = glm::normalize(camera.front),
-        };
-
-        RaycastHit hit = engine.raycasting.castRay(ray);
-        if (hit.object != INVALID_OBJECT_ID) {
-            engine.scene.get(hit.object).debug = true;
+            RaycastHit hit = engine.raycasting.castRay(ray);
+            if (hit.object != INVALID_OBJECT_ID) {
+                engine.scene.get(hit.object).debug = true;
+            }
         }
     }
 

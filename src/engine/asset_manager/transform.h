@@ -61,8 +61,9 @@ private:
 
         m = glm::translate(m, pos);
 
-        m = glm::rotate(m, glm::radians(rot.x), glm::vec3(1,0,0));
+        // YXZ: yaw around Y, then pitch around X, then roll around Z.
         m = glm::rotate(m, glm::radians(rot.y), glm::vec3(0,1,0));
+        m = glm::rotate(m, glm::radians(rot.x), glm::vec3(1,0,0));
         m = glm::rotate(m, glm::radians(rot.z), glm::vec3(0,0,1));
 
         m = glm::scale(m, scale);

@@ -66,6 +66,7 @@ private:
     UIElementID parentId_ = INVALID_UI_ELEMENT;
     UIElementID childrenId_ = INVALID_UI_ELEMENT;
     UIElementID scriptsId_ = INVALID_UI_ELEMENT;
+    UIElementID componentsId_ = INVALID_UI_ELEMENT;
     UIElementID modelId_ = INVALID_UI_ELEMENT;
     UIElementID debugId_ = INVALID_UI_ELEMENT;
 

@@ -221,6 +221,7 @@ void InspectorPanel::bind(UI& ui, EditorPanel& panel) {
     parentId_ = addInfoLabel("Parent: -");
     childrenId_ = addInfoLabel("Children: 0");
     scriptsId_ = addInfoLabel("Scripts: 0");
+    componentsId_ = addInfoLabel("Components: 0");
     modelId_ = addInfoLabel("Has Model: no");
     debugId_ = addInfoLabel("Debug: off");
 
@@ -258,6 +259,7 @@ void InspectorPanel::update(Scene& scene) {
         setLabelText(parentId_, "Parent: -");
         setLabelText(childrenId_, "Children: 0");
         setLabelText(scriptsId_, "Scripts: 0");
+        setLabelText(componentsId_, "Components: 0");
         setLabelText(modelId_, "Has Model: no");
         setLabelText(debugId_, "Debug: off");
         transformView_.setEditable(false);
@@ -272,6 +274,7 @@ void InspectorPanel::update(Scene& scene) {
     setLabelText(parentId_, "Parent: " + std::to_string(obj.parent));
     setLabelText(childrenId_, "Children: " + std::to_string(obj.children.size()));
     setLabelText(scriptsId_, "Scripts: " + std::to_string(obj.scripts.size()));
+    setLabelText(componentsId_, "Components: " + std::to_string(obj.components.size()));
     setLabelText(modelId_, std::string("Has Model: ") + (obj.model ? "yes" : "no"));
     setLabelText(debugId_, std::string("Debug: ") + (obj.debug ? "on" : "off"));
 
