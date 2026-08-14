@@ -102,7 +102,8 @@ void Scene::updateScripts(ObjectID id) {
     Object& obj = get(id);
 
     for (auto& script : obj.scripts) {
-        script->update();
+        if (script->enabled)
+            script->update();
     }
 
     for (ObjectID child : obj.children) {
@@ -114,7 +115,8 @@ void Scene::updateComponents(ObjectID id) {
     Object& obj = get(id);
 
     for (auto& component : obj.components) {
-        component->update();
+        if (component->enabled)
+            component->update();
     }
 
     for (ObjectID child : obj.children) {
@@ -126,7 +128,8 @@ void Scene::lateUpdateScripts(ObjectID id) {
     Object& obj = get(id);
 
     for (auto& script : obj.scripts) {
-        script->lateUpdate();
+        if (script->enabled)
+            script->lateUpdate();
     }
 
     for (ObjectID child : obj.children) {
@@ -138,7 +141,8 @@ void Scene::lateUpdateComponents(ObjectID id) {
     Object& obj = get(id);
 
     for (auto& component : obj.components) {
-        component->lateUpdate();
+        if (component->enabled)
+            component->lateUpdate();
     }
 
     for (ObjectID child : obj.children) {

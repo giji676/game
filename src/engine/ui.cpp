@@ -360,6 +360,16 @@ UIElementID UI::inputField(
     return id;
 }
 
+UIElementID UI::checkbox(glm::vec2 pos, glm::vec2 size)
+{
+    UIElementID id = createElement();
+    UIElement& e = get(id);
+    e.addWidget<Checkbox>();
+    e.transform.position = pos;
+    e.transform.size = size;
+    return id;
+}
+
 UIElementID UI::toolbar(
     glm::vec2 pos,
     glm::vec2 size,

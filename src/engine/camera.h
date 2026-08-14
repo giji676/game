@@ -13,6 +13,8 @@ public:
 
     void lateUpdate() override;
 
+    const char* typeName() const override { return "Camera"; }
+
     glm::mat4 view() const {
         return glm::lookAt(pos, pos + front, up);
     }

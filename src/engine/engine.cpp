@@ -297,7 +297,10 @@ void Engine::loadAssets() {
 Camera* Engine::getActiveCamera() {
     if (activeCameraObject == INVALID_OBJECT)
         return nullptr;
-    return scene.get(activeCameraObject).getComponent<Camera>();
+    Camera* camera = scene.get(activeCameraObject).getComponent<Camera>();
+    if (!camera || !camera->enabled)
+        return nullptr;
+    return camera;
 }
 
 void Engine::setPaused(bool value) {

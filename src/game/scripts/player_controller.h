@@ -12,7 +12,11 @@ class PlayerController : public IScript {
 public:
     explicit PlayerController(World* world)
         : world(world)
-    {}
+    {
+        INSPECT(speed);
+        INSPECT(jumpForce);
+        INSPECT(lookSensitivity);
+    }
 
     glm::vec3 velocity{0.f};
     bool grounded = false;
@@ -23,6 +27,7 @@ public:
     float pitch = 0.f;
 
     void init() override {}
+    const char* typeName() const override { return "PlayerController"; }
 
     void update() override {
         Engine& engine = Engine::instance();

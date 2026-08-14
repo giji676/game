@@ -5,6 +5,7 @@
 #include "engine/ui/style.h"
 #include "engine/utils/geometry.h"
 #include <functional>
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -277,6 +278,106 @@ public:
             case ButtonState::Disabled: return disabledStyle;
             default:                    return normal;
         }
+    }
+};
+
+class Checkbox : public UIWidget {
+public:
+    bool checked = false;
+    bool hovered = false;
+    bool pressed = false;
+    bool disabled = false;
+    std::function<void(bool)> onChange;
+
+    void resetInteraction() override {
+        hovered = false;
+        pressed = false;
+    }
+
+    void updateInput(
+            const UIElement& e,
+            const glm::vec2& pos) override
+    {
+        if (disabled) {
+            hovered = pressed = false;
+            return;
+        }
+
+        hovered = pointInRect(pos, e.transform.position, e.transform.size);
+
+        Input& input = Engine::instance().input;
+        if (hovered && input.pressed(MouseAction::Left))
+            pressed = true;
+        if (pressed && input.released(MouseAction::Left)) {
+            pressed = false;
+            if (hovered) {
+                checked = !checked;
+                if (onChange)
+                    onChange(checked);
+            }
+        }
+        if (!input.down(MouseAction::Left))
+            pressed = false;
+    }
+
+    void buildCommands(
+        const UIElement& e,
+        std::vector<UIRenderCommand>& out) const override
+    {
+        const float side = std::min(e.transform.size.x, e.transform.size.y);
+        const glm::vec2 boxSize = {side, side};
+        const glm::vec2 boxPos = {
+            e.transform.position.x,
+            e.transform.position.y + (e.transform.size.y - side) * 0.5f,
+        };
+
+        glm::vec4 bg = {0.13f, 0.13f, 0.15f, 1.f};
+        glm::vec4 border = {0.28f, 0.28f, 0.34f, 1.f};
+        if (disabled) {
+            bg = {0.09f, 0.09f, 0.11f, 1.f};
+            border = {0.2f, 0.2f, 0.24f, 1.f};
+        } else if (pressed) {
+            bg = {0.1f, 0.1f, 0.12f, 1.f};
+            border = {0.35f, 0.55f, 0.9f, 1.f};
+        } else if (hovered) {
+            border = {0.42f, 0.42f, 0.52f, 1.f};
+        }
+
+        out.push_back({
+            .type = UICmdType::Rect,
+            .position = boxPos,
+            .size = boxSize,
+            .color = bg,
+            .cornerRadii = {3.f, 3.f, 3.f, 3.f},
+            .borderWidth = 1.f,
+            .borderColor = border,
+        });
+
+        if (!checked)
+            return;
+
+        const float inset = std::max(3.f, side * 0.22f);
+        glm::vec4 fill = disabled
+            ? glm::vec4{0.35f, 0.45f, 0.62f, 1.f}
+            : glm::vec4{0.35f, 0.55f, 0.9f, 1.f};
+        out.push_back({
+            .type = UICmdType::Rect,
+            .position = {boxPos.x + inset, boxPos.y + inset},
+            .size = {side - inset * 2.f, side - inset * 2.f},
+            .color = fill,
+            .cornerRadii = {2.f, 2.f, 2.f, 2.f},
+        });
+    }
+
+    glm::vec2 measureContent(
+            const UIElement& e,
+            glm::vec2 available) const override
+    {
+        const float side = e.transform.size.x > 0.f
+            ? e.transform.size.x
+            : 18.f;
+        (void)available;
+        return {side, side};
     }
 };
 

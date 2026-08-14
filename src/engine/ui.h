@@ -74,6 +74,8 @@ public:
             Font* font = nullptr
     );
 
+    UIElementID checkbox(glm::vec2 pos, glm::vec2 size);
+
     UIElementID toolbar(
             glm::vec2 pos,
             glm::vec2 size,
