@@ -78,6 +78,7 @@ void Engine::run() {
             callRenderer(gameUiCommands, editorUiCommands, viewport);
 
             {
+                // TODO: CPU idle time goes up when BVH raycast makes a lot of calls?
                 GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
                 PROFILE_SCOPE("CPU idle");
                 while (glClientWaitSync(fence, 0, 0) == GL_TIMEOUT_EXPIRED) {
@@ -284,6 +285,7 @@ void Engine::loadAssets() {
     assets.loadModels({
         {"backpack", "assets/backpack/backpack.obj", true},
         {"car", "assets/car/car.obj", false},
+        {"ar", "assets/ar/AssaultRifle_01.obj", false},
     });
     assets.loadFont("InterVariable", "assets/fonts/Inter-4.1/InterVariable.ttf");
     assets.flushLoads();

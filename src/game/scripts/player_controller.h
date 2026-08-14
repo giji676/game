@@ -16,7 +16,11 @@ public:
         INSPECT(speed);
         INSPECT(jumpForce);
         INSPECT(lookSensitivity);
+        INSPECT(gun);
+        INSPECT(recoilAngle);
     }
+
+    ObjectRef gun;
 
     glm::vec3 velocity{0.f};
     bool grounded = false;
@@ -25,8 +29,12 @@ public:
     float lookSensitivity = 0.1f;
     float yaw = 0.f;
     float pitch = 0.f;
+    float recoilAngle = 5.f;
 
-    void init() override {}
+    void init() override {
+        if (Object* gunObj = gun.get(Engine::instance().scene))
+            gunRestRotation = gunObj->transform.rotation();
+    }
     const char* typeName() const override { return "PlayerController"; }
 
     void update() override {
@@ -66,6 +74,8 @@ public:
         obj.transform.setPosition(pos);
         obj.transform.setRotation({pitch, yaw, 0.f});
 
+        updateGunRecoil(engine.scene, input, dt);
+
         clearDebug(engine.scene.getRoot());
 
         Ray ray{
@@ -79,6 +89,32 @@ public:
 
 private:
     World* world = nullptr;
+    glm::vec3 gunRestRotation{0.f};
+    float gunRecoilX = 0.f;
+    float gunRecoilTarget = 0.f;
+
+    void updateGunRecoil(Scene& scene, Input& input, float dt) {
+        Object* gunObj = gun.get(scene);
+        if (!gunObj)
+            return;
+
+        if (input.pressed(MouseAction::Left))
+            gunRecoilTarget = recoilAngle;
+
+        const float speed = (gunRecoilTarget > gunRecoilX)
+            ? 40.f
+            : 12.f;
+        const float t = 1.f - std::exp(-speed * dt);
+        gunRecoilX = glm::mix(gunRecoilX, gunRecoilTarget, t);
+
+        if (gunRecoilTarget != 0.f &&
+            std::abs(gunRecoilX - gunRecoilTarget) < 0.15f)
+            gunRecoilTarget = 0.f;
+
+        glm::vec3 rot = gunRestRotation;
+        rot.x += gunRecoilX;
+        gunObj->transform.setRotation(rot);
+    }
 
     glm::vec3 lookDirection() const {
         return glm::normalize(glm::vec3(

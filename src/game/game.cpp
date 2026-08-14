@@ -89,13 +89,6 @@ void Game::init() {
     obj.addScript<Test>();
     scene.reparent(objId, lastObjId);
 
-    ObjectID objId2 = scene.createObject();
-    Object& obj2 = scene.get(objId2);
-    obj2.model = &engine.assets.getModel("backpack");
-    obj2.transform.setPosition({2.0f, 0.0f, 0.0f});
-    obj2.transform.setScale({0.2f, 0.2f, 0.2f});
-    scene.reparent(objId2, objId);
-
     Shader& texturedMatShader = engine.assets.getShader("textured_mat");
     texturedMatShader.use();
     texturedMatShader.setVec3("lightPos", light.pos);
@@ -456,8 +449,18 @@ void Game::setupPlayer() {
     Object& obj = scene.get(id);
     obj.name = "Player";
     obj.addComponent<Camera>();
-    obj.addScript<PlayerController>(&world);
+    PlayerController& controller = obj.addScript<PlayerController>(&world);
     engine.activeCameraObject = id;
+
+    ObjectID arId = scene.createObject();
+    Object& arObj = scene.get(arId);
+    scene.reparent(arId, id);
+    arObj.name = "AR";
+    arObj.model = &engine.assets.getModel("ar");
+    arObj.transform.setPosition({0.253f, -0.110f, -0.993f});
+    arObj.transform.setRotation({0.f, 0.f, 0.f});
+    arObj.transform.setScale({0.2f, 0.2f, 0.2f});
+    controller.gun.id = arId;
 }
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale) {
