@@ -17,10 +17,12 @@ public:
         INSPECT(jumpForce);
         INSPECT(lookSensitivity);
         INSPECT(gun);
+        INSPECT(child);
         INSPECT(recoilAngle);
     }
 
     ObjectRef gun;
+    ObjectRef child;
 
     glm::vec3 velocity{0.f};
     bool grounded = false;
@@ -72,7 +74,12 @@ public:
             resolveGround(pos);
 
         obj.transform.setPosition(pos);
-        obj.transform.setRotation({pitch, yaw, 0.f});
+        // obj.transform.setRotation({pitch, yaw, 0.f});
+
+        Object* childObj = child.get(Engine::instance().scene);
+        if (!childObj)
+            return;
+        childObj->transform.setRotation({pitch, yaw, 0.f});
 
         updateGunRecoil(engine.scene, input, dt);
 
