@@ -16,7 +16,7 @@ class UI;
 class HierarchyPanel {
 public:
     void bind(UI& ui, EditorPanel& panel);
-    void update(Scene& scene);
+    void update(Scene& scene, bool interactive = true);
 
     ObjectID selectedId() const { return selectedId_; }
     void setSelectedId(ObjectID id) { selectedId_ = id; }

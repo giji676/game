@@ -29,6 +29,8 @@ public:
 
     void init();
     void update();
+    void setInteractable(bool interactable) { interactable_ = interactable; }
+    bool isInteractable() const { return interactable_; }
 
     void setSurface(glm::vec2 origin, glm::vec2 logicalSize, glm::vec2 presentSize) {
         surface = {origin, logicalSize, presentSize};
@@ -110,6 +112,7 @@ private:
     UIElementID rootId = 0;
     UIElementID focusedId = INVALID_UI_ELEMENT;
     UISurface surface;
+    bool interactable_ = true;
 
     UIElementID createElementInternal();
     void recurseBuild(UIElementID id, std::vector<UIRenderCommand>& out, bool clipActive,

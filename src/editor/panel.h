@@ -36,6 +36,7 @@ public:
         glm::vec4 rect);
 
     void update(Input& input, glm::vec2 windowSize);
+    void clearDrag() { drag_ = PanelDrag::None; }
     void setVisible(bool visible);
     void setRect(glm::vec4 rect);
     void setDockedMode(bool docked) { dockedMode_ = docked; }

@@ -125,11 +125,15 @@ void Editor::update() {
         applyLayoutRects();
     }
 
-    for (EditorPanel* panel : panels_)
-        panel->update(input, {winW, winH});
+    for (EditorPanel* panel : panels_) {
+        if (isEditing())
+            panel->update(input, {winW, winH});
+        else
+            panel->clearDrag();
+    }
 
     if (open_) {
-        hierarchyView_.update(engine_.scene);
+        hierarchyView_.update(engine_.scene, isEditing());
         updateSceneInteraction();
         inspectorView_.setSelectedId(hierarchyView_.selectedId());
         inspectorView_.setEditable(isEditing());
@@ -150,8 +154,10 @@ void Editor::update() {
         }
     }
 
-    syncResize();
-    syncDocking();
+    if (isEditing()) {
+        syncResize();
+        syncDocking();
+    }
 
     viewportRect_ = viewportPanel_.rect();
 }
@@ -199,6 +205,7 @@ void Editor::setPlayState(EditorPlayState state) {
         engine_.setPaused(true);
     } else {
         clearGizmoDrag();
+        engine_.editorUi.onUnpause();
     }
 }
 
@@ -208,6 +215,7 @@ void Editor::exitEditMode() {
 
     playState_ = EditorPlayState::Play;
     clearGizmoDrag();
+    engine_.editorUi.onUnpause();
 }
 
 void Editor::buildShell() {

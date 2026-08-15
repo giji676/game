@@ -63,7 +63,7 @@ void applyClip(UIRenderCommand& cmd, const UIClipRect& clip) {
 } // namespace
 
 void UI::dispatchTextInput(const std::string& text) {
-    if (Engine::instance().app.cursorCaptured)
+    if (!interactable_ || Engine::instance().app.cursorCaptured)
         return;
     if (UIElement* e = getFocusedElement()) {
         if (e->widget) e->widget->onTextInput(text);
@@ -71,7 +71,7 @@ void UI::dispatchTextInput(const std::string& text) {
 }
 
 void UI::dispatchKeyInput(Key key) {
-    if (Engine::instance().app.cursorCaptured)
+    if (!interactable_ || Engine::instance().app.cursorCaptured)
         return;
     if (UIElement* e = getFocusedElement()) {
         if (e->widget) e->widget->onKeyInput(key);
@@ -120,7 +120,7 @@ void UI::update() {
     const glm::vec2 mouse =
         (engine.input.mousePosition() - surface.origin) / scale;
 
-    if (!engine.app.cursorCaptured) {
+    if (!engine.app.cursorCaptured && interactable_) {
         const float wheelY = engine.input.mouseWheelY();
         if (wheelY != 0.f)
             recurseScrollInput(rootId, mouse, wheelY);
@@ -129,7 +129,7 @@ void UI::update() {
     layoutTree(*this, rootId, surface.size);
 
     recurseTick(rootId, engine.app.deltaTime);
-    if (!engine.app.cursorCaptured) {
+    if (interactable_ && !engine.app.cursorCaptured) {
         recurseUpdateInput(rootId, mouse);
 
         if (engine.input.pressed(MouseAction::Left) && focusedId != INVALID_UI_ELEMENT) {

@@ -518,11 +518,19 @@ void HierarchyPanel::rebuildRows(Scene& scene) {
     syncDropPreview(scene);
 }
 
-void HierarchyPanel::update(Scene& scene) {
+void HierarchyPanel::update(Scene& scene, bool interactive) {
     if (!built_ || !ui_ || contentId_ == INVALID_UI_ELEMENT)
         return;
 
-    updateDrag(scene);
+    if (interactive) {
+        updateDrag(scene);
+    } else {
+        releasedDragId_ = INVALID_OBJECT;
+        draggingId_ = INVALID_OBJECT;
+        dragCandidateId_ = INVALID_OBJECT;
+        dragMoved_ = false;
+        activeDrop_ = {};
+    }
 
     const uint64_t signature = sceneSignature(scene);
     if (signature == lastSignature_) {

@@ -50,6 +50,7 @@ void Engine::run() {
             PROFILE_SCOPE("Engine::run");
             beginFrame();
 
+            editorUi.setInteractable(editor.isEditing());
             getInput(event);
             {
                 PROFILE_SCOPE("Engine::editor.update");
@@ -60,6 +61,7 @@ void Engine::run() {
             const float winW = static_cast<float>(app.width());
             const float winH = static_cast<float>(app.height());
             editorUi.setSurface({0.f, 0.f}, {winW, winH}, {winW, winH});
+            editorUi.setInteractable(editor.isEditing());
             editorUi.update();
 
             const glm::vec4 viewport = gameViewport();
