@@ -33,7 +33,7 @@ public:
 
     void updateWorld(const glm::mat4& world) {
         worldMatrix = world;
-        worldInvMatrix = glm::inverse(world);
+        worldInvMatrix = glm::inverse(world); // TODO: EXPENSIVE? 
     }
 
     Bounds getBounds() const {

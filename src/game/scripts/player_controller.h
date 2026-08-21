@@ -86,7 +86,7 @@ public:
         clearDebug(engine.scene.getRoot());
 
         Ray ray{
-            .origin = pos,
+            .origin = glm::vec3(childObj->worldMatrix[3]),
             .direction = look,
         };
         RaycastHit hit = engine.raycasting.castRay(ray);

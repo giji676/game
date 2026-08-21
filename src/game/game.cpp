@@ -452,19 +452,20 @@ void Game::setupPlayer() {
 
     ObjectID childId = scene.createObject();
     Object& childObj = scene.get(childId);
-    childObj.transform.setPosition({0.f, 1.f, 0.f});
+    childObj.transform.setPosition({0.f, 0.2f, 0.f});
     childObj.addComponent<Camera>();
     engine.activeCameraObject = childId;
     scene.reparent(childId, id);
+    controller.child.id = childId;
 
     ObjectID arId = scene.createObject();
     Object& arObj = scene.get(arId);
     scene.reparent(arId, childId);
     arObj.name = "AR";
     arObj.model = &engine.assets.getModel("ar");
-    arObj.transform.setPosition({0.253f, -0.110f, -0.993f});
+    arObj.transform.setPosition({0.2f, -0.11f, -0.6f});
     arObj.transform.setRotation({0.f, 0.f, 0.f});
-    arObj.transform.setScale({0.2f, 0.2f, 0.2f});
+    arObj.transform.setScale({0.1f, 0.1f, 0.1f});
     controller.gun.id = arId;
 }
 
