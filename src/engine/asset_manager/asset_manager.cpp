@@ -1,43 +1,41 @@
 #include "asset_manager.h"
 
 #include "mesh_registry.h"
-#include "shader.h"
 #include "model.h"
+#include "shader.h"
 #include "texture.h"
 
 #include "gj_image/gj_image.h"
 
 #include <stdexcept>
 #include <thread>
+#include <iostream>
 
 // enque function for loading multiple assets in parallel
-// once all assets are loaded a signal is emitted to notify 
+// once all assets are loaded a signal is emitted to notify
 // the engine that the assets are ready
 
-void AssetManager::init(MeshRegistry* meshRegistry)
-{
+void AssetManager::init(MeshRegistry *meshRegistry) {
     meshRegistry_ = meshRegistry;
     if (meshRegistry_)
         meshRegistry_->init();
 }
 
-void AssetManager::uploadMeshes()
-{
+void AssetManager::uploadMeshes() {
     if (!meshRegistry_)
-        throw std::runtime_error("AssetManager::uploadMeshes: mesh registry not set");
+        throw std::runtime_error(
+                "AssetManager::uploadMeshes: mesh registry not set");
     meshRegistry_->uploadToGPU();
 }
 
-void AssetManager::flushLoads()
-{
+void AssetManager::flushLoads() {
     processEnqueuedImageLoads();
     uploadMeshes();
 }
 
-Texture& AssetManager::enqueImageLoad(const std::string& name,
-        const std::string& fullPath,
-        const std::string& type)
-{
+Texture &AssetManager::enqueImageLoad(const std::string &name,
+        const std::string &fullPath,
+        const std::string &type) {
     if (auto it = textures_.find(name); it != textures_.end())
         return *it->second;
     if (auto it = enquedTextures_.find(name); it != enquedTextures_.end())
@@ -48,18 +46,17 @@ Texture& AssetManager::enqueImageLoad(const std::string& name,
     return *it->second;
 }
 
-void AssetManager::processEnqueuedImageLoads()
-{
+void AssetManager::processEnqueuedImageLoads() {
     // Workers flip CPU-side from Texture::flipY; keep the global flag off so
     // concurrent gj_image_load calls do not race on it.
     gj_vflip_image(0);
 
     std::vector<std::thread> threads;
     threads.reserve(enquedTextures_.size());
-    std::vector<Texture*> uploaded;
+    std::vector<Texture *> uploaded;
 
     // Move textures into the main map and load image bytes off the GL thread.
-    for (auto& [name, tex] : enquedTextures_) {
+    for (auto &[name, tex] : enquedTextures_) {
         if (!tex)
             continue;
 
@@ -67,25 +64,24 @@ void AssetManager::processEnqueuedImageLoads()
         if (!inserted || !it->second)
             continue;
 
-        Texture* texture = it->second.get();
+        Texture *texture = it->second.get();
         uploaded.push_back(texture);
         threads.emplace_back(&Texture::loadImage, texture);
     }
 
-    for (auto& t : threads)
+    for (auto &t : threads)
         t.join();
 
     // GL upload must happen on the main/context thread after CPU loads finish.
-    for (Texture* texture : uploaded)
+    for (Texture *texture : uploaded)
         texture->setupImageGPU();
 
     enquedTextures_.clear();
 }
 
-Shader& AssetManager::loadShader(const std::string& name,
-                                 const std::string& vsPath,
-                                 const std::string& fsPath)
-{
+Shader &AssetManager::loadShader(const std::string &name,
+        const std::string &vsPath,
+        const std::string &fsPath) {
     auto it = shaders_.find(name);
     if (it != shaders_.end())
         return *it->second;
@@ -96,21 +92,24 @@ Shader& AssetManager::loadShader(const std::string& name,
     return *shaders_.at(name);
 }
 
-void AssetManager::loadShaders(std::initializer_list<ShaderLoadDesc> shaders)
-{
-    for (const ShaderLoadDesc& desc : shaders)
+void AssetManager::loadShaders(std::initializer_list<ShaderLoadDesc> shaders) {
+    for (const ShaderLoadDesc &desc : shaders)
         loadShader(desc.name, desc.vsPath, desc.fsPath);
 }
 
-Shader& AssetManager::getShader(const std::string& name)
-{
-    return *shaders_.at(name);
+Shader &AssetManager::getShader(const std::string &name) {
+    try {
+        return *shaders_.at(name);
+    }
+    catch (const std::out_of_range& e) {
+        std::cout << "ERROR::ASSET_MANAGER:: '" << name << "' not found\n";
+        exit(1);
+    }
 }
 
-Texture& AssetManager::loadTexture(const std::string& name,
-                                   const std::string& fullPath,
-                                   const std::string& type)
-{
+Texture &AssetManager::loadTexture(const std::string &name,
+        const std::string &fullPath,
+        const std::string &type) {
     auto it = textures_.find(name);
     if (it != textures_.end()) {
         return *it->second;
@@ -125,15 +124,18 @@ Texture& AssetManager::loadTexture(const std::string& name,
     return *textures_.at(name);
 }
 
-Texture& AssetManager::getTexture(const std::string& name)
-{
-    return *textures_.at(name);
+Texture &AssetManager::getTexture(const std::string &name) {
+    try {
+        return *textures_.at(name);
+    }
+    catch (const std::out_of_range& e) {
+        std::cout << "ERROR::ASSET_MANAGER:: '" << name << "' not found\n";
+        exit(1);
+    }
 }
 
-Model& AssetManager::loadModel(const std::string& name,
-                               const std::string& path,
-                               bool flipY)
-{
+Model &AssetManager::loadModel(const std::string &name, const std::string &path,
+        bool flipY) {
     auto it = models_.find(name);
     if (it != models_.end()) {
         return *it->second;
@@ -146,7 +148,7 @@ Model& AssetManager::loadModel(const std::string& name,
     imageVFlip_ = flipY;
 
     auto model = std::make_unique<Model>(path.c_str(), this);
-    for (const SubMesh& sub : model->getParts())
+    for (const SubMesh &sub : model->getParts())
         meshRegistry_->addMesh(&sub.mesh);
 
     models_.emplace(name, std::move(model));
@@ -156,20 +158,22 @@ Model& AssetManager::loadModel(const std::string& name,
     return *models_.at(name);
 }
 
-void AssetManager::loadModels(std::initializer_list<ModelLoadDesc> models)
-{
-    for (const ModelLoadDesc& desc : models)
+void AssetManager::loadModels(std::initializer_list<ModelLoadDesc> models) {
+    for (const ModelLoadDesc &desc : models)
         loadModel(desc.name, desc.path, desc.flipY);
 }
 
-Model& AssetManager::getModel(const std::string& name)
-{
-    return *models_.at(name);
+Model &AssetManager::getModel(const std::string &name) {
+    try {
+        return *models_.at(name);
+    }
+    catch (const std::out_of_range& e) {
+        std::cout << "ERROR::ASSET_MANAGER:: '" << name << "' not found\n";
+        exit(1);
+    }
 }
 
-Font& AssetManager::loadFont(const std::string& name,
-                               const std::string& path)
-{
+Font &AssetManager::loadFont(const std::string &name, const std::string &path) {
     auto it = fonts_.find(name);
     if (it != fonts_.end()) {
         return *it->second;
@@ -181,26 +185,27 @@ Font& AssetManager::loadFont(const std::string& name,
     return *fonts_.at(name);
 }
 
-Font& AssetManager::getFont(const std::string& name)
-{
-    return *fonts_.at(name);
+Font &AssetManager::getFont(const std::string &name) {
+    try {
+        return *fonts_.at(name);
+    }
+    catch (const std::out_of_range& e) {
+        std::cout << "ERROR::ASSET_MANAGER:: '" << name << "' not found\n";
+        exit(1);
+    }
 }
 
-Material& AssetManager::getOrCreateMaterial(
-    Shader* shader,
-    Texture* diffuse,
-    Texture* specular,
-    Texture* alpha,
-    glm::vec3 diffuseFallback,
-    glm::vec3 specularFallback,
-    float opacity)
-{
+Material &AssetManager::getOrCreateMaterial(Shader *shader, Texture *diffuse,
+        Texture *specular, Texture *alpha,
+        glm::vec3 diffuseFallback,
+        glm::vec3 specularFallback,
+        float opacity) {
     // create a key from the combination
-    std::string key = std::to_string((uint64_t)shader)
-                    + "_" + std::to_string((uint64_t)diffuse)
-                    + "_" + std::to_string((uint64_t)specular)
-                    + "_" + std::to_string((uint64_t)alpha)
-                    + "_" + std::to_string(opacity);
+    std::string key = std::to_string((uint64_t)shader) + "_" +
+        std::to_string((uint64_t)diffuse) + "_" +
+        std::to_string((uint64_t)specular) + "_" +
+        std::to_string((uint64_t)alpha) + "_" +
+        std::to_string(opacity);
 
     auto it = materials_.find(key);
     if (it != materials_.end())
@@ -212,9 +217,12 @@ Material& AssetManager::getOrCreateMaterial(
     mat->specularFallback = specularFallback;
     mat->opacity = opacity;
     mat->id = allocateMaterialId();
-    if (diffuse) mat->textures.push_back(diffuse);
-    if (specular) mat->textures.push_back(specular);
-    if (alpha) mat->textures.push_back(alpha);
+    if (diffuse)
+        mat->textures.push_back(diffuse);
+    if (specular)
+        mat->textures.push_back(specular);
+    if (alpha)
+        mat->textures.push_back(alpha);
 
     materials_.emplace(key, std::move(mat));
     return *materials_.at(key);
