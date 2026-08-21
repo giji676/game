@@ -37,7 +37,7 @@ void Profiler::endFrame() {
                 sample.averageMs * (1.0 - alpha) +
                 sample.currentMs * alpha;
     }
-    // print();
+    print();
 }
 
 void Profiler::print() {

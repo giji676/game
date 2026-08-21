@@ -186,13 +186,13 @@ bool Raycasting::testRaySegmentDistance(
 
 std::optional<TriangleHit> Raycasting::testTriangleIntersection(
         const Ray& ray,
-        const triangle3& triangle)
+        const Triangle& triangle)
 {
     // From https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
     constexpr float epsilon = std::numeric_limits<float>::epsilon();
 
-    glm::vec3 edge1 = triangle.b - triangle.a;
-    glm::vec3 edge2 = triangle.c - triangle.a;
+    glm::vec3 edge1 = triangle.v1 - triangle.v0;
+    glm::vec3 edge2 = triangle.v2 - triangle.v0;
 
     // Backface culling, assuming CCW-wound triangles.
     const glm::vec3 normal = cross(edge1, edge2); // No need to normalize
@@ -204,7 +204,7 @@ std::optional<TriangleHit> Raycasting::testTriangleIntersection(
     if (abs(det) < epsilon) return {}; // Ray is parallel to triangle
 
     float inv_det = 1.0 / det;
-    glm::vec3 s = ray.origin - triangle.a;
+    glm::vec3 s = ray.origin - triangle.v0;
     float u = inv_det * dot(s, ray_cross_e2);
 
     if (u < -epsilon || u - 1 > epsilon) return {}; // Ray passes outside edge2's bounds

@@ -63,5 +63,5 @@ public:
 
     static std::optional<TriangleHit> testTriangleIntersection(
         const Ray& ray,
-        const triangle3& triangle);
+        const Triangle& triangle);
 };

@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include "raycasting.h"
+#include "defines.h"
 
 // https://jacco.ompf2.com/2022/04/13/How-to-build-a-bvh-part-1-basics/
 
@@ -17,11 +18,6 @@ struct MeshBVHNode {
 
     uint32_t firstPrim;
     uint32_t primCount;
-};
-
-struct Triangle {
-    glm::vec3 v0, v1, v2;
-    glm::vec3 centroid;
 };
 
 class MeshBVH {

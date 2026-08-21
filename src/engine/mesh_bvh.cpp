@@ -148,15 +148,8 @@ void MeshBVH::_intersectBVH(Ray& ray, uint32_t nodeIdx, const glm::mat4& world) 
         for (uint32_t i = 0; i < node.primCount; i++) {
             const Triangle& tri = triangles[node.firstPrim + i];
 
-            // TODO: top using triangle3, use Triangle instaed
-            // so no need to construct a new triangle3
-            triangle3 tri3{
-                tri.v0,
-                    tri.v1,
-                    tri.v2
-            };
-            auto hit = Raycasting::testTriangleIntersection(ray, tri3);
-
+            auto hit = Raycasting::testTriangleIntersection(ray, tri);
+  
             if (hit && hit->t < ray.t)
                 ray.t = hit->t;
         }
