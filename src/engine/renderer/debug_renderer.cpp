@@ -1,4 +1,4 @@
-#include "debug.h"
+#include "debug_renderer.h"
 #include "engine/asset_manager/shader.h"
 #include "engine/engine.h"
 #include "engine/profilers/profile_scope.h"

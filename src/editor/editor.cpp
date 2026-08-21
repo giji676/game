@@ -11,7 +11,7 @@
 #include "engine/camera.h"
 #include "engine/engine.h"
 #include "engine/input.h"
-#include "engine/renderer/debug.h"
+#include "engine/renderer/debug_renderer.h"
 #include "engine/scene.h"
 #include "engine/ui.h"
 #include "engine/utils/geometry.h"

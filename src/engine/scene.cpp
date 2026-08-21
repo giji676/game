@@ -3,7 +3,7 @@
 
 #include "scene.h"
 #include "engine/profilers/profile_scope.h"
-#include "engine/renderer/debug.h"
+#include "engine/renderer/debug_renderer.h"
 #include "engine/engine.h"
 
 void collectRenderCommands(

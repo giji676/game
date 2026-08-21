@@ -1,4 +1,5 @@
 #include "ui.h"
+#include "defines.h"
 #include "engine/engine.h"
 #include "engine/input.h"
 #include "engine/ui.h"
@@ -100,13 +101,13 @@ UIElement* UI::getFocusedElement() {
 
 UIElement& UI::get(UIElementID id) {
     assert(id != INVALID_UI_ELEMENT && "UI::get called with INVALID_UI_ELEMENT");
-    assert(id < elements.size() && "UI::get called with out-of-range UIElementID");
+    assert(id < (UIElementID)elements.size() && "UI::get called with out-of-range UIElementID");
     return elements[id];
 }
 
 const UIElement& UI::get(UIElementID id) const {
     assert(id != INVALID_UI_ELEMENT && "UI::get called with INVALID_UI_ELEMENT");
-    assert(id < elements.size() && "UI::get called with out-of-range UIElementID");
+    assert(id < (UIElementID)elements.size() && "UI::get called with out-of-range UIElementID");
     return elements[id];
 }
 

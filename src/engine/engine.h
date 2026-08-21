@@ -12,7 +12,7 @@
 #include "asset_manager/mesh_registry.h"
 #include "renderer/renderer.h"
 #include "renderer/ui_renderer.h"
-#include "renderer/debug.h"
+#include "renderer/debug_renderer.h"
 #include "editor/editor.h"
 
 class Game;
