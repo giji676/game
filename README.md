@@ -38,22 +38,26 @@ submodules) from the repo root:
 
 Linux builds still use system SDL2/FreeType via the linker and `pkg-config`.
 
-For a Windows cross-build, place these DLLs next to `main.exe`:
-
-* `deps/SDL2/x86_64-w64-mingw32/bin/SDL2.dll`
-* `deps/freetype/x86_64-w64-mingw32/bin/libfreetype.dll`
+For a Windows cross-build, runtime DLLs are copied into `dist/windows/` automatically
+(SDL2, FreeType, and MinGW runtimes).
 
 ## Building
 
 ```bash
-make                         # native (linux/macos)
+make                         # native (linux/macos) -> dist/<os>/
 make TARGET_OS=windows       # MinGW cross-compile (after fetch-deps)
+make all-targets             # every platform this host can build
+make clean-all               # remove all build/ and dist/ outputs
 ```
+
+On Linux with MinGW installed, `all-targets` builds `linux` and `windows`.
+macOS is only included when building on Darwin.
 
 ## Running
 
 ```bash
-./main
+./dist/linux/gj-engine
+wine ./dist/windows/gj-engine.exe
 ```
 
 ## Status

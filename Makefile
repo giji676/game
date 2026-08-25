@@ -88,7 +88,7 @@ OBJ = $(OBJ_C) $(OBJ_CPP) $(OBJ_ASM)
 # For tracking header dependencies
 DEP_FILES = $(OBJ:.o=.d)
 
-TARGET = main
+TARGET = gj-engine
 DIST_DIR = dist/$(TARGET_OS)
 
 IMAGE_LIB = $(LIB_DIR)/gj-image/build/$(TARGET_OS)/libgj_image.a
@@ -154,9 +154,49 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
 	@mkdir -p $(dir $@)
 	$(ASM) $(ASMFLAGS) $< -o $@
 
-# Clean
+# Clean current TARGET_OS artifacts
 clean:
 	rm -rf $(BUILD_DIR) $(DIST_DIR) $(TARGET) $(TARGET).exe
+	rm -f SDL2.dll libfreetype.dll libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll
+	$(MAKE) -C $(LIB_DIR)/gj-image clean
+	$(MAKE) -C $(LIB_DIR)/gj-model clean
+
+# Build every platform this host can produce.
+# linux: always (when this Makefile runs on Linux, or via TARGET_OS=linux)
+# windows: if MinGW cross-compiler is installed
+# macos: only when the host is Darwin (no Linux->macOS cross by default)
+AVAILABLE_TARGETS :=
+ifeq ($(OS),Windows_NT)
+    AVAILABLE_TARGETS += windows
+else
+    UNAME_HOST := $(shell uname -s)
+    ifeq ($(UNAME_HOST),Darwin)
+        AVAILABLE_TARGETS += macos
+    else
+        AVAILABLE_TARGETS += linux
+    endif
+endif
+
+ifneq ($(shell command -v x86_64-w64-mingw32-g++ 2>/dev/null),)
+    ifeq ($(filter windows,$(AVAILABLE_TARGETS)),)
+        AVAILABLE_TARGETS += windows
+    endif
+endif
+
+.PHONY: all-targets
+all-targets:
+	@echo "Building targets:$(AVAILABLE_TARGETS)"
+	@for os in $(AVAILABLE_TARGETS); do \
+		echo ""; \
+		echo "==== $$os ===="; \
+		$(MAKE) TARGET_OS=$$os all || exit 1; \
+	done
+	@echo ""
+	@echo "Done. Outputs under dist/"
+
+.PHONY: clean-all
+clean-all:
+	rm -rf build dist
 	rm -f SDL2.dll libfreetype.dll libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll
 	$(MAKE) -C $(LIB_DIR)/gj-image clean
 	$(MAKE) -C $(LIB_DIR)/gj-model clean
