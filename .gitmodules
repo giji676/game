@@ -1,0 +1,6 @@
+[submodule "deps/gj-image"]
+	path = deps/gj-image
+	url = https://github.com/gj-libs/gj-image.git
+[submodule "deps/gj-model"]
+	path = deps/gj-model
+	url = https://github.com/gj-libs/gj-model.git

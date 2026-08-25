@@ -6,14 +6,24 @@ CXXFLAGS  = -std=c++17 -Wall -Iinclude -Isrc -Llib -O2 -g -MMD -MP
 CFLAGS    = -Wall -Iinclude -Isrc -Llib -O2 -g -MMD -MP
 ASMFLAGS  = -x assembler -c
 
-LDFLAGS   = -Llib -lSDL2 -lGL -lgj_image -lgj_model
+LDFLAGS   = -lSDL2 -lGL
+
+SRC_DIR   = src
+BUILD_DIR = build
+LIB_DIR   = deps
+
+
+CXXFLAGS += -I$(LIB_DIR)/gj-image/include \
+			-I$(LIB_DIR)/gj-model/include
+CFLAGS   += -I$(LIB_DIR)/gj-image/include \
+			-I$(LIB_DIR)/gj-model/include
+
+LDFLAGS  += -L$(LIB_DIR)/gj-image/build -lgj_image \
+			-L$(LIB_DIR)/gj-model/build -lgj_model
 
 # FreeType flags (for fonts)
 CXXFLAGS += $(shell pkg-config --cflags freetype2)
 LDFLAGS  += $(shell pkg-config --libs freetype2)
-
-SRC_DIR   = src
-BUILD_DIR = build
 
 # Find all source files
 SRC_C   = $(shell find $(SRC_DIR) -name "*.c")
@@ -28,16 +38,25 @@ OBJ_ASM = $(patsubst $(SRC_DIR)/%.asm, $(BUILD_DIR)/%.o, $(SRC_ASM))
 OBJ = $(OBJ_C) $(OBJ_CPP) $(OBJ_ASM)
 
 # For tracking header dependencies
-DEPS = $(OBJ:.o=.d)
+DEP_FILES = $(OBJ:.o=.d)
 
 TARGET = main
+
+IMAGE_LIB = $(LIB_DIR)/gj-image/build/libgj_image.a
+MODEL_LIB = $(LIB_DIR)/gj-model/build/libgj_model.a
 
 # Default target
 all: $(TARGET)
 
 # Link
-$(TARGET): $(OBJ)
-	$(CXX) $^ -o $@ $(LDFLAGS)
+$(TARGET): $(OBJ) $(IMAGE_LIB) $(MODEL_LIB)
+	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
+
+$(IMAGE_LIB):
+	$(MAKE) -C $(LIB_DIR)/gj-image
+
+$(MODEL_LIB):
+	$(MAKE) -C $(LIB_DIR)/gj-model
 
 # Compile C
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
@@ -57,7 +76,9 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
 # Clean
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)
+	$(MAKE) -C $(LIB_DIR)/gj-image clean
+	$(MAKE) -C $(LIB_DIR)/gj-model clean
 
--include $(DEPS)
+-include $(DEP_FILES)
 
-.PHONY: all clean
+.PHONY: all deps image model clean
