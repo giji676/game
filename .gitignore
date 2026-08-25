@@ -1,4 +1,27 @@
+# Engine binary and local build
 main
+main.exe
+*.dll
 *.json
 build/
+dist/
+lib/*.a
 
+# Vendored third-party prefixes (populated by scripts/fetch-deps.sh)
+deps/SDL2/
+deps/freetype/
+
+# Downloaded archives and fetch-deps cache under deps/
+deps/*.tar.gz
+deps/*.tar.xz
+deps/*.tar.bz2
+deps/*.tgz
+deps/*.zip
+deps/.cache/
+
+# Root-level fetch/build cache (scripts/fetch-deps.sh)
+.cache/
+
+# Local builds of gj-* deps (submodule checkouts stay tracked)
+deps/*/build/
+deps/*/*.a
