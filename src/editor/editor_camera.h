@@ -16,6 +16,10 @@ public:
 
     void syncFrom(const Camera& gameCam, float lookDistance = kDefaultDistance);
     void focusOn(const glm::vec3& worldPoint, float distance = kDefaultDistance);
+    void frameOn(
+        const glm::vec3& worldCenter,
+        float worldExtent,
+        ObjectID selectionId = INVALID_OBJECT);
 
     void update(
         Input& input,

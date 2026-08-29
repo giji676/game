@@ -159,6 +159,8 @@ private:
     void updateSceneInteraction();
 
     bool makeViewportRay(glm::vec2 mouse, Ray& outRay) const;
+    void frameSelection();
+    float frameExtentForObject(const Object& obj) const;
     float gizmoWorldSize(const glm::vec3& origin) const;
     GizmoHandle pickGizmoHandle(
         GizmoMode mode,

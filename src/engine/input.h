@@ -25,6 +25,7 @@ enum class Action : uint16_t {
     GizmoMove,
     GizmoRotate,
     GizmoScale,
+    FrameSelection,
 
     Count
 };

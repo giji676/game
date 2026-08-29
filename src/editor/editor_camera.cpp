@@ -5,6 +5,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "engine/asset_manager/model.h"
 #include "engine/utils/geometry.h"
 
 namespace {
@@ -17,6 +18,8 @@ constexpr float kMaxPitch = 1.55f;
 constexpr float kDollyStep = 0.15f;
 constexpr float kFineControlScale = 0.15f;
 constexpr float kPivotFollowEpsilon = 1e-4f;
+constexpr float kFramePadding = 1.25f;
+constexpr float kMinFrameExtent = 0.25f;
 
 float fineScale(Input& input) {
     return input.shiftDown() ? kFineControlScale : 1.f;
@@ -46,6 +49,22 @@ void EditorCamera::focusOn(const glm::vec3& worldPoint, float distance) {
     trackedSelectionId_ = INVALID_OBJECT;
     distance_ = std::max(distance, kOrbitEpsilon);
     camera_.pos = pivot_ - camera_.front * distance_;
+    syncOrbitStateFromCamera();
+}
+
+void EditorCamera::frameOn(
+    const glm::vec3& worldCenter,
+    float worldExtent,
+    ObjectID selectionId)
+{
+    const float extent = std::max(worldExtent, kMinFrameExtent);
+    distance_ = std::max(extent * kFramePadding * 2.f, kDefaultDistance);
+
+    pivot_ = worldCenter;
+    trackedSelectionId_ = selectionId;
+
+    const glm::vec3 forward = safeNormalize(camera_.front, {0.f, 0.f, -1.f});
+    camera_.pos = pivot_ - forward * distance_;
     syncOrbitStateFromCamera();
 }
 

@@ -255,6 +255,8 @@ void Editor::update() {
             setGizmoMode(GizmoMode::Rotate);
         if (input.pressed(Action::GizmoScale))
             setGizmoMode(GizmoMode::Scale);
+        if (input.pressed(Action::FrameSelection))
+            frameSelection();
     }
 
     const float winW = static_cast<float>(engine_.app.width());
@@ -928,6 +930,37 @@ void Editor::clearGizmoDrag() {
     gizmoActiveHandle_ = GizmoHandle::None;
     dragAxis_ = {0.f, 0.f, 0.f};
     dragLocalAxis_ = {0.f, 0.f, 0.f};
+}
+
+float Editor::frameExtentForObject(const Object& obj) const {
+    const Bounds bounds = obj.getBounds();
+    if (!obj.model || glm::length(bounds.size) < 1e-6f)
+        return EditorCamera::kDefaultDistance * 0.5f;
+
+    const glm::vec3 col0 = glm::vec3(obj.worldMatrix[0]);
+    const glm::vec3 col1 = glm::vec3(obj.worldMatrix[1]);
+    const glm::vec3 col2 = glm::vec3(obj.worldMatrix[2]);
+    const glm::vec3 worldSize = {
+        glm::length(col0) * bounds.size.x,
+        glm::length(col1) * bounds.size.y,
+        glm::length(col2) * bounds.size.z,
+    };
+    return glm::length(worldSize) * 0.5f;
+}
+
+void Editor::frameSelection() {
+    const ObjectID selectedId = hierarchyView_.selectedId();
+    if (selectedId == INVALID_OBJECT || selectedId == engine_.scene.getRoot())
+        return;
+
+    const Object& obj = engine_.scene.get(selectedId);
+    glm::vec3 center = glm::vec3(obj.worldMatrix[3]);
+
+    const Bounds bounds = obj.getBounds();
+    if (obj.model && glm::length(bounds.size) > 1e-6f)
+        center = glm::vec3(obj.worldMatrix * glm::vec4(bounds.center, 1.f));
+
+    editorCamera_.frameOn(center, frameExtentForObject(obj), selectedId);
 }
 
 float Editor::gizmoWorldSize(const glm::vec3& origin) const {
