@@ -155,7 +155,10 @@ private:
     bool built_ = false;
 
     UIElementID headerId_ = INVALID_UI_ELEMENT;
-    UIElementID nameId_ = INVALID_UI_ELEMENT;
+    UIElementID nameRowId_ = INVALID_UI_ELEMENT;
+    UIElementID nameFieldId_ = INVALID_UI_ELEMENT;
+    bool nameFieldWasFocused_ = false;
+    bool namePendingApply_ = false;
     UIElementID idLabelId_ = INVALID_UI_ELEMENT;
     UIElementID parentId_ = INVALID_UI_ELEMENT;
     UIElementID childrenId_ = INVALID_UI_ELEMENT;

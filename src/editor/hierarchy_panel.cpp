@@ -108,6 +108,9 @@ uint64_t HierarchyPanel::sceneSignature(Scene& scene) const {
         mix(static_cast<uint64_t>(id));
         mix(static_cast<uint64_t>(obj.parent));
         mix(static_cast<uint64_t>(obj.children.size()));
+        mix(static_cast<uint64_t>(obj.name.size()));
+        for (unsigned char c : obj.name)
+            mix(static_cast<uint64_t>(c));
         mix(collapsedIds_.count(id) ? 1ull : 0ull);
         for (ObjectID child : obj.children)
             walk(child);

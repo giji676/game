@@ -106,6 +106,14 @@ bool tryParseFloat(const std::string& text, float& out) {
     return std::sscanf(text.c_str(), " %f %c", &out, &tail) == 1;
 }
 
+std::string trimCopy(const std::string& text) {
+    const size_t start = text.find_first_not_of(" \t");
+    if (start == std::string::npos)
+        return {};
+    const size_t end = text.find_last_not_of(" \t");
+    return text.substr(start, end - start + 1);
+}
+
 bool parseInt(const std::string& text, int& out) {
     char tail = '\0';
     return std::sscanf(text.c_str(), " %d %c", &out, &tail) == 1;
@@ -586,7 +594,50 @@ void InspectorPanel::bind(UI& ui, EditorPanel& panel) {
     ui.reparent(headerId_, contentId_);
     styleInfoLabel(ui.get(headerId_), kHeaderFontSize);
 
-    nameId_ = addInfoLabel("Name: (none)");
+    nameRowId_ = ui.createElement();
+    ui.reparent(nameRowId_, contentId_);
+    UIElement& nameRow = ui.get(nameRowId_);
+    nameRow.style.position = PositionMode::Relative;
+    nameRow.style.display = Display::Flex;
+    nameRow.style.flexDirection = FlexDirection::Row;
+    nameRow.style.alignItems = AlignItems::Center;
+    nameRow.style.gap = Length::px(8.f);
+    nameRow.style.width = Length::percent(100.f);
+    nameRow.style.height = Length::px(kInfoLabelH);
+
+    UIElementID nameLabelId = ui.label(
+        {0.f, 0.f},
+        {0.f, 0.f},
+        {0.82f, 0.82f, 0.86f, 1.f},
+        "Name");
+    ui.reparent(nameLabelId, nameRowId_);
+    styleInfoLabel(ui.get(nameLabelId), kRowFontSize);
+
+    nameFieldId_ = ui.inputField(
+        {0.f, 0.f},
+        {0.f, 0.f},
+        kRowFontSize,
+        "Object name");
+    ui.reparent(nameFieldId_, nameRowId_);
+    UIElement& nameFieldEl = ui.get(nameFieldId_);
+    nameFieldEl.style.position = PositionMode::Relative;
+    nameFieldEl.style.flexGrow = 1.f;
+    nameFieldEl.style.flexBasis = Length::px(0.f);
+    nameFieldEl.style.height = Length::percent(100.f);
+    if (auto* nameField = dynamic_cast<InputField*>(nameFieldEl.widget.get())) {
+        styleInspectorInput(nameField);
+        nameField->onSubmit = [this](const std::string& value) {
+            if (!ui_ || nameFieldId_ == INVALID_UI_ELEMENT)
+                return;
+            auto* field = dynamic_cast<InputField*>(ui_->get(nameFieldId_).widget.get());
+            if (!field)
+                return;
+            field->text = trimCopy(value);
+            field->caretPos = std::min(field->caretPos, field->text.size());
+            namePendingApply_ = true;
+        };
+    }
+
     idLabelId_ = addInfoLabel("ID: -");
     parentId_ = addInfoLabel("Parent: -");
     childrenId_ = addInfoLabel("Children: 0");
@@ -629,7 +680,17 @@ void InspectorPanel::update(Scene& scene) {
         return;
 
     if (selectedId_ == INVALID_OBJECT) {
-        setLabelText(nameId_, "Name: (none selected)");
+        if (nameFieldId_ != INVALID_UI_ELEMENT) {
+            auto* nameField = dynamic_cast<InputField*>(ui_->get(nameFieldId_).widget.get());
+            if (nameField) {
+                nameField->disabled = true;
+                nameField->text.clear();
+                nameField->placeholder = "Object name";
+                nameField->caretPos = 0;
+            }
+            nameFieldWasFocused_ = false;
+            namePendingApply_ = false;
+        }
         setLabelText(idLabelId_, "ID: -");
         setLabelText(parentId_, "Parent: -");
         setLabelText(childrenId_, "Children: 0");
@@ -642,16 +703,42 @@ void InspectorPanel::update(Scene& scene) {
     }
 
     const Object& obj = scene.get(selectedId_);
-    const std::string displayName = obj.name.empty() ? ("Object " + std::to_string(selectedId_)) : obj.name;
 
-    setLabelText(nameId_, "Name: " + displayName);
+    Object& editableObj = scene.get(selectedId_);
+
+    if (nameFieldId_ != INVALID_UI_ELEMENT) {
+        auto* nameField = dynamic_cast<InputField*>(ui_->get(nameFieldId_).widget.get());
+        if (nameField) {
+            nameField->disabled = !editable_;
+
+            const bool applyOnBlur =
+                nameFieldWasFocused_ && !nameField->focused && editable_;
+            nameFieldWasFocused_ = nameField->focused;
+
+            if (editable_ && namePendingApply_) {
+                editableObj.name = trimCopy(nameField->text);
+                namePendingApply_ = false;
+            } else if (applyOnBlur) {
+                editableObj.name = trimCopy(nameField->text);
+            }
+
+            if (!nameField->focused) {
+                nameField->text = editableObj.name;
+                nameField->placeholder = editableObj.name.empty()
+                    ? ("Object " + std::to_string(selectedId_))
+                    : "Object name";
+                nameField->caretPos =
+                    std::min(nameField->caretPos, nameField->text.size());
+            }
+        }
+    }
+
     setLabelText(idLabelId_, "ID: " + std::to_string(selectedId_));
     setLabelText(parentId_, "Parent: " + std::to_string(obj.parent));
     setLabelText(childrenId_, "Children: " + std::to_string(obj.children.size()));
     setLabelText(modelId_, std::string("Has Model: ") + (obj.model ? "yes" : "no"));
     setLabelText(debugId_, std::string("Debug: ") + (obj.debug ? "on" : "off"));
 
-    Object& editableObj = scene.get(selectedId_);
     transformView_.update(
         editableObj.transform, editableObj, scene, editable_, gizmoSpace_);
 
