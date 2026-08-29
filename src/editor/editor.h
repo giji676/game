@@ -8,6 +8,7 @@
 #include "editor/hierarchy_panel.h"
 #include "editor/inspector_panel.h"
 #include "editor/panel.h"
+#include "editor/toolbar_panel.h"
 #include "engine/camera.h"
 #include "engine/defines.h"
 #include "engine/raycasting.h"
@@ -98,15 +99,16 @@ private:
     glm::vec3 dragLastHit_{0.f};
 
     UIElementID rootId_ = INVALID_UI_ELEMENT;
-    UIElementID placeholderLabelId_ = INVALID_UI_ELEMENT;
     UIElementID dockPreviewIndicatorId_ = INVALID_UI_ELEMENT;
 
+    EditorPanel toolbarPanel_;
     EditorPanel viewportPanel_;
     EditorPanel hierarchyPanel_;
     EditorPanel samplePanelB_;
     EditorPanel inspectorPanel_;
     HierarchyPanel hierarchyView_;
     InspectorPanel inspectorView_;
+    ToolbarPanel toolbarView_;
     EditorCamera editorCamera_;
     EditorLayout layout_;
     std::vector<EditorPanel*> panels_;
@@ -127,6 +129,8 @@ private:
     void syncDocking();
     void syncResize();
     void applyLayoutRects();
+    void syncAnchoredPanels(float winW, float winH);
+    glm::vec4 dockableBounds(float winW, float winH) const;
     void updateViewportInteraction();
     void updateSceneInteraction();
 

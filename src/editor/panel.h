@@ -40,6 +40,13 @@ public:
     void setVisible(bool visible);
     void setRect(glm::vec4 rect);
     void setDockedMode(bool docked) { dockedMode_ = docked; }
+    void setAnchored(bool anchored) {
+        anchored_ = anchored;
+        if (anchored)
+            drag_ = PanelDrag::None;
+    }
+    void setShowTitleBar(bool show);
+    bool isAnchored() const { return anchored_; }
     void sync();
 
     bool isDragging() const { return drag_ != PanelDrag::None; }
@@ -72,6 +79,8 @@ private:
     glm::vec2 dragStartMouse_ = {0.f, 0.f};
     glm::vec4 dragStartRect_ = {0.f, 0.f, 0.f, 0.f};
     bool dockedMode_ = false;
+    bool anchored_ = false;
+    bool showTitleBar_ = true;
 
     void clampToWindow(glm::vec2 windowSize);
     PanelDrag hitTest(glm::vec2 mouse) const;

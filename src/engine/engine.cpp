@@ -50,7 +50,7 @@ void Engine::run() {
             PROFILE_SCOPE("Engine::run");
             beginFrame();
 
-            editorUi.setInteractable(editor.isEditing());
+            editorUi.setInteractable(editor.isOpen());
             getInput(event);
             {
                 PROFILE_SCOPE("Engine::editor.update");
@@ -61,7 +61,7 @@ void Engine::run() {
             const float winW = static_cast<float>(app.width());
             const float winH = static_cast<float>(app.height());
             editorUi.setSurface({0.f, 0.f}, {winW, winH}, {winW, winH});
-            editorUi.setInteractable(editor.isEditing());
+            editorUi.setInteractable(editor.isOpen());
             editorUi.update();
 
             const glm::vec4 viewport = gameViewport();
@@ -267,6 +267,7 @@ void Engine::setupKeyBindings() {
     input.bind(Action::ToggleScreen, SDL_SCANCODE_F11);
     input.bind(Action::Pause, SDL_SCANCODE_ESCAPE);
     input.bind(Action::ToggleEditor, SDL_SCANCODE_F3);
+    input.bind(Action::TogglePlay, SDL_SCANCODE_F5);
 
     input.bind(MouseAction::Left, SDL_BUTTON_LEFT);
     input.bind(MouseAction::Middle, SDL_BUTTON_MIDDLE);

@@ -84,6 +84,15 @@ void EditorPanel::setRect(glm::vec4 rect) {
     sync();
 }
 
+void EditorPanel::setShowTitleBar(bool show) {
+    if (!isBuilt())
+        return;
+    showTitleBar_ = show;
+    UIElement& titleBar = ui_->get(titleBarId_);
+    titleBar.visible = show;
+    titleBar.style.height = show ? Length::px(kTitleBarH) : Length::px(0.f);
+}
+
 void EditorPanel::sync() {
     if (!isBuilt())
         return;
@@ -132,6 +141,9 @@ void EditorPanel::clampToWindow(glm::vec2 windowSize) {
 }
 
 PanelDrag EditorPanel::hitTest(glm::vec2 mouse) const {
+    if (anchored_)
+        return PanelDrag::None;
+
     const float x = rect_.x;
     const float y = rect_.y;
     const float w = rect_.z;
@@ -244,6 +256,11 @@ glm::vec4 EditorPanel::applyDrag(
 void EditorPanel::update(Input& input, glm::vec2 windowSize) {
     if (!isBuilt())
         return;
+
+    if (anchored_) {
+        drag_ = PanelDrag::None;
+        return;
+    }
 
     const glm::vec2 mouse = input.mousePosition();
 

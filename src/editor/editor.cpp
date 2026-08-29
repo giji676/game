@@ -22,6 +22,7 @@ constexpr float kDefaultViewportScale = 0.6f;
 constexpr float kMinViewportW = 192.f;
 constexpr float kMinViewportH = 108.f;
 constexpr float kResizeHandle = 10.f;
+constexpr float kToolbarHeight = 36.f;
 
 constexpr float kGizmoScreenFactor = 0.12f;
 constexpr float kGizmoPlanePadStart = 0.2f;
@@ -112,6 +113,10 @@ void Editor::update() {
         }
     }
 
+    if (input.pressed(Action::TogglePlay) && open_) {
+        setPlayState(isEditing() ? EditorPlayState::Play : EditorPlayState::Edit);
+    }
+
     if (!open_)
         return;
 
@@ -121,9 +126,13 @@ void Editor::update() {
     // Reflow the dock tree whenever the OS window size changes.
     if (winW != lastWindowSize_.x || winH != lastWindowSize_.y) {
         lastWindowSize_ = {winW, winH};
-        layout_.relayout({0.f, 0.f, winW, winH});
+        syncAnchoredPanels(winW, winH);
+        layout_.relayout(dockableBounds(winW, winH));
         applyLayoutRects();
     }
+
+    toolbarView_.update(*this);
+    toolbarPanel_.update(input, {winW, winH});
 
     for (EditorPanel* panel : panels_) {
         if (isEditing())
@@ -220,6 +229,7 @@ void Editor::setOpen(bool open) {
         samplePanelB_.setVisible(false);
         inspectorPanel_.setVisible(false);
         hierarchyPanel_.setVisible(false);
+        toolbarPanel_.setVisible(false);
     }
 
     syncVisibility();
@@ -230,15 +240,22 @@ void Editor::toggleOpen() {
 }
 
 void Editor::setPlayState(EditorPlayState state) {
-    playState_ = state;
-    if (!open_)
+    if (!open_) {
+        playState_ = state;
         return;
+    }
+
+    if (playState_ == state)
+        return;
+
+    playState_ = state;
 
     if (state == EditorPlayState::Edit) {
         engine_.setPaused(true);
+        engine_.editorUi.onUnpause();
     } else {
         clearGizmoDrag();
-        engine_.editorUi.onUnpause();
+        engine_.setPaused(false);
     }
 }
 
@@ -266,15 +283,37 @@ void Editor::buildShell() {
     // Panel shells. Future Hierarchy / Inspector panels will reuse EditorPanel.
     const float winW = std::max(1.f, static_cast<float>(engine_.app.width()));
     const float winH = std::max(1.f, static_cast<float>(engine_.app.height()));
+    const float dockH = std::max(1.f, winH - kToolbarHeight);
+
+    toolbarPanel_.build(
+            ui,
+            rootId_,
+            "Toolbar",
+            {0.f, winH - kToolbarHeight, winW, kToolbarHeight});
+    toolbarPanel_.setAnchored(true);
+    toolbarPanel_.setShowTitleBar(false);
+    if (UIElement& toolbarRoot = ui.get(toolbarPanel_.rootId()); toolbarRoot.widget) {
+        auto* bg = static_cast<Rect*>(toolbarRoot.widget.get());
+        bg->color = {0.14f, 0.15f, 0.18f, 1.f};
+        bg->borderWidth = 0.f;
+    }
+    UIElement& toolbarContent = ui.get(toolbarPanel_.contentId());
+    toolbarContent.style.padding.left = Length::px(0.f);
+    toolbarContent.style.padding.right = Length::px(0.f);
+    toolbarContent.style.padding.top = Length::px(0.f);
+    toolbarContent.style.padding.bottom = Length::px(0.f);
+    toolbarContent.style.overflow = Overflow::Hidden;
+    toolbarView_.bind(ui, toolbarPanel_, *this);
+
     viewportPanel_.build(
             ui,
             rootId_,
             "Viewport",
             {
                 std::floor(winW/4),
-                std::floor(winH/3),
+                std::floor(dockH/3),
                 std::floor(2*winW/4),
-                std::floor(2*winH/3),
+                std::floor(2*dockH/3),
             });
     viewportPanel_.setDockedMode(true);
     if (UIElement& viewportRoot = ui.get(viewportPanel_.rootId()); viewportRoot.widget) {
@@ -292,7 +331,7 @@ void Editor::buildShell() {
                 0.f,
                 0.f,
                 std::floor(winW/4),
-                winH,
+                dockH,
             });
     hierarchyPanel_.setDockedMode(true);
     hierarchyView_.bind(ui, hierarchyPanel_);
@@ -305,7 +344,7 @@ void Editor::buildShell() {
                 std::floor(winW/4),
                 0.f,
                 std::floor(2*winW/4),
-                std::floor(winH/3),
+                std::floor(dockH/3),
             });
     samplePanelB_.setDockedMode(true);
 
@@ -317,7 +356,7 @@ void Editor::buildShell() {
                 std::floor(3*winW/4),
                 0.f,
                 std::floor(winW/4),
-                winH
+                dockH
             });
     inspectorPanel_.setDockedMode(true);
     inspectorView_.bind(ui, inspectorPanel_);
@@ -340,8 +379,9 @@ void Editor::buildShell() {
          samplePanelB_.rootId(), inspectorPanel_.rootId()},
         {viewportPanel_.rect(), hierarchyPanel_.rect(),
          samplePanelB_.rect(), inspectorPanel_.rect()},
-        {0.f, 0.f, winW, winH});
+        dockableBounds(winW, winH));
     applyLayoutRects();
+    syncAnchoredPanels(winW, winH);
     viewportRect_ = viewportPanel_.rect();
     lastWindowSize_ = {winW, winH};
 }
@@ -349,6 +389,7 @@ void Editor::buildShell() {
 void Editor::syncVisibility() {
     if (rootId_ != INVALID_UI_ELEMENT)
         engine_.editorUi.get(rootId_).visible = open_;
+    toolbarPanel_.setVisible(open_);
     viewportPanel_.setVisible(open_);
     hierarchyPanel_.setVisible(open_);
     samplePanelB_.setVisible(open_);
@@ -404,6 +445,17 @@ void Editor::clampViewportToWindow() {
     y = clampf(y, 0.f, std::max(0.f, winH - h));
 
     viewportRect_ = {x, y, w, h};
+}
+
+glm::vec4 Editor::dockableBounds(float winW, float winH) const {
+    const float dockH = std::max(1.f, winH - kToolbarHeight);
+    return {0.f, 0.f, winW, dockH};
+}
+
+void Editor::syncAnchoredPanels(float winW, float winH) {
+    if (!toolbarPanel_.isBuilt())
+        return;
+    toolbarPanel_.setRect({0.f, winH - kToolbarHeight, winW, kToolbarHeight});
 }
 
 void Editor::applyLayoutRects() {
@@ -481,7 +533,7 @@ void Editor::syncResize() {
     }
 
     if (changed) {
-        layout_.relayout({0.f, 0.f, winW, winH});
+        layout_.relayout(dockableBounds(winW, winH));
         applyLayoutRects();
     }
 }
@@ -511,7 +563,7 @@ void Editor::syncDocking() {
             if (layout_.dockPanel(activeDragPanelId_, activeDockPreview_)) {
                 const float winW = static_cast<float>(engine_.app.width());
                 const float winH = static_cast<float>(engine_.app.height());
-                layout_.relayout({0.f, 0.f, winW, winH});
+                layout_.relayout(dockableBounds(winW, winH));
                 applyLayoutRects();
             }
         }
@@ -538,7 +590,7 @@ void Editor::syncDocking() {
         if (layout_.dockPanel(activeDragPanelId_, activeDockPreview_)) {
             const float winW = static_cast<float>(engine_.app.width());
             const float winH = static_cast<float>(engine_.app.height());
-            layout_.relayout({0.f, 0.f, winW, winH});
+            layout_.relayout(dockableBounds(winW, winH));
             applyLayoutRects();
         }
         activeDragPanelId_ = INVALID_UI_ELEMENT;
