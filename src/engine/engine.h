@@ -15,6 +15,11 @@
 #include "renderer/debug_renderer.h"
 #include "editor/editor.h"
 
+#define ENGINE() \
+    Engine::instance()
+#define DT() \
+    Engine::instance().app.deltaTime
+
 class Game;
 
 class Engine {

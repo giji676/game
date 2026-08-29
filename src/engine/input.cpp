@@ -8,7 +8,7 @@
 glm::vec2 Input::mousePosition() const {
     return {
         x,
-        Engine::instance().app.height() - y
+        ENGINE().app.height() - y
     };
 }
 

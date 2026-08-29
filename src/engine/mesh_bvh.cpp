@@ -136,7 +136,7 @@ void MeshBVH::_intersectBVH(Ray& ray, uint32_t nodeIdx, const glm::mat4& world) 
     if (!intersectAABB(ray, node.aabbMin, node.aabbMax, world))
         return;
 
-    // Engine::instance().debugRenderer.aabb(
+    // ENGINE().debugRenderer.aabb(
     //     world,
     //     node.aabbMin,
     //     node.aabbMax,

@@ -397,7 +397,7 @@ void HierarchyPanel::syncDropPreview(Scene& scene) {
 }
 
 void HierarchyPanel::updateDrag(Scene& scene) {
-    Input& input = Engine::instance().input;
+    Input& input = ENGINE().input;
     const glm::vec2 mouse = input.mousePosition();
     const ObjectID rootId = scene.getRoot();
     releasedDragId_ = INVALID_OBJECT;

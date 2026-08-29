@@ -64,7 +64,7 @@ void applyClip(UIRenderCommand& cmd, const UIClipRect& clip) {
 } // namespace
 
 void UI::dispatchTextInput(const std::string& text) {
-    if (!interactable_ || Engine::instance().app.cursorCaptured)
+    if (!interactable_ || ENGINE().app.cursorCaptured)
         return;
     if (UIElement* e = getFocusedElement()) {
         if (e->widget) e->widget->onTextInput(text);
@@ -72,7 +72,7 @@ void UI::dispatchTextInput(const std::string& text) {
 }
 
 void UI::dispatchKeyInput(Key key) {
-    if (!interactable_ || Engine::instance().app.cursorCaptured)
+    if (!interactable_ || ENGINE().app.cursorCaptured)
         return;
     if (UIElement* e = getFocusedElement()) {
         if (e->widget) e->widget->onKeyInput(key);
@@ -112,7 +112,7 @@ const UIElement& UI::get(UIElementID id) const {
 }
 
 void UI::update() {
-    Engine& engine = Engine::instance();
+    Engine& engine = ENGINE();
 
     // Window space -> logical space. When the surface is presented smaller than
     // its layout size, divide out the scale so hit tests land on the right
@@ -282,7 +282,7 @@ UIElementID UI::label(
     elem.transform.size = size;
     auto& lbl = elem.addWidget<Label>();
     Font* resolvedFont =
-        font ? font : &Engine::instance().assets.getFont("InterVariable");
+        font ? font : &ENGINE().assets.getFont("InterVariable");
     lbl.font = resolvedFont;
     lbl.color = color;
     lbl.text = std::move(text);
@@ -324,7 +324,7 @@ UIElementID UI::button(
     btn.text = std::move(text);
     btn.font = font
         ? font
-        : &Engine::instance().assets.getFont("InterVariable");
+        : &ENGINE().assets.getFont("InterVariable");
 
     glm::vec2 textSize = btn.font->measure(btn.text, fontSize);
 
@@ -352,7 +352,7 @@ UIElementID UI::inputField(
     field.selfId = id;
     field.font = font
         ? font
-        : &Engine::instance().assets.getFont("InterVariable");
+        : &ENGINE().assets.getFont("InterVariable");
     field.placeholder = std::move(placeholder);
 
     e.transform.position = pos;
@@ -383,7 +383,7 @@ UIElementID UI::toolbar(
     auto& tb = e.addWidget<Toolbar>();
     tb.font = font
         ? font
-        : &Engine::instance().assets.getFont("InterVariable");
+        : &ENGINE().assets.getFont("InterVariable");
 
     e.transform.position = pos;
     e.transform.size = size;

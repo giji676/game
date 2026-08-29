@@ -4,7 +4,7 @@
 #include "engine/engine.h"
 
 void Camera::lateUpdate() {
-    const Object& obj = Engine::instance().scene.get(object);
+    const Object& obj = ENGINE().scene.get(object);
     pos = glm::vec3(obj.worldMatrix[3]);
 
     const glm::vec3 worldUp = glm::vec3(obj.worldMatrix[1]);

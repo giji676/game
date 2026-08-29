@@ -34,16 +34,16 @@ public:
     float recoilAngle = 5.f;
 
     void init() override {
-        if (Object* gunObj = gun.get(Engine::instance().scene))
+        if (Object* gunObj = gun.get(ENGINE().scene))
             gunRestRotation = gunObj->transform.rotation();
     }
     const char* typeName() const override { return "PlayerController"; }
 
     void update() override {
-        Engine& engine = Engine::instance();
+        Engine& engine = ENGINE();
         Object& obj = engine.scene.get(object);
         Input& input = engine.input;
-        const float dt = engine.app.deltaTime;
+        const float dt = DT();
 
         yaw -= input.mouseDeltaX * lookSensitivity;
         pitch -= input.mouseDeltaY * lookSensitivity;
@@ -76,7 +76,7 @@ public:
         obj.transform.setPosition(pos);
         // obj.transform.setRotation({pitch, yaw, 0.f});
 
-        Object* childObj = child.get(Engine::instance().scene);
+        Object* childObj = child.get(ENGINE().scene);
         if (!childObj)
             return;
         childObj->transform.setRotation({pitch, yaw, 0.f});
@@ -152,7 +152,7 @@ private:
     }
 
     static void clearDebug(ObjectID id) {
-        Object& obj = Engine::instance().scene.get(id);
+        Object& obj = ENGINE().scene.get(id);
         obj.debug = false;
         for (ObjectID child : obj.children)
             clearDebug(child);

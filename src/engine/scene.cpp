@@ -55,7 +55,7 @@ void collectRenderCommands(
     }
 
     if (obj.debug) {
-        DebugRenderer& debug = Engine::instance().debugRenderer;
+        DebugRenderer& debug = ENGINE().debugRenderer;
         debug.axis(world, 2.5f);
         Bounds bounds = obj.getBounds();
         debug.box(
@@ -74,7 +74,7 @@ void collectRenderCommands(
                 (uint64_t)cmd.material->shader->ID << 48 |
                 (uint64_t)cmd.material->id       << 32 |
                 (uint64_t)cmd.mesh->id           << 16;
-            cmd.allocation = &Engine::instance().meshRegistry.getAllocation(&part.mesh);
+            cmd.allocation = &ENGINE().meshRegistry.getAllocation(&part.mesh);
             out.push_back(cmd);
         }
     }

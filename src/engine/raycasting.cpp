@@ -10,7 +10,7 @@ RaycastHit Raycasting::castRay(const Ray& ray) {
     RaycastHit hit;
 
     checkIntersect(
-        Engine::instance().scene.getRoot(),
+        ENGINE().scene.getRoot(),
         ray,
         glm::mat4(1.0f),
         hit
@@ -25,7 +25,7 @@ void Raycasting::checkIntersect(
     const glm::mat4& parent,
     RaycastHit& bestHit)
 {
-    Engine& engine = Engine::instance();
+    Engine& engine = ENGINE();
     const Object& obj = engine.scene.get(id);
 
     glm::mat4 world = obj.worldMatrix;

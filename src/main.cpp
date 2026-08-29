@@ -2,9 +2,9 @@
 #include "game/game.h"
 
 int main(int argc, char* argv[]) {
-    Game game(Engine::instance());
-    Engine::instance().init(&game);
-    Engine::instance().run();
+    Game game(ENGINE());
+    ENGINE().init(&game);
+    ENGINE().run();
 }
 
 

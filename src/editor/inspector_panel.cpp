@@ -692,7 +692,7 @@ void BehaviourListView::syncFieldRow(
     if (refField) {
         if (typeChanged) {
             auto& btn = controlEl.addWidget<Button>();
-            btn.font = &Engine::instance().assets.getFont("InterVariable");
+            btn.font = &ENGINE().assets.getFont("InterVariable");
         }
         controlEl.style.width = Length::px(0.f);
         controlEl.style.flexGrow = 1.f;
@@ -706,7 +706,7 @@ void BehaviourListView::syncFieldRow(
         if (!slot || !value)
             return;
 
-        const glm::vec2 mouse = Engine::instance().input.mousePosition();
+        const glm::vec2 mouse = ENGINE().input.mousePosition();
         const bool hovered = pointInRect(
             mouse, controlEl.transform.position, controlEl.transform.size);
         bool dropValid = false;
@@ -751,7 +751,7 @@ void BehaviourListView::syncFieldRow(
     if (typeChanged) {
         auto& input = controlEl.addWidget<InputField>();
         input.selfId = row.controlId;
-        input.font = &Engine::instance().assets.getFont("InterVariable");
+        input.font = &ENGINE().assets.getFont("InterVariable");
         styleInspectorInput(&input);
     }
     controlEl.style.width = Length::px(0.f);

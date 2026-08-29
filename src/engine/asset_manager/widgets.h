@@ -191,7 +191,7 @@ public:
 
         hovered = pointInRect(pos, e.transform.position, e.transform.size);
 
-        Input& input = Engine::instance().input;
+        Input& input = ENGINE().input;
         if (hovered && input.pressed(MouseAction::Left))
             pressed = true;
         if (pressed && input.released(MouseAction::Left)) {
@@ -204,7 +204,7 @@ public:
     }
 
     void tick(const UIElement& e, float dt) override {
-        if (Engine::instance().app.cursorCaptured)
+        if (ENGINE().app.cursorCaptured)
             resetInteraction();
         current = resolve(normal, overridesFor(resolveState()));
         (void)e;
@@ -305,7 +305,7 @@ public:
 
         hovered = pointInRect(pos, e.transform.position, e.transform.size);
 
-        Input& input = Engine::instance().input;
+        Input& input = ENGINE().input;
         if (hovered && input.pressed(MouseAction::Left))
             pressed = true;
         if (pressed && input.released(MouseAction::Left)) {
@@ -441,7 +441,7 @@ public:
 
         hovered = pointInRect(pos, e.transform.position, e.transform.size);
 
-        if (hovered && Engine::instance().input.pressed(MouseAction::Left)) {
+        if (hovered && ENGINE().input.pressed(MouseAction::Left)) {
             if (!focused && e.owner)
                 e.owner->requestFocus(selfId);
             setCaretFromClick(e, pos);
@@ -685,7 +685,7 @@ public:
     }
 
     void updateInput(const UIElement& e, const glm::vec2& pos) override {
-        Input& input = Engine::instance().input;
+        Input& input = ENGINE().input;
         ensureStateSize();
 
         for (size_t i = 0; i < items.size(); ++i) {

@@ -77,7 +77,7 @@ void DebugRenderer::render(
 {
     PROFILE_SCOPE("DebugRenderer::render");
 
-    Shader& shader = Engine::instance().assets.getShader("debug");
+    Shader& shader = ENGINE().assets.getShader("debug");
     shader.use();
     shader.setMat4("view", view);
     shader.setMat4("projection", projection);
