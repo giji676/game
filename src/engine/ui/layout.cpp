@@ -152,6 +152,8 @@ size_t countFlowChildren(UI& ui, UIElementID parentId)
 {
     size_t count = 0;
     for (UIElementID childId : ui.get(parentId).children) {
+        if (!ui.get(childId).visible)
+            continue;
         if (ui.resolvedStyle(childId).position == PositionMode::Relative)
             ++count;
     }
@@ -482,6 +484,8 @@ void layoutFlowAbsoluteChildren(
     LayoutRect content)
 {
     for (UIElementID childId : ui.get(parentId).children) {
+        if (!ui.get(childId).visible)
+            continue;
         const Style& childStyle = ui.resolvedStyle(childId);
         if (childStyle.position != PositionMode::Absolute)
             continue;
@@ -504,6 +508,8 @@ void layoutColumnFlow(
     items.reserve(ui.get(parentId).children.size());
 
     for (UIElementID childId : ui.get(parentId).children) {
+        if (!ui.get(childId).visible)
+            continue;
         const Style& childStyle = ui.resolvedStyle(childId);
         if (childStyle.position != PositionMode::Relative)
             continue;
@@ -599,6 +605,8 @@ void layoutRowFlow(
     items.reserve(ui.get(parentId).children.size());
 
     for (UIElementID childId : ui.get(parentId).children) {
+        if (!ui.get(childId).visible)
+            continue;
         const Style& childStyle = ui.resolvedStyle(childId);
         if (childStyle.position != PositionMode::Relative)
             continue;

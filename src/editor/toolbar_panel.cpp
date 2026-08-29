@@ -11,7 +11,7 @@ namespace {
 
 constexpr float kToolbarFontSize = 16.f;
 constexpr float kButtonGap = 8.f;
-constexpr float kGizmoButtonWidth = 80.f;
+constexpr float kGroupGap = 16.f;
 
 void styleToolbarButton(UIElement& el, bool active = false) {
     auto* btn = dynamic_cast<Button*>(el.widget.get());
@@ -38,8 +38,9 @@ void layoutToolbarButton(UI& ui, UIElementID id, float marginRight = kButtonGap)
     UIElement& el = ui.get(id);
     el.style.position = PositionMode::Relative;
     el.style.height = Length::px(28.f);
-    el.style.width = Length::px(kGizmoButtonWidth);
+    el.style.width = Length::automatic();
     el.style.margin.right = Length::px(marginRight);
+    el.style.textOverflow = TextOverflow::Visible;
 }
 
 } // namespace
@@ -55,7 +56,7 @@ void ToolbarPanel::bind(UI& ui, EditorPanel& panel, Editor& editor) {
     content.style.flexDirection = FlexDirection::Row;
     content.style.alignItems = AlignItems::Center;
     content.style.padding.left = Length::px(10.f);
-    content.style.padding.right = Length::px(10.f);
+    content.style.padding.right = Length::px(56.f);
     content.style.padding.top = Length::px(0.f);
     content.style.padding.bottom = Length::px(0.f);
     content.style.overflow = Overflow::Hidden;
@@ -90,7 +91,7 @@ void ToolbarPanel::bind(UI& ui, EditorPanel& panel, Editor& editor) {
                 editor_->setPlayState(EditorPlayState::Play);
         };
 
-    layoutToolbarButton(ui, stopButtonId_, 16.f);
+    layoutToolbarButton(ui, stopButtonId_, kGroupGap);
     styleToolbarButton(ui.get(stopButtonId_));
     if (auto* stopBtn = dynamic_cast<Button*>(ui.get(stopButtonId_).widget.get()))
         stopBtn->onClick = [this]() {
@@ -114,7 +115,7 @@ void ToolbarPanel::bind(UI& ui, EditorPanel& panel, Editor& editor) {
                 editor_->setGizmoMode(GizmoMode::Rotate);
         };
 
-    layoutToolbarButton(ui, scaleButtonId_, 16.f);
+    layoutToolbarButton(ui, scaleButtonId_, kGroupGap);
     styleToolbarButton(ui.get(scaleButtonId_));
     if (auto* scaleBtn = dynamic_cast<Button*>(ui.get(scaleButtonId_).widget.get()))
         scaleBtn->onClick = [this]() {
@@ -130,10 +131,8 @@ void ToolbarPanel::bind(UI& ui, EditorPanel& panel, Editor& editor) {
                 editor_->setGizmoSpace(GizmoSpace::Local);
         };
 
-    layoutToolbarButton(ui, worldSpaceButtonId_, 16.f);
-    UIElement& worldEl = ui.get(worldSpaceButtonId_);
-    worldEl.style.width = Length::px(110.f);
-    styleToolbarButton(worldEl);
+    layoutToolbarButton(ui, worldSpaceButtonId_, kGroupGap);
+    styleToolbarButton(ui.get(worldSpaceButtonId_));
     if (auto* worldBtn = dynamic_cast<Button*>(ui.get(worldSpaceButtonId_).widget.get()))
         worldBtn->onClick = [this]() {
             if (editor_)
@@ -141,9 +140,10 @@ void ToolbarPanel::bind(UI& ui, EditorPanel& panel, Editor& editor) {
         };
 
     UIElement& statusEl = ui.get(statusLabelId_);
-    statusEl.style.position = PositionMode::Relative;
+    statusEl.style.position = PositionMode::Absolute;
+    statusEl.style.inset.right = Length::px(10.f);
+    statusEl.style.inset.bottom = Length::px(6.f);
     statusEl.style.height = Length::px(24.f);
-    statusEl.style.flexGrow = 1.f;
 }
 
 void ToolbarPanel::update(Editor& editor) {
