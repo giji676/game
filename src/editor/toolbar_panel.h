@@ -16,5 +16,8 @@ private:
     Editor* editor_ = nullptr;
     UIElementID playButtonId_ = INVALID_UI_ELEMENT;
     UIElementID stopButtonId_ = INVALID_UI_ELEMENT;
+    UIElementID moveButtonId_ = INVALID_UI_ELEMENT;
+    UIElementID rotateButtonId_ = INVALID_UI_ELEMENT;
+    UIElementID scaleButtonId_ = INVALID_UI_ELEMENT;
     UIElementID statusLabelId_ = INVALID_UI_ELEMENT;
 };

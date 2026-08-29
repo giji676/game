@@ -268,6 +268,9 @@ void Engine::setupKeyBindings() {
     input.bind(Action::Pause, SDL_SCANCODE_ESCAPE);
     input.bind(Action::ToggleEditor, SDL_SCANCODE_F3);
     input.bind(Action::TogglePlay, SDL_SCANCODE_F5);
+    input.bind(Action::GizmoMove, SDL_SCANCODE_W);
+    input.bind(Action::GizmoRotate, SDL_SCANCODE_E);
+    input.bind(Action::GizmoScale, SDL_SCANCODE_R);
 
     input.bind(MouseAction::Left, SDL_BUTTON_LEFT);
     input.bind(MouseAction::Middle, SDL_BUTTON_MIDDLE);

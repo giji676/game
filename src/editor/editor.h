@@ -33,8 +33,22 @@ enum class ViewportDrag {
     TopRight,
 };
 
+enum class GizmoMode {
+    Move,
+    Rotate,
+    Scale,
+};
+
+// Object-local axes expressed in world space (from worldMatrix basis).
+struct GizmoAxes {
+    glm::vec3 x{1.f, 0.f, 0.f};
+    glm::vec3 y{0.f, 1.f, 0.f};
+    glm::vec3 z{0.f, 0.f, 1.f};
+};
+
 enum class GizmoHandle {
     None,
+    Center,
     AxisX,
     AxisY,
     AxisZ,
@@ -68,6 +82,9 @@ public:
         return open_ && playState_ == EditorPlayState::Edit;
     }
 
+    GizmoMode gizmoMode() const { return gizmoMode_; }
+    void setGizmoMode(GizmoMode mode);
+
     Camera* editModeCamera() { return &editorCamera_.camera(); }
 
     // Window-space x, y, w, h the game renders into. While the editor is open
@@ -97,6 +114,10 @@ private:
     glm::vec3 dragPlaneNormal_{0.f, 0.f, 1.f};
     glm::vec3 dragAxis_{0.f};
     glm::vec3 dragLastHit_{0.f};
+    glm::vec3 dragStartScale_{1.f};
+    float dragGizmoSize_ = 1.f;
+    glm::vec3 dragLocalAxis_{0.f};
+    GizmoMode gizmoMode_ = GizmoMode::Move;
 
     UIElementID rootId_ = INVALID_UI_ELEMENT;
     UIElementID dockPreviewIndicatorId_ = INVALID_UI_ELEMENT;
@@ -137,15 +158,23 @@ private:
     bool makeViewportRay(glm::vec2 mouse, Ray& outRay) const;
     float gizmoWorldSize(const glm::vec3& origin) const;
     GizmoHandle pickGizmoHandle(
+        GizmoMode mode,
         const Ray& ray,
         const glm::vec3& origin,
-        float size) const;
+        float size,
+        const GizmoAxes& axes) const;
     bool beginGizmoDrag(
         GizmoHandle handle,
         const Ray& ray,
         ObjectID id,
-        const glm::vec3& origin);
-    void drawTranslateGizmo(const glm::vec3& origin, float size);
+        const glm::vec3& origin,
+        float gizmoSize,
+        const GizmoAxes& axes);
+    void drawGizmo(
+        GizmoMode mode,
+        const glm::vec3& origin,
+        float size,
+        const GizmoAxes& axes);
     void clearGizmoDrag();
 
     static ViewportDrag hitTestViewport(glm::vec2 mouse, glm::vec4 rect);

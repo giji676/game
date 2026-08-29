@@ -22,6 +22,9 @@ enum class Action : uint16_t {
     Pause,
     ToggleEditor,
     TogglePlay,
+    GizmoMove,
+    GizmoRotate,
+    GizmoScale,
 
     Count
 };
