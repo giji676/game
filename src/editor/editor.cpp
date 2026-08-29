@@ -162,6 +162,35 @@ void Editor::update() {
     viewportRect_ = viewportPanel_.rect();
 }
 
+void Editor::updateEditorCamera() {
+    if (!open_ || !isEditing())
+        return;
+
+    Input& input = engine_.input;
+
+    if (activeDragPanelId_ != INVALID_UI_ELEMENT ||
+        activeResizePanelId_ != INVALID_UI_ELEMENT ||
+        hierarchyView_.isDragging())
+        return;
+
+    glm::vec3 selectionPivot{0.f};
+    ObjectID selectionId = INVALID_OBJECT;
+    const ObjectID selectedId = hierarchyView_.selectedId();
+    if (selectedId != INVALID_OBJECT &&
+        selectedId != engine_.scene.getRoot()) {
+        selectionId = selectedId;
+        selectionPivot = glm::vec3(
+            engine_.scene.get(selectedId).worldMatrix[3]);
+    }
+
+    editorCamera_.update(
+        input,
+        gameViewportRect(),
+        true,
+        selectionId,
+        selectionPivot);
+}
+
 void Editor::setOpen(bool open) {
     if (open_ == open)
         return;
@@ -172,6 +201,10 @@ void Editor::setOpen(bool open) {
         wasPausedBeforeOpen_ = engine_.isPaused();
         playState_ = EditorPlayState::Edit;
         engine_.setPaused(true);
+        if (Camera* gameCam = engine_.getSceneCamera())
+            editorCamera_.syncFrom(*gameCam);
+        else
+            editorCamera_.focusOn({0.f, 2.f, 0.f});
         if (!viewportInitialized_) {
             resetViewportDefault();
             viewportInitialized_ = true;
@@ -229,18 +262,6 @@ void Editor::buildShell() {
     root.style.inset.top = Length::px(0.f);
     root.style.inset.bottom = Length::px(0.f);
     root.style.display = Display::Block;
-
-    placeholderLabelId_ = ui.label(
-            {0.f, 0.f},
-            {0.f, 20.f},
-            {0.85f, 0.85f, 0.9f, 1.f},
-            "Editor - F3 to close  |  drag translate gizmo to move");
-    ui.reparent(placeholderLabelId_, rootId_);
-    ui.get(placeholderLabelId_).style.position = PositionMode::Absolute;
-    ui.get(placeholderLabelId_).style.inset.left = Length::px(12.f);
-    ui.get(placeholderLabelId_).style.inset.top = Length::px(12.f);
-    ui.get(placeholderLabelId_).style.width = Length::automatic();
-    ui.get(placeholderLabelId_).style.height = Length::px(24.f);
 
     // Panel shells. Future Hierarchy / Inspector panels will reuse EditorPanel.
     const float winW = std::max(1.f, static_cast<float>(engine_.app.width()));
@@ -659,11 +680,16 @@ bool Editor::makeViewportRay(glm::vec2 mouse, Ray& outRay) const {
     if (!pointInRect(mouse, {vp.x, vp.y}, {vp.z, vp.w}))
         return false;
 
+    const Camera* viewCam = isEditing()
+        ? &editorCamera_.camera()
+        : engine_.getSceneCamera();
+    if (!viewCam)
+        return false;
+
     const float ndcX = ((mouse.x - vp.x) / vp.z) * 2.f - 1.f;
     const float ndcY = ((mouse.y - vp.y) / vp.w) * 2.f - 1.f;
 
-    const Camera& camera = *engine_.getActiveCamera();
-    const glm::mat4 view = camera.view();
+    const glm::mat4 view = viewCam->view();
     const glm::mat4 projection = glm::perspective(
         glm::radians(45.f),
         vp.z / vp.w,
@@ -677,11 +703,12 @@ bool Editor::makeViewportRay(glm::vec2 mouse, Ray& outRay) const {
     nearH /= nearH.w;
 
     const glm::vec3 target(nearH);
-    const glm::vec3 dir = target - camera.pos;
+    const glm::vec3 camPos = viewCam->pos;
+    const glm::vec3 dir = target - camPos;
     if (glm::dot(dir, dir) < 1e-12f)
         return false;
 
-    outRay.origin = camera.pos;
+    outRay.origin = camPos;
     outRay.direction = glm::normalize(dir);
     outRay.t = FLT_MAX;
     return true;
@@ -695,7 +722,9 @@ void Editor::clearGizmoDrag() {
 }
 
 float Editor::gizmoWorldSize(const glm::vec3& origin) const {
-    const Camera* camera = engine_.getActiveCamera();
+    const Camera* camera = isEditing()
+        ? &editorCamera_.camera()
+        : engine_.getSceneCamera();
     if (!camera)
         return 1.f;
     const float dist = glm::length(camera->pos - origin);
@@ -777,7 +806,9 @@ bool Editor::beginGizmoDrag(
     ObjectID id,
     const glm::vec3& origin)
 {
-    const Camera* camera = engine_.getActiveCamera();
+    const Camera* camera = isEditing()
+        ? &editorCamera_.camera()
+        : engine_.getSceneCamera();
     if (!camera)
         return false;
 

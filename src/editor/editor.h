@@ -3,10 +3,12 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#include "editor/editor_camera.h"
 #include "editor/editor_layout.h"
 #include "editor/hierarchy_panel.h"
 #include "editor/inspector_panel.h"
 #include "editor/panel.h"
+#include "engine/camera.h"
 #include "engine/defines.h"
 #include "engine/raycasting.h"
 
@@ -49,6 +51,8 @@ public:
     void init();
     void shutdown();
     void update();
+    // After scene world matrices are updated (input + fresh pivots).
+    void updateEditorCamera();
 
     bool isOpen() const { return open_; }
     EditorPlayState playState() const { return playState_; }
@@ -62,6 +66,8 @@ public:
     bool isEditing() const {
         return open_ && playState_ == EditorPlayState::Edit;
     }
+
+    Camera* editModeCamera() { return &editorCamera_.camera(); }
 
     // Window-space x, y, w, h the game renders into. While the editor is open
     // this is the floating, resizable sub-window; otherwise it is the whole window.
@@ -101,6 +107,7 @@ private:
     EditorPanel inspectorPanel_;
     HierarchyPanel hierarchyView_;
     InspectorPanel inspectorView_;
+    EditorCamera editorCamera_;
     EditorLayout layout_;
     std::vector<EditorPanel*> panels_;
 

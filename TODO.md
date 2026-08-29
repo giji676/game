@@ -3,15 +3,16 @@
 
 # Features:
 1. Editor UI
-2. Improved shaders
-3. Physics
-4. Collisions
-5. Animations
-6. Audio
-7. Navigation
-8. Networking
-00. Live script loading
-01. LOD
+2. Multithreading
+3. Improved shaders
+4. Physics
+5. Collisions
+6. Animations
+7. Audio
+8. Navigation
+9. Networking
+10. Live script loading
+11. LOD
 
 *wip* = Work In Progress / Early Stages / Very Basic
 

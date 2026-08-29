@@ -73,6 +73,10 @@ void Engine::run() {
 
             game->update();
             scene.update(!paused);
+
+            if (editor.isOpen() && editor.isEditing())
+                editor.updateEditorCamera();
+
             gameUi.update();
 
             auto gameUiCommands = gameUi.buildRenderList();
@@ -298,13 +302,20 @@ void Engine::loadAssets() {
     // 6.4 seconds
 }
 
-Camera* Engine::getActiveCamera() {
+Camera* Engine::getSceneCamera() {
     if (activeCameraObject == INVALID_OBJECT)
         return nullptr;
     Camera* camera = scene.get(activeCameraObject).getComponent<Camera>();
     if (!camera || !camera->enabled)
         return nullptr;
     return camera;
+}
+
+Camera* Engine::getActiveCamera() {
+    if (editor.isOpen() && editor.isEditing())
+        return editor.editModeCamera();
+
+    return getSceneCamera();
 }
 
 void Engine::setPaused(bool value) {

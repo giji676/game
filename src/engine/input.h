@@ -129,6 +129,9 @@ public:
         return mouseReleased(mouseBindings[static_cast<size_t>(action)]);
     }
 
+    // Live SDL state so modifier release is not delayed by buffered key events.
+    bool shiftDown() const;
+
 private:
     std::array<uint8_t, KEY_COUNT> current{};
     std::array<uint8_t, KEY_COUNT> previous{};

@@ -48,6 +48,8 @@ public:
     void run();
 
     Camera* getActiveCamera();
+    // In-scene gameplay camera; ignores the editor view camera.
+    Camera* getSceneCamera();
 
 private:
     Game* game;
