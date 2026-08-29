@@ -19,5 +19,7 @@ private:
     UIElementID moveButtonId_ = INVALID_UI_ELEMENT;
     UIElementID rotateButtonId_ = INVALID_UI_ELEMENT;
     UIElementID scaleButtonId_ = INVALID_UI_ELEMENT;
+    UIElementID localSpaceButtonId_ = INVALID_UI_ELEMENT;
+    UIElementID worldSpaceButtonId_ = INVALID_UI_ELEMENT;
     UIElementID statusLabelId_ = INVALID_UI_ELEMENT;
 };

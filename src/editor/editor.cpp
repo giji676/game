@@ -76,6 +76,27 @@ GizmoAxes gizmoAxesFromObject(const Object& obj) {
     return axes;
 }
 
+GizmoAxes gizmoAxesForSpace(const Object& obj, GizmoSpace space) {
+    if (space == GizmoSpace::Local)
+        return gizmoAxesFromObject(obj);
+    GizmoAxes axes;
+    axes.x = {1.f, 0.f, 0.f};
+    axes.y = {0.f, 1.f, 0.f};
+    axes.z = {0.f, 0.f, 1.f};
+    return axes;
+}
+
+glm::quat rotationQuatFromWorldMatrix(const glm::mat4& worldMatrix) {
+    const glm::vec3 x = glm::vec3(worldMatrix[0]);
+    const glm::vec3 y = glm::vec3(worldMatrix[1]);
+    const glm::vec3 z = glm::vec3(worldMatrix[2]);
+    const glm::mat3 rot(
+        glm::normalize(x),
+        glm::normalize(y),
+        glm::normalize(z));
+    return glm::quat_cast(glm::mat4(rot));
+}
+
 glm::vec3 gizmoPlaneNormal(GizmoHandle handle, const GizmoAxes& axes) {
     switch (handle) {
     case GizmoHandle::PlaneXY: return axes.z;
@@ -224,7 +245,11 @@ void Editor::update() {
         return;
 
     if (isEditing() && !engine_.editorUi.hasFocus()) {
-        if (input.pressed(Action::GizmoMove))
+        if (input.pressed(SDL_SCANCODE_L))
+            setGizmoSpace(GizmoSpace::Local);
+        if (input.pressed(Action::GizmoMove) && input.shiftDown())
+            setGizmoSpace(GizmoSpace::World);
+        else if (input.pressed(Action::GizmoMove))
             setGizmoMode(GizmoMode::Move);
         if (input.pressed(Action::GizmoRotate))
             setGizmoMode(GizmoMode::Rotate);
@@ -258,6 +283,7 @@ void Editor::update() {
         updateSceneInteraction();
         inspectorView_.setSelectedId(hierarchyView_.selectedId());
         inspectorView_.setEditable(isEditing());
+        inspectorView_.setGizmoSpace(gizmoSpace_);
         inspectorView_.setObjectDrag(
             hierarchyView_.draggingId(),
             hierarchyView_.releasedDragId());
@@ -270,7 +296,7 @@ void Editor::update() {
                 const Object& obj = engine_.scene.get(selectedId);
                 const glm::vec3 origin = glm::vec3(obj.worldMatrix[3]);
                 const float size = gizmoWorldSize(origin);
-                const GizmoAxes axes = gizmoAxesFromObject(obj);
+                const GizmoAxes axes = gizmoAxesForSpace(obj, gizmoSpace_);
                 drawGizmo(gizmoMode_, origin, size, axes);
             }
         }
@@ -379,6 +405,13 @@ void Editor::setGizmoMode(GizmoMode mode) {
     clearGizmoDrag();
 }
 
+void Editor::setGizmoSpace(GizmoSpace space) {
+    if (gizmoSpace_ == space)
+        return;
+    gizmoSpace_ = space;
+    clearGizmoDrag();
+}
+
 void Editor::exitEditMode() {
     if (!open_ || playState_ != EditorPlayState::Edit)
         return;
@@ -480,6 +513,9 @@ void Editor::buildShell() {
             });
     inspectorPanel_.setDockedMode(true);
     inspectorView_.bind(ui, inspectorPanel_);
+    inspectorView_.setGizmoSpaceCallback([this](GizmoSpace space) {
+        setGizmoSpace(space);
+    });
 
     panels_ = {&viewportPanel_, &hierarchyPanel_, &samplePanelB_, &inspectorPanel_};
 
@@ -1210,7 +1246,7 @@ void Editor::updateSceneInteraction() {
         const Object& selected = engine_.scene.get(selectedId);
         gizmoOrigin = glm::vec3(selected.worldMatrix[3]);
         gizmoSize = gizmoWorldSize(gizmoOrigin);
-        gizmoAxes = gizmoAxesFromObject(selected);
+        gizmoAxes = gizmoAxesForSpace(selected, gizmoSpace_);
     }
 
     if (!objectDragging_) {
@@ -1299,11 +1335,19 @@ void Editor::updateSceneInteraction() {
             if (std::abs(angleDeg) < 1e-4f)
                 return;
 
-            const glm::quat deltaQ =
-                glm::angleAxis(angleRad, dragLocalAxis_);
-            const glm::quat currentQ =
-                eulerYXZToQuat(obj.transform.rotation());
-            obj.transform.setRotation(quatToEulerYXZ(currentQ * deltaQ));
+            const glm::quat currentQ = eulerYXZToQuat(obj.transform.rotation());
+            glm::quat newQ;
+            if (gizmoSpace_ == GizmoSpace::World) {
+                const Object& parent = engine_.scene.get(obj.parent);
+                const glm::quat parentQ =
+                    rotationQuatFromWorldMatrix(parent.worldMatrix);
+                const glm::quat worldQ = parentQ * currentQ;
+                newQ = glm::inverse(parentQ) *
+                    (glm::angleAxis(angleRad, dragAxis_) * worldQ);
+            } else {
+                newQ = currentQ * glm::angleAxis(angleRad, dragLocalAxis_);
+            }
+            obj.transform.setRotation(quatToEulerYXZ(newQ));
             return;
         }
 
@@ -1332,12 +1376,26 @@ void Editor::updateSceneInteraction() {
 
                 glm::vec3 scale = obj.transform.scale();
                 const float factor = 1.f + scaleDelta;
-                if (gizmoActiveHandle_ == GizmoHandle::AxisX)
-                    scale.x = std::max(kGizmoMinScale, scale.x * factor);
-                else if (gizmoActiveHandle_ == GizmoHandle::AxisY)
-                    scale.y = std::max(kGizmoMinScale, scale.y * factor);
-                else if (gizmoActiveHandle_ == GizmoHandle::AxisZ)
-                    scale.z = std::max(kGizmoMinScale, scale.z * factor);
+                if (gizmoSpace_ == GizmoSpace::World) {
+                    glm::vec3 localDir = glm::vec3(
+                        parent.worldInvMatrix * glm::vec4(dragAxis_, 0.f));
+                    if (glm::dot(localDir, localDir) > 1e-12f)
+                        localDir = glm::normalize(localDir);
+                    const glm::vec3 weights = glm::abs(localDir);
+                    scale.x = std::max(
+                        kGizmoMinScale, scale.x * (1.f + scaleDelta * weights.x));
+                    scale.y = std::max(
+                        kGizmoMinScale, scale.y * (1.f + scaleDelta * weights.y));
+                    scale.z = std::max(
+                        kGizmoMinScale, scale.z * (1.f + scaleDelta * weights.z));
+                } else {
+                    if (gizmoActiveHandle_ == GizmoHandle::AxisX)
+                        scale.x = std::max(kGizmoMinScale, scale.x * factor);
+                    else if (gizmoActiveHandle_ == GizmoHandle::AxisY)
+                        scale.y = std::max(kGizmoMinScale, scale.y * factor);
+                    else if (gizmoActiveHandle_ == GizmoHandle::AxisZ)
+                        scale.z = std::max(kGizmoMinScale, scale.z * factor);
+                }
                 obj.transform.setScale(scale);
                 return;
             }

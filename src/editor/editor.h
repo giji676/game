@@ -84,6 +84,8 @@ public:
 
     GizmoMode gizmoMode() const { return gizmoMode_; }
     void setGizmoMode(GizmoMode mode);
+    GizmoSpace gizmoSpace() const { return gizmoSpace_; }
+    void setGizmoSpace(GizmoSpace space);
 
     Camera* editModeCamera() { return &editorCamera_.camera(); }
 
@@ -118,6 +120,7 @@ private:
     float dragGizmoSize_ = 1.f;
     glm::vec3 dragLocalAxis_{0.f};
     GizmoMode gizmoMode_ = GizmoMode::Move;
+    GizmoSpace gizmoSpace_ = GizmoSpace::Local;
 
     UIElementID rootId_ = INVALID_UI_ELEMENT;
     UIElementID dockPreviewIndicatorId_ = INVALID_UI_ELEMENT;

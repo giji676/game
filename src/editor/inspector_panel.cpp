@@ -18,7 +18,8 @@
 #include "engine/ui/style.h"
 #include "engine/utils/geometry.h"
 
-#include <typeinfo>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 namespace {
 
@@ -28,7 +29,9 @@ constexpr float kAxisFontSize = 18.f;
 constexpr float kInfoLabelH = kRowFontSize + 10.f;
 constexpr float kAxisRowH = kAxisFontSize + 12.f;
 constexpr float kTransformGap = 4.f;
+constexpr float kSpaceRowH = 28.f;
 constexpr float kTransformViewH =
+    kSpaceRowH + kTransformGap +
     3.f * (kInfoLabelH + kAxisRowH) + 5.f * kTransformGap;
 constexpr float kListGap = 6.f;
 constexpr float kCardPad = 8.f;
@@ -209,10 +212,80 @@ void styleClearButton(Button* btn) {
     btn->disabledStyle.textColor = {0.45f, 0.45f, 0.5f, 1.f};
 }
 
+void styleSpaceButton(UIElement& el, bool active) {
+    auto* btn = dynamic_cast<Button*>(el.widget.get());
+    if (!btn)
+        return;
+    btn->centerText = true;
+    btn->padding = {8.f, 4.f};
+    btn->cornerRadii = {4.f, 4.f, 4.f, 4.f};
+    btn->normal.bgColor = active
+        ? glm::vec4{0.16f, 0.38f, 0.72f, 1.f}
+        : glm::vec4{0.2f, 0.22f, 0.28f, 1.f};
+    btn->normal.textColor = {0.92f, 0.92f, 0.96f, 1.f};
+    btn->normal.borderColor = active
+        ? glm::vec4{0.35f, 0.55f, 0.9f, 1.f}
+        : glm::vec4{0.34f, 0.36f, 0.42f, 1.f};
+    btn->normal.borderWidth = 1.f;
+    btn->hoveredStyle.bgColor = {0.28f, 0.3f, 0.36f, 1.f};
+    btn->pressedStyle.bgColor = {0.16f, 0.38f, 0.72f, 1.f};
+}
+
+glm::quat eulerYXZToQuat(const glm::vec3& eulerDeg) {
+    const glm::quat qY =
+        glm::angleAxis(glm::radians(eulerDeg.y), glm::vec3(0.f, 1.f, 0.f));
+    const glm::quat qX =
+        glm::angleAxis(glm::radians(eulerDeg.x), glm::vec3(1.f, 0.f, 0.f));
+    const glm::quat qZ =
+        glm::angleAxis(glm::radians(eulerDeg.z), glm::vec3(0.f, 0.f, 1.f));
+    return qY * qX * qZ;
+}
+
+glm::vec3 quatToEulerYXZ(const glm::quat& q) {
+    const glm::mat4 m = glm::mat4_cast(q);
+    float yaw = 0.f;
+    float pitch = 0.f;
+    float roll = 0.f;
+    glm::extractEulerAngleYXZ(m, yaw, pitch, roll);
+    return glm::degrees(glm::vec3(pitch, yaw, roll));
+}
+
+glm::quat rotationQuatFromWorldMatrix(const glm::mat4& worldMatrix) {
+    const glm::vec3 x = glm::vec3(worldMatrix[0]);
+    const glm::vec3 y = glm::vec3(worldMatrix[1]);
+    const glm::vec3 z = glm::vec3(worldMatrix[2]);
+    const glm::mat3 rot(
+        glm::normalize(x),
+        glm::normalize(y),
+        glm::normalize(z));
+    return glm::quat_cast(glm::mat4(rot));
+}
+
+glm::vec3 worldPosition(const Object& obj) {
+    return glm::vec3(obj.worldMatrix[3]);
+}
+
+glm::vec3 worldScale(const Object& obj) {
+    const glm::mat4& w = obj.worldMatrix;
+    return {
+        glm::length(glm::vec3(w[0])),
+        glm::length(glm::vec3(w[1])),
+        glm::length(glm::vec3(w[2]))};
+}
+
+glm::vec3 worldRotationEuler(const Object& obj) {
+    return quatToEulerYXZ(rotationQuatFromWorldMatrix(obj.worldMatrix));
+}
+
 } // namespace
 
-void TransformView::bind(UI& ui, UIElementID parentId) {
+void TransformView::bind(
+        UI& ui,
+        UIElementID parentId,
+        std::function<void(GizmoSpace)> onSpaceChange)
+{
     ui_ = &ui;
+    onSpaceChange_ = std::move(onSpaceChange);
     rootId_ = ui.createElement();
     ui.reparent(rootId_, parentId);
 
@@ -223,6 +296,53 @@ void TransformView::bind(UI& ui, UIElementID parentId) {
     root.style.width = Length::percent(100.f);
     root.style.height = Length::px(kTransformViewH);
     root.style.padding.left = Length::px(2.f);
+
+    UIElementID spaceRowId = ui.createElement();
+    ui.reparent(spaceRowId, rootId_);
+    UIElement& spaceRow = ui.get(spaceRowId);
+    spaceRow.style.position = PositionMode::Relative;
+    spaceRow.style.display = Display::Flex;
+    spaceRow.style.flexDirection = FlexDirection::Row;
+    spaceRow.style.alignItems = AlignItems::Center;
+    spaceRow.style.gap = Length::px(6.f);
+    spaceRow.style.width = Length::percent(100.f);
+    spaceRow.style.height = Length::px(kSpaceRowH);
+
+    UIElementID spaceLabelId = ui.label(
+        {0.f, 0.f},
+        {0.f, kRowFontSize},
+        {0.72f, 0.76f, 0.84f, 1.f},
+        "Space");
+    ui.reparent(spaceLabelId, spaceRowId);
+    styleInfoLabel(ui.get(spaceLabelId), kRowFontSize);
+
+    Font& font = ENGINE().assets.getFont("InterVariable");
+    spaceLocalButtonId_ = ui.button({0.f, 0.f}, kAxisFontSize, "Local (L)", &font);
+    spaceWorldButtonId_ = ui.button({0.f, 0.f}, kAxisFontSize, "World (Shift+W)", &font);
+    ui.reparent(spaceLocalButtonId_, spaceRowId);
+    ui.reparent(spaceWorldButtonId_, spaceRowId);
+
+    UIElement& localBtnEl = ui.get(spaceLocalButtonId_);
+    localBtnEl.style.position = PositionMode::Relative;
+    localBtnEl.style.height = Length::px(24.f);
+    localBtnEl.style.width = Length::px(88.f);
+    styleSpaceButton(localBtnEl, true);
+    if (auto* localBtn = dynamic_cast<Button*>(localBtnEl.widget.get()))
+        localBtn->onClick = [this]() {
+            if (onSpaceChange_)
+                onSpaceChange_(GizmoSpace::Local);
+        };
+
+    UIElement& worldBtnEl = ui.get(spaceWorldButtonId_);
+    worldBtnEl.style.position = PositionMode::Relative;
+    worldBtnEl.style.height = Length::px(24.f);
+    worldBtnEl.style.width = Length::px(120.f);
+    styleSpaceButton(worldBtnEl, false);
+    if (auto* worldBtn = dynamic_cast<Button*>(worldBtnEl.widget.get()))
+        worldBtn->onClick = [this]() {
+            if (onSpaceChange_)
+                onSpaceChange_(GizmoSpace::World);
+        };
 
     auto createRow = [&](const char* title, AxisFields& fields) {
         UIElementID titleId = ui.label({0.f, 0.f}, {0.f, 0.f}, {0.85f, 0.85f, 0.9f, 1.f}, title);
@@ -298,7 +418,52 @@ bool TransformView::parseFloat(const std::string& text, float& out) const {
     return false;
 }
 
-void TransformView::applyPendingEdits(Transform& transform) {
+void TransformView::applyPendingEdits(
+        Transform& transform,
+        const Object& object,
+        const Scene& scene,
+        GizmoSpace space)
+{
+    const Object& parent = scene.get(object.parent);
+
+    auto applyPosition = [&](const glm::vec3& v) {
+        if (space == GizmoSpace::World) {
+            const glm::vec3 localPos =
+                glm::vec3(parent.worldInvMatrix * glm::vec4(v, 1.f));
+            transform.setPosition(localPos);
+        } else {
+            transform.setPosition(v);
+        }
+    };
+
+    auto applyRotation = [&](const glm::vec3& eulerDeg) {
+        if (space == GizmoSpace::World) {
+            const glm::quat desiredWorldQ = eulerYXZToQuat(eulerDeg);
+            const glm::quat parentQ =
+                rotationQuatFromWorldMatrix(parent.worldMatrix);
+            const glm::quat localQ = glm::inverse(parentQ) * desiredWorldQ;
+            transform.setRotation(quatToEulerYXZ(localQ));
+        } else {
+            transform.setRotation(eulerDeg);
+        }
+    };
+
+    auto applyScale = [&](const glm::vec3& v) {
+        if (space == GizmoSpace::World) {
+            const glm::vec3 curWorld = worldScale(object);
+            glm::vec3 ratio{1.f, 1.f, 1.f};
+            if (curWorld.x > 1e-8f)
+                ratio.x = v.x / curWorld.x;
+            if (curWorld.y > 1e-8f)
+                ratio.y = v.y / curWorld.y;
+            if (curWorld.z > 1e-8f)
+                ratio.z = v.z / curWorld.z;
+            transform.setScale(transform.scale() * ratio);
+        } else {
+            transform.setScale(v);
+        }
+    };
+
     auto applyAxis = [&](AxisFields& f, glm::vec3 current, auto setFn) {
         float parsed = 0.f;
         bool changed = false;
@@ -317,9 +482,16 @@ void TransformView::applyPendingEdits(Transform& transform) {
         if (changed)
             setFn(current);
     };
-    applyAxis(pos_, transform.position(), [&](const glm::vec3& v) { transform.setPosition(v); });
-    applyAxis(rot_, transform.rotation(), [&](const glm::vec3& v) { transform.setRotation(v); });
-    applyAxis(scale_, transform.scale(), [&](const glm::vec3& v) { transform.setScale(v); });
+
+    if (space == GizmoSpace::World) {
+        applyAxis(pos_, worldPosition(object), applyPosition);
+        applyAxis(rot_, worldRotationEuler(object), applyRotation);
+        applyAxis(scale_, worldScale(object), applyScale);
+    } else {
+        applyAxis(pos_, transform.position(), applyPosition);
+        applyAxis(rot_, transform.rotation(), applyRotation);
+        applyAxis(scale_, transform.scale(), applyScale);
+    }
 }
 
 void TransformView::setEditable(bool editable) {
@@ -344,28 +516,47 @@ void TransformView::setEditable(bool editable) {
     setTriplet(scale_);
 }
 
-void TransformView::update(Transform& transform, bool editable) {
+void TransformView::setSpace(GizmoSpace space) {
+    space_ = space;
+    if (!ui_ || spaceLocalButtonId_ == INVALID_UI_ELEMENT)
+        return;
+    styleSpaceButton(ui_->get(spaceLocalButtonId_), space == GizmoSpace::Local);
+    styleSpaceButton(ui_->get(spaceWorldButtonId_), space == GizmoSpace::World);
+}
+
+void TransformView::update(
+        Transform& transform,
+        const Object& object,
+        const Scene& scene,
+        bool editable,
+        GizmoSpace space)
+{
     if (!ui_ || rootId_ == INVALID_UI_ELEMENT)
         return;
 
     setEditable(editable);
+    setSpace(space);
 
     if (editable_)
-        applyPendingEdits(transform);
+        applyPendingEdits(transform, object, scene, space);
 
     auto syncField = [&](UIElementID id, const std::string& value) {
         auto* field = dynamic_cast<InputField*>(ui_->get(id).widget.get());
         if (!field)
             return;
-        // Do not clobber active typing while editor control is active.
         if (editable_ && field->focused)
             return;
         field->text = value;
         field->caretPos = std::min(field->caretPos, field->text.size());
     };
-    const glm::vec3 pos = transform.position();
-    const glm::vec3 rot = transform.rotation();
-    const glm::vec3 scale = transform.scale();
+
+    const glm::vec3 pos =
+        space == GizmoSpace::World ? worldPosition(object) : transform.position();
+    const glm::vec3 rot =
+        space == GizmoSpace::World ? worldRotationEuler(object) : transform.rotation();
+    const glm::vec3 scale =
+        space == GizmoSpace::World ? worldScale(object) : transform.scale();
+
     syncField(pos_.xId, formatFloat(pos.x));
     syncField(pos_.yId, formatFloat(pos.y));
     syncField(pos_.zId, formatFloat(pos.z));
@@ -402,7 +593,10 @@ void InspectorPanel::bind(UI& ui, EditorPanel& panel) {
     modelId_ = addInfoLabel("Has Model: no");
     debugId_ = addInfoLabel("Debug: off");
 
-    transformView_.bind(ui, contentId_);
+    transformView_.bind(ui, contentId_, [this](GizmoSpace space) {
+        if (gizmoSpaceCallback_)
+            gizmoSpaceCallback_(space);
+    });
     componentsView_.bind(ui, contentId_, "Components");
     scriptsView_.bind(ui, contentId_, "Scripts");
     componentsView_.setVisible(false);
@@ -458,7 +652,8 @@ void InspectorPanel::update(Scene& scene) {
     setLabelText(debugId_, std::string("Debug: ") + (obj.debug ? "on" : "off"));
 
     Object& editableObj = scene.get(selectedId_);
-    transformView_.update(editableObj.transform, editable_);
+    transformView_.update(
+        editableObj.transform, editableObj, scene, editable_, gizmoSpace_);
 
     std::vector<IBehaviour*> components;
     components.reserve(editableObj.components.size());

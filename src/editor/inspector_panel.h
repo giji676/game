@@ -4,12 +4,14 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "engine/defines.h"
 #include "engine/inspectable.h"
 
 class EditorPanel;
 class IBehaviour;
+class Object;
 class Scene;
 class Transform;
 class UI;
@@ -77,13 +79,26 @@ private:
 // Reusable transform display block for inspector-like UIs.
 class TransformView {
 public:
-    void bind(UI& ui, UIElementID parentId);
-    void update(Transform& transform, bool editable);
+    void bind(
+        UI& ui,
+        UIElementID parentId,
+        std::function<void(GizmoSpace)> onSpaceChange);
+    void update(
+        Transform& transform,
+        const Object& object,
+        const Scene& scene,
+        bool editable,
+        GizmoSpace space);
     void setEditable(bool editable);
+    void setSpace(GizmoSpace space);
 
 private:
     bool parseFloat(const std::string& text, float& out) const;
-    void applyPendingEdits(Transform& transform);
+    void applyPendingEdits(
+        Transform& transform,
+        const Object& object,
+        const Scene& scene,
+        GizmoSpace space);
 
     struct AxisFields {
         UIElementID xId = INVALID_UI_ELEMENT;
@@ -99,10 +114,14 @@ private:
 
     UI* ui_ = nullptr;
     UIElementID rootId_ = INVALID_UI_ELEMENT;
+    UIElementID spaceLocalButtonId_ = INVALID_UI_ELEMENT;
+    UIElementID spaceWorldButtonId_ = INVALID_UI_ELEMENT;
     AxisFields pos_;
     AxisFields rot_;
     AxisFields scale_;
     bool editable_ = true;
+    GizmoSpace space_ = GizmoSpace::Local;
+    std::function<void(GizmoSpace)> onSpaceChange_;
 };
 
 class InspectorPanel {
@@ -110,6 +129,10 @@ public:
     void bind(UI& ui, EditorPanel& panel);
     void setSelectedId(ObjectID id) { selectedId_ = id; }
     void setEditable(bool editable) { editable_ = editable; }
+    void setGizmoSpace(GizmoSpace space) { gizmoSpace_ = space; }
+    void setGizmoSpaceCallback(std::function<void(GizmoSpace)> callback) {
+        gizmoSpaceCallback_ = std::move(callback);
+    }
     void setObjectDrag(ObjectID draggingId, ObjectID droppedId) {
         draggingObjectId_ = draggingId;
         droppedObjectId_ = droppedId;
@@ -127,6 +150,8 @@ private:
     ObjectID draggingObjectId_ = INVALID_OBJECT;
     ObjectID droppedObjectId_ = INVALID_OBJECT;
     bool editable_ = true;
+    GizmoSpace gizmoSpace_ = GizmoSpace::Local;
+    std::function<void(GizmoSpace)> gizmoSpaceCallback_;
     bool built_ = false;
 
     UIElementID headerId_ = INVALID_UI_ELEMENT;

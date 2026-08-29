@@ -65,6 +65,8 @@ void ToolbarPanel::bind(UI& ui, EditorPanel& panel, Editor& editor) {
     moveButtonId_ = ui.button({0.f, 0.f}, kToolbarFontSize, "Move (W)", &font);
     rotateButtonId_ = ui.button({0.f, 0.f}, kToolbarFontSize, "Rotate (E)", &font);
     scaleButtonId_ = ui.button({0.f, 0.f}, kToolbarFontSize, "Scale (R)", &font);
+    localSpaceButtonId_ = ui.button({0.f, 0.f}, kToolbarFontSize, "Local (L)", &font);
+    worldSpaceButtonId_ = ui.button({0.f, 0.f}, kToolbarFontSize, "World (Shift+W)", &font);
     statusLabelId_ = ui.label(
         {0.f, 0.f},
         {0.f, kToolbarFontSize},
@@ -76,6 +78,8 @@ void ToolbarPanel::bind(UI& ui, EditorPanel& panel, Editor& editor) {
     ui.reparent(moveButtonId_, contentId);
     ui.reparent(rotateButtonId_, contentId);
     ui.reparent(scaleButtonId_, contentId);
+    ui.reparent(localSpaceButtonId_, contentId);
+    ui.reparent(worldSpaceButtonId_, contentId);
     ui.reparent(statusLabelId_, contentId);
 
     layoutToolbarButton(ui, playButtonId_);
@@ -118,6 +122,24 @@ void ToolbarPanel::bind(UI& ui, EditorPanel& panel, Editor& editor) {
                 editor_->setGizmoMode(GizmoMode::Scale);
         };
 
+    layoutToolbarButton(ui, localSpaceButtonId_);
+    styleToolbarButton(ui.get(localSpaceButtonId_));
+    if (auto* localBtn = dynamic_cast<Button*>(ui.get(localSpaceButtonId_).widget.get()))
+        localBtn->onClick = [this]() {
+            if (editor_)
+                editor_->setGizmoSpace(GizmoSpace::Local);
+        };
+
+    layoutToolbarButton(ui, worldSpaceButtonId_, 16.f);
+    UIElement& worldEl = ui.get(worldSpaceButtonId_);
+    worldEl.style.width = Length::px(110.f);
+    styleToolbarButton(worldEl);
+    if (auto* worldBtn = dynamic_cast<Button*>(ui.get(worldSpaceButtonId_).widget.get()))
+        worldBtn->onClick = [this]() {
+            if (editor_)
+                editor_->setGizmoSpace(GizmoSpace::World);
+        };
+
     UIElement& statusEl = ui.get(statusLabelId_);
     statusEl.style.position = PositionMode::Relative;
     statusEl.style.height = Length::px(24.f);
@@ -130,12 +152,15 @@ void ToolbarPanel::update(Editor& editor) {
 
     const bool editing = editor.isEditing();
     const GizmoMode mode = editor.gizmoMode();
+    const GizmoSpace space = editor.gizmoSpace();
 
     UIElement& playEl = ui_->get(playButtonId_);
     UIElement& stopEl = ui_->get(stopButtonId_);
     UIElement& moveEl = ui_->get(moveButtonId_);
     UIElement& rotateEl = ui_->get(rotateButtonId_);
     UIElement& scaleEl = ui_->get(scaleButtonId_);
+    UIElement& localEl = ui_->get(localSpaceButtonId_);
+    UIElement& worldEl = ui_->get(worldSpaceButtonId_);
     UIElement& statusEl = ui_->get(statusLabelId_);
 
     playEl.visible = editing;
@@ -143,10 +168,14 @@ void ToolbarPanel::update(Editor& editor) {
     moveEl.visible = editing;
     rotateEl.visible = editing;
     scaleEl.visible = editing;
+    localEl.visible = editing;
+    worldEl.visible = editing;
 
     styleToolbarButton(moveEl, mode == GizmoMode::Move);
     styleToolbarButton(rotateEl, mode == GizmoMode::Rotate);
     styleToolbarButton(scaleEl, mode == GizmoMode::Scale);
+    styleToolbarButton(localEl, space == GizmoSpace::Local);
+    styleToolbarButton(worldEl, space == GizmoSpace::World);
 
     auto* statusLbl = dynamic_cast<Label*>(statusEl.widget.get());
     if (statusLbl)
