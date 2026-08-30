@@ -10,7 +10,7 @@
 
 class PlayerController : public IScript {
 public:
-    explicit PlayerController(World* world)
+    explicit PlayerController(World_* world)
         : world(world)
     {
         INSPECT(speed);
@@ -95,7 +95,7 @@ public:
     }
 
 private:
-    World* world = nullptr;
+    World_* world = nullptr;
     glm::vec3 gunRestRotation{0.f};
     float gunRecoilX = 0.f;
     float gunRecoilTarget = 0.f;

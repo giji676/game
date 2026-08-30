@@ -25,7 +25,7 @@ public:
 
 private:
     Engine& engine;
-    World world;
+    World_ world;
     Light light;
 
     UIElementID fpsLabelId = INVALID_UI_ELEMENT;

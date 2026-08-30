@@ -20,6 +20,6 @@ public:
         Object* obj = target.get(scene);
         if (!obj)
             obj = &scene.get(object);
-        obj->transform.rotate({0, 45.f * DT(), 0});
+        // obj->transform.rotate({0, 45.f * DT(), 0});
     }
 };

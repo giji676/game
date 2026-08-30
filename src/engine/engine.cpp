@@ -34,6 +34,7 @@ void Engine::init(Game *g) {
     game = g;
     game->init();
     scene.init();
+    world.init();
     editor.init();
     renderer.init(&meshRegistry);
     uiRenderer.init();
@@ -73,6 +74,7 @@ void Engine::run() {
 
             game->update();
             scene.update(!paused);
+            world.update(app.deltaTime);
 
             if (editor.isOpen() && editor.isEditing())
                 editor.updateEditorCamera();

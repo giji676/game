@@ -55,6 +55,7 @@ Game::Game(Engine& engine)
 
 void Game::init() {
     Scene& scene = engine.scene;
+    World& world = engine.world;
     UI& ui = engine.gameUi;
     setupTerrain();
     setupPlayer();

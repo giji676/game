@@ -3,6 +3,7 @@
 #include <SDL2/SDL_events.h>
 
 #include "camera.h"
+#include "world.h"
 #include "raycasting.h"
 #include "scene.h"
 #include "ui.h"
@@ -17,6 +18,7 @@
 
 #define ENGINE() \
     Engine::instance()
+
 #define DT() \
     Engine::instance().app.deltaTime
 
@@ -33,6 +35,7 @@ public:
     UIRenderer uiRenderer;
     DebugRenderer debugRenderer;
     Scene scene;
+    World world;
     // Laid out in game space, drawn inside the game viewport.
     UI gameUi;
     // Laid out in window space, drawn over the whole window.
