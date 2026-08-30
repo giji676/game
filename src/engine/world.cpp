@@ -1,24 +1,25 @@
 #include "world.h"
 
-#include "engine/engine.h"
-#include "engine/scene.h"
+#include "engine/render_system.h"
+#include "engine/transfrom_system.h"
 
 void World::init() {}
 
 void World::update(float dt) {
-    Scene& scene = ENGINE().scene;
+    (void)dt;
+    TransformSystem ts;
+    ts.update(*this);
+}
 
-    for (uint32_t idx = 0; idx < slots.size(); ++idx) {
-        if (!slots[idx].alive)
-            continue;
-
-        const Entity e = {idx, slots[idx].gen};
-        if (!has<Transform_>(e))
-            continue;
-
-        Transform_& transform = get<Transform_>(e);
-        transform.rotation.y += 45.f * dt;
-    }
+void World::collectRenderCommands(
+    const Frustum& frustum,
+    std::vector<RenderCommand>& out)
+{
+    RenderSystem rs;
+    rs.lastSize = lastRenderListSize;
+    rs.update(*this, frustum);
+    lastRenderListSize = rs.lastSize;
+    out.insert(out.end(), rs.commands.begin(), rs.commands.end());
 }
 
 void World::ensureSlotCapacity(uint32_t idx) {

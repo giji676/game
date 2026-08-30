@@ -5,6 +5,7 @@
 #include "game/game.h"
 #include "engine/defines.h"
 #include "engine/profilers/profile_scope.h"
+#include "engine/world.h"
 #include "game/perlin.h"
 #include "game/scripts/test.h"
 #include "game/scripts/player_controller.h"
@@ -68,6 +69,15 @@ void Game::init() {
     sceneShader.use();
     sceneShader.setVec3("lightPos", light.pos);
     sceneShader.setVec3("lightColor", light.color);
+
+    Entity e = world.create();
+    Transform_& t = world.get<Transform_>(e);
+    t.position.y = 0.5f;
+    t.scale = {0.001f, 0.001f, 0.001f};
+    Object_& o = world.add<Object_>(e);
+    o.model = &engine.assets.getModel("car");
+    o.name = "ECS ENTITY";
+    o.debug = true;
 
     int width = 10;
     ObjectID lastObjId;

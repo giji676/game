@@ -2,12 +2,14 @@
 
 #include <cassert>
 #include <cstdint>
+#include <string>
 #include <vector>
-
 #include <glm/glm.hpp>
 
-#include "defines.h"
+#include "engine/asset_manager/model.h"
 #include "engine/component_pool.h"
+#include "engine/frustrum.h"
+#include "engine/renderer/renderer.h"
 
 struct Entity {
     uint32_t idx = UINT32_MAX;
@@ -26,6 +28,20 @@ struct Transform_ {
     glm::vec3 position{0.f};
     glm::vec3 rotation{0.f};
     glm::vec3 scale{1.f};
+
+    glm::mat4 worldMatrix{1.f};
+    glm::mat4 worldInvMatrix{1.f};
+};
+
+struct Object_ {
+    std::string name;
+    Model* model = nullptr;
+    bool debug = false;
+};
+
+struct Hierarchy_ {
+    Entity parent;
+    std::vector<Entity> children;
 };
 
 class World {
@@ -52,12 +68,17 @@ public:
 
     void update(float dt);
     void init();
+    void collectRenderCommands(const Frustum& frustum, std::vector<RenderCommand>& out);
+
+    size_t lastRenderListSize = 0;
 
 private:
     template <typename T>
     friend struct ComponentTraits;
 
     ComponentPool<Transform_> transforms_;
+    ComponentPool<Object_> objects_;
+    ComponentPool<Hierarchy_> hierarchies_;
 
     void ensureSlotCapacity(uint32_t idx);
 };
@@ -76,6 +97,8 @@ struct ComponentTraits {
     };
 
 WORLD_REGISTER_COMPONENT(Transform_, transforms_, (1ull << 0))
+WORLD_REGISTER_COMPONENT(Object_, objects_, (1ull << 1))
+WORLD_REGISTER_COMPONENT(Hierarchy_, hierarchies_, (1ull << 2))
 
 template <typename T>
 T& World::get(const Entity& e) {

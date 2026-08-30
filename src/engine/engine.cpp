@@ -141,6 +141,7 @@ void Engine::callRenderer(
 
     renderCommands.clear();
     scene.buildRenderList(renderCommands, frustum);
+    world.collectRenderCommands(frustum, renderCommands);
 
     game->render(view, projection);
     renderer.render(renderCommands, view, projection);
