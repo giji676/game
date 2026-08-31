@@ -5,13 +5,19 @@
 #include "engine/render_system.h"
 #include "engine/transfrom_system.h"
 
+uint32_t TagRegistry::byName(const std::string& name) const {
+    const auto it = byName_.find(name);
+    assert(it != byName_.end());
+    return it->second;
+}
+
 uint32_t TagRegistry::intern(const std::string& name) {
-    const auto it = byName.find(name);
-    if (it != byName.end())
+    const auto it = byName_.find(name);
+    if (it != byName_.end())
         return it->second;
 
     const uint32_t id = static_cast<uint32_t>(byId.size());
-    byName.emplace(name, id);
+    byName_.emplace(name, id);
     byId.push_back(name);
     return id;
 }
@@ -22,7 +28,7 @@ const std::string& TagRegistry::name(uint32_t id) const {
 }
 
 bool TagRegistry::hasName(const std::string& name) const {
-    return byName.find(name) != byName.end();
+    return byName_.find(name) != byName_.end();
 }
 
 bool TagRegistry::isValidId(uint32_t id) const {

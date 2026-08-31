@@ -47,10 +47,11 @@ struct Hierarchy_ {
 };
 
 struct TagRegistry {
-    std::unordered_map<std::string, uint32_t> byName;
+    std::unordered_map<std::string, uint32_t> byName_;
     std::vector<std::string> byId;
 
     uint32_t intern(const std::string& name);
+    uint32_t byName(const std::string& name) const;
     const std::string& name(uint32_t id) const;
     bool hasName(const std::string& name) const;
     bool isValidId(uint32_t id) const;
