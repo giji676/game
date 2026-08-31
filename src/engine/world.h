@@ -44,6 +44,10 @@ struct Hierarchy_ {
     std::vector<Entity> children;
 };
 
+struct Tag_ {
+    std::vector<std::string> tags;
+};
+
 class World {
 public:
     std::vector<EntitySlot> slots;
@@ -52,6 +56,7 @@ public:
 
     bool isValid(const Entity& e) const;
     Entity create();
+    Entity create(Entity parent);
     void destroy(Entity& e);
 
     template <typename T>
@@ -72,6 +77,8 @@ public:
 
     size_t lastRenderListSize = 0;
 
+    Entity root = Entity::invalid();
+
 private:
     template <typename T>
     friend struct ComponentTraits;
@@ -79,6 +86,7 @@ private:
     ComponentPool<Transform_> transforms_;
     ComponentPool<Object_> objects_;
     ComponentPool<Hierarchy_> hierarchies_;
+    ComponentPool<Tag_> tags_;
 
     void ensureSlotCapacity(uint32_t idx);
 };
@@ -99,6 +107,7 @@ struct ComponentTraits {
 WORLD_REGISTER_COMPONENT(Transform_, transforms_, (1ull << 0))
 WORLD_REGISTER_COMPONENT(Object_, objects_, (1ull << 1))
 WORLD_REGISTER_COMPONENT(Hierarchy_, hierarchies_, (1ull << 2))
+WORLD_REGISTER_COMPONENT(Tag_, tags_, (1ull << 3))
 
 template <typename T>
 T& World::get(const Entity& e) {

@@ -32,9 +32,9 @@ void Engine::init(Game *g) {
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     
     game = g;
-    game->init();
-    scene.init();
     world.init();
+    scene.init();
+    game->init();
     editor.init();
     renderer.init(&meshRegistry);
     uiRenderer.init();
