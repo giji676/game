@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
 
@@ -10,6 +11,7 @@
 #include "engine/component_pool.h"
 #include "engine/frustrum.h"
 #include "engine/renderer/renderer.h"
+#include "glm/common.hpp"
 
 struct Entity {
     uint32_t idx = UINT32_MAX;
@@ -44,8 +46,18 @@ struct Hierarchy_ {
     std::vector<Entity> children;
 };
 
+struct TagRegistry {
+    std::unordered_map<std::string, uint32_t> byName;
+    std::vector<std::string> byId;
+
+    uint32_t intern(const std::string& name);
+    const std::string& name(uint32_t id) const;
+    bool hasName(const std::string& name) const;
+    bool isValidId(uint32_t id) const;
+};
+
 struct Tag_ {
-    std::vector<std::string> tags;
+    std::vector<uint32_t> ids;
 };
 
 class World {
@@ -78,6 +90,7 @@ public:
     size_t lastRenderListSize = 0;
 
     Entity root = Entity::invalid();
+    TagRegistry tagRegistry;
 
 private:
     template <typename T>
@@ -137,3 +150,7 @@ T& World::add(const Entity& e) {
     ComponentTraits<T>::pool(*this).ensure(e.idx);
     return ComponentTraits<T>::pool(*this).at(e.idx);
 }
+
+bool hasTag(const Tag_& t, uint32_t id);
+void addTag(Tag_& t, uint32_t id);
+void removeTag(Tag_& t, uint32_t id);

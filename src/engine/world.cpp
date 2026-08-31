@@ -1,7 +1,48 @@
 #include "world.h"
 
+#include <algorithm>
+
 #include "engine/render_system.h"
 #include "engine/transfrom_system.h"
+
+uint32_t TagRegistry::intern(const std::string& name) {
+    const auto it = byName.find(name);
+    if (it != byName.end())
+        return it->second;
+
+    const uint32_t id = static_cast<uint32_t>(byId.size());
+    byName.emplace(name, id);
+    byId.push_back(name);
+    return id;
+}
+
+const std::string& TagRegistry::name(uint32_t id) const {
+    assert(id < byId.size());
+    return byId[id];
+}
+
+bool TagRegistry::hasName(const std::string& name) const {
+    return byName.find(name) != byName.end();
+}
+
+bool TagRegistry::isValidId(uint32_t id) const {
+    return id < byId.size();
+}
+
+bool hasTag(const Tag_& t, uint32_t id) {
+    return std::find(t.ids.begin(), t.ids.end(), id) != t.ids.end();
+}
+
+void addTag(Tag_& t, uint32_t id) {
+    if (!hasTag(t, id))
+        t.ids.push_back(id);
+}
+
+void removeTag(Tag_& t, uint32_t id) {
+    auto it = std::find(t.ids.begin(), t.ids.end(), id);
+    if (it != t.ids.end())
+        t.ids.erase(it);
+}
 
 void World::init() {
     root = create(Entity::invalid());
