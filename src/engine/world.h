@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -10,6 +11,7 @@
 #include "engine/asset_manager/model.h"
 #include "engine/component_pool.h"
 #include "engine/frustrum.h"
+#include "engine/isystem.h"
 #include "engine/renderer/renderer.h"
 #include "glm/common.hpp"
 
@@ -88,6 +90,8 @@ public:
     void init();
     void collectRenderCommands(const Frustum& frustum, std::vector<RenderCommand>& out);
 
+    void registerSystem(std::unique_ptr<ISystem> system);
+
     size_t lastRenderListSize = 0;
 
     Entity root = Entity::invalid();
@@ -101,6 +105,8 @@ private:
     ComponentPool<Object_> objects_;
     ComponentPool<Hierarchy_> hierarchies_;
     ComponentPool<Tag_> tags_;
+
+    std::vector<std::unique_ptr<ISystem>> systems_;
 
     void ensureSlotCapacity(uint32_t idx);
 };

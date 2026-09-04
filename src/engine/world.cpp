@@ -56,8 +56,14 @@ void World::init() {
     rootObj.name = "Scene";
 }
 
+void World::registerSystem(std::unique_ptr<ISystem> system) {
+    systems_.push_back(std::move(system));
+}
+
 void World::update(float dt) {
-    (void)dt;
+    for (auto& system : systems_)
+        system->update(*this, dt);
+
     TransformSystem ts;
     ts.update(*this);
 }

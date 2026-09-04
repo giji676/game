@@ -9,6 +9,7 @@
 #include "game/perlin.h"
 #include "game/scripts/test.h"
 #include "game/scripts/player_controller.h"
+#include "game/scripts/spin_system.h"
 
 #include "engine/engine.h"
 #include "engine/asset_manager/widgets.h"
@@ -70,6 +71,8 @@ void Game::init() {
     sceneShader.setVec3("lightPos", light.pos);
     sceneShader.setVec3("lightColor", light.color);
 
+    world.registerSystem(std::make_unique<SpinSystem>());
+
     Entity e = world.create();
     Transform_& t = world.get<Transform_>(e);
     t.position.y = 0.5f;
@@ -78,6 +81,7 @@ void Game::init() {
     o.model = &engine.assets.getModel("car");
     o.name = "ECS ENTITY";
     o.debug = true;
+    addTag(world.add<Tag_>(e), world.tagRegistry.intern("spin"));
 
     int width = 10;
     ObjectID lastObjId;
