@@ -109,6 +109,7 @@ private:
     std::vector<std::unique_ptr<ISystem>> systems_;
 
     void ensureSlotCapacity(uint32_t idx);
+    void clearEntityComponents(uint32_t idx);
 };
 
 template <typename T>

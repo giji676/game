@@ -134,6 +134,13 @@ Entity World::create(Entity parent) {
     return e;
 }
 
+void World::clearEntityComponents(uint32_t idx) {
+    transforms_.reset(idx);
+    objects_.reset(idx);
+    hierarchies_.reset(idx);
+    tags_.reset(idx);
+}
+
 void World::destroy(Entity& e) {
     if (!isValid(e))
         return;
@@ -141,23 +148,33 @@ void World::destroy(Entity& e) {
     if (isValid(root) && e.idx == root.idx)
         return;
 
+    const uint32_t idx = e.idx;
+
     if (has<Hierarchy_>(e)) {
         Hierarchy_& h = get<Hierarchy_>(e);
         if (isValid(h.parent) && has<Hierarchy_>(h.parent)) {
             Hierarchy_& parentH = get<Hierarchy_>(h.parent);
             auto it = std::find_if(parentH.children.begin(), parentH.children.end(),
-                [&](const Entity& child) { return child.idx == e.idx; });
+                [&](const Entity& child) { return child.idx == idx; });
             if (it != parentH.children.end())
                 parentH.children.erase(it);
         }
-        for (const Entity& child : h.children)
-            destroy(const_cast<Entity&>(child));
+
+        // Copy first: recursive destroy unlinks children from this parent.
+        std::vector<Entity> children = h.children;
+        h.children.clear();
+        for (Entity child : children)
+            destroy(child);
     }
 
-    slots[e.idx].alive = false;
-    slots[e.idx].comp_mask = 0;
-    slots[e.idx].gen++;
-    freeIndices.push_back(e.idx);
+    clearEntityComponents(idx);
+
+    slots[idx].alive = false;
+    slots[idx].comp_mask = 0;
+    slots[idx].gen++;
+    freeIndices.push_back(idx);
+
+    e = Entity::invalid();
 }
 
 bool World::isValid(const Entity& e) const {
