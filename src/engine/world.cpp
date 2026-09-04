@@ -139,6 +139,7 @@ void World::clearEntityComponents(uint32_t idx) {
     objects_.reset(idx);
     hierarchies_.reset(idx);
     tags_.reset(idx);
+    dynamicComponents_.clearEntity(idx);
 }
 
 void World::destroy(Entity& e) {

@@ -10,6 +10,8 @@
 #include "game/scripts/test.h"
 #include "game/scripts/player_controller.h"
 #include "game/scripts/spin_system.h"
+#include "game/scripts/gravity_system.h"
+#include "game/components/gravity.h"
 
 #include "engine/engine.h"
 #include "engine/asset_manager/widgets.h"
@@ -71,17 +73,21 @@ void Game::init() {
     sceneShader.setVec3("lightPos", light.pos);
     sceneShader.setVec3("lightColor", light.color);
 
+    world.registerComponent<Gravity_>();
     world.registerSystem(std::make_unique<SpinSystem>());
+    world.registerSystem(std::make_unique<GravitySystem>());
 
     Entity e = world.create();
     Transform_& t = world.get<Transform_>(e);
-    t.position.y = 0.5f;
+    t.position.y = 2.f;
     t.scale = {0.001f, 0.001f, 0.001f};
     Object_& o = world.add<Object_>(e);
     o.model = &engine.assets.getModel("car");
     o.name = "ECS ENTITY";
     o.debug = true;
     addTag(world.add<Tag_>(e), world.tagRegistry.intern("spin"));
+    Gravity_& gravity = world.add<Gravity_>(e);
+    gravity.acceleration = {0.f, -0.2f, 0.f};
 
     int width = 10;
     ObjectID lastObjId;

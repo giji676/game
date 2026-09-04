@@ -1,5 +1,13 @@
 #pragma once
 
+#include "engine/asset_manager/model.h"
+#include "engine/component_pool.h"
+#include "engine/component_registry.h"
+#include "engine/frustrum.h"
+#include "engine/isystem.h"
+#include "engine/renderer/renderer.h"
+#include "glm/common.hpp"
+
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -7,13 +15,6 @@
 #include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
-
-#include "engine/asset_manager/model.h"
-#include "engine/component_pool.h"
-#include "engine/frustrum.h"
-#include "engine/isystem.h"
-#include "engine/renderer/renderer.h"
-#include "glm/common.hpp"
 
 struct Entity {
     uint32_t idx = UINT32_MAX;
@@ -86,6 +87,9 @@ public:
     template <typename T>
     T& add(const Entity& e);
 
+    template <typename T>
+    void registerComponent();
+
     void update(float dt);
     void init();
     void collectRenderCommands(const Frustum& frustum, std::vector<RenderCommand>& out);
@@ -106,10 +110,20 @@ private:
     ComponentPool<Hierarchy_> hierarchies_;
     ComponentPool<Tag_> tags_;
 
+    ComponentRegistry dynamicComponents_;
     std::vector<std::unique_ptr<ISystem>> systems_;
 
     void ensureSlotCapacity(uint32_t idx);
     void clearEntityComponents(uint32_t idx);
+
+    template <typename T>
+    uint64_t maskFor() const;
+
+    template <typename T>
+    ComponentPool<T>& poolFor();
+
+    template <typename T>
+    const ComponentPool<T>& poolFor() const;
 };
 
 template <typename T>
@@ -131,32 +145,72 @@ WORLD_REGISTER_COMPONENT(Hierarchy_, hierarchies_, (1ull << 2))
 WORLD_REGISTER_COMPONENT(Tag_, tags_, (1ull << 3))
 
 template <typename T>
+uint64_t World::maskFor() const {
+    if constexpr (ComponentTraits<T>::mask != 0)
+        return ComponentTraits<T>::mask;
+    if (!dynamicComponents_.isRegistered<T>())
+        return 0;
+    return dynamicComponents_.mask<T>();
+}
+
+template <typename T>
+ComponentPool<T>& World::poolFor() {
+    if constexpr (ComponentTraits<T>::mask != 0)
+        return ComponentTraits<T>::pool(*this);
+    else
+        return dynamicComponents_.pool<T>();
+}
+
+template <typename T>
+const ComponentPool<T>& World::poolFor() const {
+    if constexpr (ComponentTraits<T>::mask != 0)
+        return ComponentTraits<T>::pool(const_cast<World&>(*this));
+    else
+        return dynamicComponents_.pool<T>();
+}
+
+template <typename T>
+void World::registerComponent() {
+    static_assert(
+        ComponentTraits<T>::mask == 0,
+        "Type is already a static engine component");
+    dynamicComponents_.registerType<T>();
+}
+
+template <typename T>
 T& World::get(const Entity& e) {
     assert(isValid(e));
-    return ComponentTraits<T>::pool(*this).at(e.idx);
+    return poolFor<T>().at(e.idx);
 }
 
 template <typename T>
 const T& World::get(const Entity& e) const {
     assert(isValid(e));
-    return ComponentTraits<T>::pool(*this).at(e.idx);
+    return poolFor<T>().at(e.idx);
 }
 
 template <typename T>
 bool World::has(const Entity& e) const {
     if (!isValid(e))
         return false;
-    if (ComponentTraits<T>::mask == 0)
+    const uint64_t mask = maskFor<T>();
+    if (mask == 0)
         return false;
-    return (slots[e.idx].comp_mask & ComponentTraits<T>::mask) != 0;
+    return (slots[e.idx].comp_mask & mask) != 0;
 }
 
 template <typename T>
 T& World::add(const Entity& e) {
     assert(isValid(e));
-    slots[e.idx].comp_mask |= ComponentTraits<T>::mask;
-    ComponentTraits<T>::pool(*this).ensure(e.idx);
-    return ComponentTraits<T>::pool(*this).at(e.idx);
+    if constexpr (ComponentTraits<T>::mask == 0)
+        assert(dynamicComponents_.isRegistered<T>() && "Call registerComponent<T>() first");
+
+    const uint64_t mask = maskFor<T>();
+    assert(mask != 0);
+    slots[e.idx].comp_mask |= mask;
+    ComponentPool<T>& pool = poolFor<T>();
+    pool.ensure(e.idx);
+    return pool.at(e.idx);
 }
 
 bool hasTag(const Tag_& t, uint32_t id);
