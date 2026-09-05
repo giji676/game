@@ -39,12 +39,10 @@ struct TransformSystem {
         order.clear();
         depth.assign(w.slots.size(), 0);
 
-        for (uint32_t idx = 0; idx < w.slots.size(); ++idx) {
+        for (uint32_t idx : w.entitiesWith<Transform_>()) {
             if (!w.slots[idx].alive)
                 continue;
             const Entity e = {idx, w.slots[idx].gen};
-            if (!w.has<Transform_>(e))
-                continue;
             depth[idx] = depthOf(w, e);
             order.push_back(idx);
         }

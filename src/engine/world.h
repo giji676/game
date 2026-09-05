@@ -52,12 +52,18 @@ struct Hierarchy_ {
 struct TagRegistry {
     std::unordered_map<std::string, uint32_t> byName_;
     std::vector<std::string> byId;
+    std::vector<std::vector<uint32_t>> entitiesByTag_;
+    std::vector<std::vector<int32_t>> denseByTag_;
 
     uint32_t intern(const std::string& name);
     uint32_t byName(const std::string& name) const;
     const std::string& name(uint32_t id) const;
     bool hasName(const std::string& name) const;
     bool isValidId(uint32_t id) const;
+
+    void trackEntity(uint32_t tagId, uint32_t entityIdx);
+    void untrackEntity(uint32_t tagId, uint32_t entityIdx);
+    const std::vector<uint32_t>& entities(uint32_t tagId) const;
 };
 
 struct Tag_ {
@@ -89,6 +95,12 @@ public:
 
     template <typename T>
     void registerComponent();
+
+    template <typename T>
+    const std::vector<uint32_t>& entitiesWith() const;
+
+    void addTag(const Entity& e, uint32_t tagId);
+    void removeTag(const Entity& e, uint32_t tagId);
 
     void update(float dt);
     void init();
@@ -178,6 +190,11 @@ void World::registerComponent() {
 }
 
 template <typename T>
+const std::vector<uint32_t>& World::entitiesWith() const {
+    return poolFor<T>().entities;
+}
+
+template <typename T>
 T& World::get(const Entity& e) {
     assert(isValid(e));
     return poolFor<T>().at(e.idx);
@@ -207,9 +224,14 @@ T& World::add(const Entity& e) {
 
     const uint64_t mask = maskFor<T>();
     assert(mask != 0);
+
+    const bool already = (slots[e.idx].comp_mask & mask) != 0;
     slots[e.idx].comp_mask |= mask;
+
     ComponentPool<T>& pool = poolFor<T>();
     pool.ensure(e.idx);
+    if (!already)
+        pool.track(e.idx);
     return pool.at(e.idx);
 }
 

@@ -6,6 +6,8 @@
 template <typename T>
 struct ComponentPool {
     std::vector<T> values;
+    std::vector<uint32_t> entities;
+    std::vector<int32_t> denseIndex;
 
     void ensure(uint32_t idx) {
         const size_t need = static_cast<size_t>(idx) + 1;
@@ -20,5 +22,27 @@ struct ComponentPool {
     void reset(uint32_t idx, const T& value = T{}) {
         ensure(idx);
         values[idx] = value;
+    }
+
+    void track(uint32_t idx) {
+        if (idx >= denseIndex.size())
+            denseIndex.resize(static_cast<size_t>(idx) + 1, -1);
+        if (denseIndex[idx] >= 0)
+            return;
+
+        denseIndex[idx] = static_cast<int32_t>(entities.size());
+        entities.push_back(idx);
+    }
+
+    void untrack(uint32_t idx) {
+        if (idx >= denseIndex.size() || denseIndex[idx] < 0)
+            return;
+
+        const int32_t pos = denseIndex[idx];
+        const uint32_t last = entities.back();
+        entities[static_cast<size_t>(pos)] = last;
+        denseIndex[last] = pos;
+        entities.pop_back();
+        denseIndex[idx] = -1;
     }
 };

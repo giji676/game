@@ -19,6 +19,8 @@ uint32_t TagRegistry::intern(const std::string& name) {
     const uint32_t id = static_cast<uint32_t>(byId.size());
     byName_.emplace(name, id);
     byId.push_back(name);
+    entitiesByTag_.emplace_back();
+    denseByTag_.emplace_back();
     return id;
 }
 
@@ -35,6 +37,38 @@ bool TagRegistry::isValidId(uint32_t id) const {
     return id < byId.size();
 }
 
+void TagRegistry::trackEntity(uint32_t tagId, uint32_t entityIdx) {
+    assert(isValidId(tagId));
+    auto& dense = denseByTag_[tagId];
+    if (entityIdx >= dense.size())
+        dense.resize(static_cast<size_t>(entityIdx) + 1, -1);
+    if (dense[entityIdx] >= 0)
+        return;
+
+    dense[entityIdx] = static_cast<int32_t>(entitiesByTag_[tagId].size());
+    entitiesByTag_[tagId].push_back(entityIdx);
+}
+
+void TagRegistry::untrackEntity(uint32_t tagId, uint32_t entityIdx) {
+    assert(isValidId(tagId));
+    auto& dense = denseByTag_[tagId];
+    if (entityIdx >= dense.size() || dense[entityIdx] < 0)
+        return;
+
+    auto& list = entitiesByTag_[tagId];
+    const int32_t pos = dense[entityIdx];
+    const uint32_t last = list.back();
+    list[static_cast<size_t>(pos)] = last;
+    dense[last] = pos;
+    list.pop_back();
+    dense[entityIdx] = -1;
+}
+
+const std::vector<uint32_t>& TagRegistry::entities(uint32_t tagId) const {
+    assert(isValidId(tagId));
+    return entitiesByTag_[tagId];
+}
+
 bool hasTag(const Tag_& t, uint32_t id) {
     return std::find(t.ids.begin(), t.ids.end(), id) != t.ids.end();
 }
@@ -48,6 +82,30 @@ void removeTag(Tag_& t, uint32_t id) {
     auto it = std::find(t.ids.begin(), t.ids.end(), id);
     if (it != t.ids.end())
         t.ids.erase(it);
+}
+
+void World::addTag(const Entity& e, uint32_t tagId) {
+    assert(isValid(e));
+    assert(tagRegistry.isValidId(tagId));
+
+    Tag_& tags = has<Tag_>(e) ? get<Tag_>(e) : add<Tag_>(e);
+    if (hasTag(tags, tagId))
+        return;
+
+    tags.ids.push_back(tagId);
+    tagRegistry.trackEntity(tagId, e.idx);
+}
+
+void World::removeTag(const Entity& e, uint32_t tagId) {
+    if (!isValid(e) || !has<Tag_>(e))
+        return;
+
+    Tag_& tags = get<Tag_>(e);
+    if (!hasTag(tags, tagId))
+        return;
+
+    ::removeTag(tags, tagId);
+    tagRegistry.untrackEntity(tagId, e.idx);
 }
 
 void World::init() {
@@ -111,7 +169,8 @@ Entity World::create(Entity parent) {
     };
 
     slots[idx].alive = true;
-    slots[idx].comp_mask = ComponentTraits<Transform_>::mask;
+    slots[idx].comp_mask = 0;
+    add<Transform_>(e);
 
     Hierarchy_& h = add<Hierarchy_>(e);
     h.children.clear();
@@ -135,6 +194,16 @@ Entity World::create(Entity parent) {
 }
 
 void World::clearEntityComponents(uint32_t idx) {
+    if ((slots[idx].comp_mask & ComponentTraits<Tag_>::mask) != 0) {
+        for (uint32_t tagId : tags_.at(idx).ids)
+            tagRegistry.untrackEntity(tagId, idx);
+    }
+
+    transforms_.untrack(idx);
+    objects_.untrack(idx);
+    hierarchies_.untrack(idx);
+    tags_.untrack(idx);
+
     transforms_.reset(idx);
     objects_.reset(idx);
     hierarchies_.reset(idx);

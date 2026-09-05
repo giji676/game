@@ -20,12 +20,12 @@ struct RenderSystem {
 
         Engine& engine = ENGINE();
 
-        for (uint32_t idx = 0; idx < w.slots.size(); ++idx) {
+        for (uint32_t idx : w.entitiesWith<Object_>()) {
             if (!w.slots[idx].alive)
                 continue;
 
             const Entity e = {idx, w.slots[idx].gen};
-            if (!w.has<Object_>(e) || !w.has<Transform_>(e))
+            if (!w.has<Transform_>(e))
                 continue;
 
             const Object_& object = w.get<Object_>(e);

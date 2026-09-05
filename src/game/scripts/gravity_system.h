@@ -6,12 +6,12 @@
 
 struct GravitySystem : ISystem {
     void update(World& w, float dt) override {
-        for (uint32_t idx = 0; idx < w.slots.size(); ++idx) {
+        for (uint32_t idx : w.entitiesWith<Gravity_>()) {
             if (!w.slots[idx].alive)
                 continue;
 
             const Entity e = {idx, w.slots[idx].gen};
-            if (!w.has<Gravity_>(e) || !w.has<Transform_>(e))
+            if (!w.has<Transform_>(e))
                 continue;
 
             Gravity_& gravity = w.get<Gravity_>(e);

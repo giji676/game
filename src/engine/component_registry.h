@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <typeindex>
+#include <typeinfo>
 #include <unordered_map>
 
 #include "engine/component_pool.h"
@@ -12,6 +13,9 @@ struct IComponentPool {
     virtual ~IComponentPool() = default;
     virtual void ensure(uint32_t idx) = 0;
     virtual void reset(uint32_t idx) = 0;
+    virtual void track(uint32_t idx) = 0;
+    virtual void untrack(uint32_t idx) = 0;
+    virtual const std::vector<uint32_t>& entities() const = 0;
 };
 
 template <typename T>
@@ -20,6 +24,9 @@ struct TypedComponentPool : IComponentPool {
 
     void ensure(uint32_t idx) override { pool.ensure(idx); }
     void reset(uint32_t idx) override { pool.reset(idx); }
+    void track(uint32_t idx) override { pool.track(idx); }
+    void untrack(uint32_t idx) override { pool.untrack(idx); }
+    const std::vector<uint32_t>& entities() const override { return pool.entities; }
 };
 
 struct DynamicComponentEntry {
@@ -75,7 +82,9 @@ struct ComponentRegistry {
     }
 
     void clearEntity(uint32_t idx) {
-        for (auto& entry : entries)
+        for (auto& entry : entries) {
+            entry.second.storage->untrack(idx);
             entry.second.storage->reset(idx);
+        }
     }
 };

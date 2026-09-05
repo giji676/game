@@ -85,7 +85,7 @@ void Game::init() {
     o.model = &engine.assets.getModel("car");
     o.name = "ECS ENTITY";
     o.debug = true;
-    addTag(world.add<Tag_>(e), world.tagRegistry.intern("spin"));
+    world.addTag(e, world.tagRegistry.intern("spin"));
     Gravity_& gravity = world.add<Gravity_>(e);
     gravity.acceleration = {0.f, -0.2f, 0.f};
 
