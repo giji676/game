@@ -33,7 +33,6 @@ void Engine::init(Game *g) {
     
     game = g;
     world.init();
-    scene.init();
     game->init();
     editor.init();
     renderer.init(&meshRegistry);
@@ -73,8 +72,7 @@ void Engine::run() {
             gameUi.setSurface({viewport.x, viewport.y}, vpSize, vpSize);
 
             game->update();
-            scene.update(!paused);
-            world.update(app.deltaTime);
+            world.update(app.deltaTime, !paused);
 
             if (editor.isOpen() && editor.isEditing())
                 editor.updateEditorCamera();
@@ -140,7 +138,6 @@ void Engine::callRenderer(
     Frustum frustum = Frustum::fromMatrix(vp);
 
     renderCommands.clear();
-    scene.buildRenderList(renderCommands, frustum);
     world.collectRenderCommands(frustum, renderCommands);
 
     game->render(view, projection);
@@ -307,13 +304,16 @@ void Engine::loadAssets() {
     std::cout << "Time elapse: " << 
         std::chrono::duration_cast<Second>(Clock::now() - m_beg).count()
         << std::endl;
-    // 6.4 seconds
+    // ~2 seconds
 }
 
 Camera* Engine::getSceneCamera() {
-    if (activeCameraObject == INVALID_OBJECT)
+    if (!world.isValid(activeCameraEntity))
         return nullptr;
-    Camera* camera = scene.get(activeCameraObject).getComponent<Camera>();
+
+    IBehaviour_& ib = world.get<IBehaviour_>(activeCameraEntity);
+    Camera* camera = ib.getComponent<Camera>();
+
     if (!camera || !camera->enabled)
         return nullptr;
     return camera;

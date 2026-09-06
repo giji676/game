@@ -7,13 +7,11 @@
 #include <vector>
 
 #include "editor/panel.h"
-#include "engine/asset_manager/object.h"
-#include "engine/asset_manager/transform.h"
 #include "engine/asset_manager/widgets.h"
 #include "engine/engine.h"
 #include "engine/ibehaviour.h"
 #include "engine/inspectable.h"
-#include "engine/scene.h"
+#include "engine/world.h"
 #include "engine/ui.h"
 #include "engine/ui/style.h"
 #include "engine/utils/geometry.h"
@@ -133,20 +131,25 @@ const char* refTypeLabel(InspectType type) {
     }
 }
 
-bool acceptsRef(const Object& obj, const InspectField& field) {
+bool acceptsRef(World& world, Entity e, const InspectField& field) {
+    if (!world.isValid(e))
+        return false;
     if (field.type == InspectType::Object)
         return true;
     if (!field.requiredType)
         return false;
+    if (!world.has<IBehaviour_>(e))
+        return false;
+    const IBehaviour_& ib = world.get<IBehaviour_>(e);
     if (field.type == InspectType::Component) {
-        for (const auto& component : obj.components) {
+        for (const auto& component : ib.components) {
             if (component && typeid(*component) == *field.requiredType)
                 return true;
         }
         return false;
     }
     if (field.type == InspectType::Script) {
-        for (const auto& script : obj.scripts) {
+        for (const auto& script : ib.scripts) {
             if (script && typeid(*script) == *field.requiredType)
                 return true;
         }
@@ -155,10 +158,13 @@ bool acceptsRef(const Object& obj, const InspectField& field) {
     return false;
 }
 
-std::string objectDisplayName(const Object& obj, ObjectID id) {
-    if (!obj.name.empty())
-        return obj.name;
-    return "Object " + std::to_string(id);
+std::string entityDisplayName(const World& world, Entity e) {
+    if (world.has<Object_>(e)) {
+        const Object_& obj = world.get<Object_>(e);
+        if (!obj.name.empty())
+            return obj.name;
+    }
+    return "Entity " + std::to_string(e.idx);
 }
 
 void styleObjectSlot(Button* btn, bool dropHover, bool dropValid, bool missing) {
@@ -269,20 +275,20 @@ glm::quat rotationQuatFromWorldMatrix(const glm::mat4& worldMatrix) {
     return glm::quat_cast(glm::mat4(rot));
 }
 
-glm::vec3 worldPosition(const Object& obj) {
-    return glm::vec3(obj.worldMatrix[3]);
+glm::vec3 worldPosition(const Transform_& t) {
+    return glm::vec3(t.worldMatrix[3]);
 }
 
-glm::vec3 worldScale(const Object& obj) {
-    const glm::mat4& w = obj.worldMatrix;
+glm::vec3 worldScale(const Transform_& t) {
+    const glm::mat4& w = t.worldMatrix;
     return {
         glm::length(glm::vec3(w[0])),
         glm::length(glm::vec3(w[1])),
         glm::length(glm::vec3(w[2]))};
 }
 
-glm::vec3 worldRotationEuler(const Object& obj) {
-    return quatToEulerYXZ(rotationQuatFromWorldMatrix(obj.worldMatrix));
+glm::vec3 worldRotationEuler(const Transform_& t) {
+    return quatToEulerYXZ(rotationQuatFromWorldMatrix(t.worldMatrix));
 }
 
 } // namespace
@@ -427,20 +433,25 @@ bool TransformView::parseFloat(const std::string& text, float& out) const {
 }
 
 void TransformView::applyPendingEdits(
-        Transform& transform,
-        const Object& object,
-        const Scene& scene,
+        Transform_& transform,
+        Entity entity,
+        World& world,
         GizmoSpace space)
 {
-    const Object& parent = scene.get(object.parent);
+    static const Transform_ kIdentityTransform;
+    const Transform_* parentT = &kIdentityTransform;
+    if (world.has<Hierarchy_>(entity)) {
+        const Entity parent = world.get<Hierarchy_>(entity).parent;
+        if (world.isValid(parent) && world.has<Transform_>(parent))
+            parentT = &world.get<Transform_>(parent);
+    }
 
     auto applyPosition = [&](const glm::vec3& v) {
         if (space == GizmoSpace::World) {
-            const glm::vec3 localPos =
-                glm::vec3(parent.worldInvMatrix * glm::vec4(v, 1.f));
-            transform.setPosition(localPos);
+            transform.position =
+                glm::vec3(parentT->worldInvMatrix * glm::vec4(v, 1.f));
         } else {
-            transform.setPosition(v);
+            transform.position = v;
         }
     };
 
@@ -448,17 +459,17 @@ void TransformView::applyPendingEdits(
         if (space == GizmoSpace::World) {
             const glm::quat desiredWorldQ = eulerYXZToQuat(eulerDeg);
             const glm::quat parentQ =
-                rotationQuatFromWorldMatrix(parent.worldMatrix);
+                rotationQuatFromWorldMatrix(parentT->worldMatrix);
             const glm::quat localQ = glm::inverse(parentQ) * desiredWorldQ;
-            transform.setRotation(quatToEulerYXZ(localQ));
+            transform.rotation = quatToEulerYXZ(localQ);
         } else {
-            transform.setRotation(eulerDeg);
+            transform.rotation = eulerDeg;
         }
     };
 
     auto applyScale = [&](const glm::vec3& v) {
         if (space == GizmoSpace::World) {
-            const glm::vec3 curWorld = worldScale(object);
+            const glm::vec3 curWorld = worldScale(transform);
             glm::vec3 ratio{1.f, 1.f, 1.f};
             if (curWorld.x > 1e-8f)
                 ratio.x = v.x / curWorld.x;
@@ -466,9 +477,9 @@ void TransformView::applyPendingEdits(
                 ratio.y = v.y / curWorld.y;
             if (curWorld.z > 1e-8f)
                 ratio.z = v.z / curWorld.z;
-            transform.setScale(transform.scale() * ratio);
+            transform.scale = transform.scale * ratio;
         } else {
-            transform.setScale(v);
+            transform.scale = v;
         }
     };
 
@@ -492,13 +503,13 @@ void TransformView::applyPendingEdits(
     };
 
     if (space == GizmoSpace::World) {
-        applyAxis(pos_, worldPosition(object), applyPosition);
-        applyAxis(rot_, worldRotationEuler(object), applyRotation);
-        applyAxis(scale_, worldScale(object), applyScale);
+        applyAxis(pos_, worldPosition(transform), applyPosition);
+        applyAxis(rot_, worldRotationEuler(transform), applyRotation);
+        applyAxis(scale_, worldScale(transform), applyScale);
     } else {
-        applyAxis(pos_, transform.position(), applyPosition);
-        applyAxis(rot_, transform.rotation(), applyRotation);
-        applyAxis(scale_, transform.scale(), applyScale);
+        applyAxis(pos_, transform.position, applyPosition);
+        applyAxis(rot_, transform.rotation, applyRotation);
+        applyAxis(scale_, transform.scale, applyScale);
     }
 }
 
@@ -533,9 +544,9 @@ void TransformView::setSpace(GizmoSpace space) {
 }
 
 void TransformView::update(
-        Transform& transform,
-        const Object& object,
-        const Scene& scene,
+        Transform_& transform,
+        Entity entity,
+        World& world,
         bool editable,
         GizmoSpace space)
 {
@@ -546,7 +557,7 @@ void TransformView::update(
     setSpace(space);
 
     if (editable_)
-        applyPendingEdits(transform, object, scene, space);
+        applyPendingEdits(transform, entity, world, space);
 
     auto syncField = [&](UIElementID id, const std::string& value) {
         auto* field = dynamic_cast<InputField*>(ui_->get(id).widget.get());
@@ -559,11 +570,11 @@ void TransformView::update(
     };
 
     const glm::vec3 pos =
-        space == GizmoSpace::World ? worldPosition(object) : transform.position();
+        space == GizmoSpace::World ? worldPosition(transform) : transform.position;
     const glm::vec3 rot =
-        space == GizmoSpace::World ? worldRotationEuler(object) : transform.rotation();
+        space == GizmoSpace::World ? worldRotationEuler(transform) : transform.rotation;
     const glm::vec3 scale =
-        space == GizmoSpace::World ? worldScale(object) : transform.scale();
+        space == GizmoSpace::World ? worldScale(transform) : transform.scale;
 
     syncField(pos_.xId, formatFloat(pos.x));
     syncField(pos_.yId, formatFloat(pos.y));
@@ -617,7 +628,7 @@ void InspectorPanel::bind(UI& ui, EditorPanel& panel) {
         {0.f, 0.f},
         {0.f, 0.f},
         kRowFontSize,
-        "Object name");
+        "Entity name");
     ui.reparent(nameFieldId_, nameRowId_);
     UIElement& nameFieldEl = ui.get(nameFieldId_);
     nameFieldEl.style.position = PositionMode::Relative;
@@ -675,17 +686,17 @@ void InspectorPanel::setLabelText(UIElementID id, const std::string& value) cons
         label->text = value;
 }
 
-void InspectorPanel::update(Scene& scene) {
+void InspectorPanel::update(World& world) {
     if (!built_ || !ui_ || contentId_ == INVALID_UI_ELEMENT)
         return;
 
-    if (selectedId_ == INVALID_OBJECT) {
+    if (selectedId_ == Entity::invalid() || !world.isValid(selectedId_)) {
         if (nameFieldId_ != INVALID_UI_ELEMENT) {
             auto* nameField = dynamic_cast<InputField*>(ui_->get(nameFieldId_).widget.get());
             if (nameField) {
                 nameField->disabled = true;
                 nameField->text.clear();
-                nameField->placeholder = "Object name";
+                nameField->placeholder = "Entity name";
                 nameField->caretPos = 0;
             }
             nameFieldWasFocused_ = false;
@@ -702,9 +713,18 @@ void InspectorPanel::update(Scene& scene) {
         return;
     }
 
-    const Object& obj = scene.get(selectedId_);
+    Object_& obj = world.has<Object_>(selectedId_)
+        ? world.get<Object_>(selectedId_)
+        : world.add<Object_>(selectedId_);
+    Transform_& transform = world.get<Transform_>(selectedId_);
 
-    Object& editableObj = scene.get(selectedId_);
+    Entity parent = Entity::invalid();
+    size_t childCount = 0;
+    if (world.has<Hierarchy_>(selectedId_)) {
+        const Hierarchy_& h = world.get<Hierarchy_>(selectedId_);
+        parent = h.parent;
+        childCount = h.children.size();
+    }
 
     if (nameFieldId_ != INVALID_UI_ELEMENT) {
         auto* nameField = dynamic_cast<InputField*>(ui_->get(nameFieldId_).widget.get());
@@ -716,45 +736,49 @@ void InspectorPanel::update(Scene& scene) {
             nameFieldWasFocused_ = nameField->focused;
 
             if (editable_ && namePendingApply_) {
-                editableObj.name = trimCopy(nameField->text);
+                obj.name = trimCopy(nameField->text);
                 namePendingApply_ = false;
             } else if (applyOnBlur) {
-                editableObj.name = trimCopy(nameField->text);
+                obj.name = trimCopy(nameField->text);
             }
 
             if (!nameField->focused) {
-                nameField->text = editableObj.name;
-                nameField->placeholder = editableObj.name.empty()
-                    ? ("Object " + std::to_string(selectedId_))
-                    : "Object name";
+                nameField->text = obj.name;
+                nameField->placeholder = obj.name.empty()
+                    ? ("Entity " + std::to_string(selectedId_.idx))
+                    : "Entity name";
                 nameField->caretPos =
                     std::min(nameField->caretPos, nameField->text.size());
             }
         }
     }
 
-    setLabelText(idLabelId_, "ID: " + std::to_string(selectedId_));
-    setLabelText(parentId_, "Parent: " + std::to_string(obj.parent));
-    setLabelText(childrenId_, "Children: " + std::to_string(obj.children.size()));
+    setLabelText(idLabelId_, "ID: " + std::to_string(selectedId_.idx));
+    setLabelText(
+        parentId_,
+        world.isValid(parent) ? ("Parent: " + std::to_string(parent.idx)) : "Parent: -");
+    setLabelText(childrenId_, "Children: " + std::to_string(childCount));
     setLabelText(modelId_, std::string("Has Model: ") + (obj.model ? "yes" : "no"));
     setLabelText(debugId_, std::string("Debug: ") + (obj.debug ? "on" : "off"));
 
     transformView_.update(
-        editableObj.transform, editableObj, scene, editable_, gizmoSpace_);
+        transform, selectedId_, world, editable_, gizmoSpace_);
 
     std::vector<IBehaviour*> components;
-    components.reserve(editableObj.components.size());
-    for (auto& component : editableObj.components)
-        components.push_back(component.get());
-    componentsView_.update(
-        scene, components, editable_, draggingObjectId_, droppedObjectId_);
-
     std::vector<IBehaviour*> scripts;
-    scripts.reserve(editableObj.scripts.size());
-    for (auto& script : editableObj.scripts)
-        scripts.push_back(script.get());
+    if (world.has<IBehaviour_>(selectedId_)) {
+        IBehaviour_& ib = world.get<IBehaviour_>(selectedId_);
+        components.reserve(ib.components.size());
+        for (auto& component : ib.components)
+            components.push_back(component.get());
+        scripts.reserve(ib.scripts.size());
+        for (auto& script : ib.scripts)
+            scripts.push_back(script.get());
+    }
+    componentsView_.update(
+        world, components, editable_, draggingObjectId_, droppedObjectId_);
     scriptsView_.update(
-        scene, scripts, editable_, draggingObjectId_, droppedObjectId_);
+        world, scripts, editable_, draggingObjectId_, droppedObjectId_);
 }
 
 void BehaviourListView::bind(UI& ui, UIElementID parentId, const char* title) {
@@ -932,10 +956,10 @@ void BehaviourListView::ensureFieldCount(Card& card, size_t count) {
 void BehaviourListView::syncFieldRow(
         FieldRow& row,
         const InspectField& field,
-        Scene& scene,
+        World& world,
         bool editable,
-        ObjectID draggingId,
-        ObjectID droppedId)
+        Entity draggingId,
+        Entity droppedId)
 {
     setElementInFlow(row.rootId, true, kFieldRowH);
 
@@ -984,7 +1008,7 @@ void BehaviourListView::syncFieldRow(
 
         auto* slot = dynamic_cast<Button*>(controlEl.widget.get());
         auto* clear = dynamic_cast<Button*>(ui_->get(row.clearId).widget.get());
-        ObjectID* value = static_cast<ObjectID*>(field.ptr);
+        Entity* value = static_cast<Entity*>(field.ptr);
         if (!slot || !value)
             return;
 
@@ -992,26 +1016,26 @@ void BehaviourListView::syncFieldRow(
         const bool hovered = pointInRect(
             mouse, controlEl.transform.position, controlEl.transform.size);
         bool dropValid = false;
-        if (draggingId != INVALID_OBJECT && scene.valid(draggingId))
-            dropValid = acceptsRef(scene.get(draggingId), field);
-        const bool dropHover = editable && hovered && draggingId != INVALID_OBJECT;
+        if (draggingId != Entity::invalid() && world.isValid(draggingId))
+            dropValid = acceptsRef(world, draggingId, field);
+        const bool dropHover = editable && hovered && draggingId != Entity::invalid();
 
-        if (editable && hovered && droppedId != INVALID_OBJECT && scene.valid(droppedId) &&
-            acceptsRef(scene.get(droppedId), field)) {
+        if (editable && hovered && droppedId != Entity::invalid() && world.isValid(droppedId) &&
+            acceptsRef(world, droppedId, field)) {
             *value = droppedId;
         }
 
         bool missing = false;
-        if (*value == INVALID_OBJECT) {
+        if (*value == Entity::invalid()) {
             slot->text = std::string("None (") + refTypeLabel(field.type) + ")";
-        } else if (!scene.valid(*value)) {
+        } else if (!world.isValid(*value)) {
             missing = true;
             slot->text = "Missing";
-        } else if (!acceptsRef(scene.get(*value), field)) {
+        } else if (!acceptsRef(world, *value, field)) {
             missing = true;
             slot->text = "Missing";
         } else {
-            slot->text = objectDisplayName(scene.get(*value), *value);
+            slot->text = entityDisplayName(world, *value);
         }
 
         slot->disabled = !editable;
@@ -1020,11 +1044,11 @@ void BehaviourListView::syncFieldRow(
 
         styleClearButton(clear);
         if (clear) {
-            clear->disabled = !editable || *value == INVALID_OBJECT;
-            ObjectID* clearValue = value;
+            clear->disabled = !editable || *value == Entity::invalid();
+            Entity* clearValue = value;
             clear->onClick = [clearValue, editable]() {
                 if (editable && clearValue)
-                    *clearValue = INVALID_OBJECT;
+                    *clearValue = Entity::invalid();
             };
         }
         return;
@@ -1089,10 +1113,10 @@ void BehaviourListView::syncFieldRow(
 void BehaviourListView::syncCard(
         Card& card,
         IBehaviour& behaviour,
-        Scene& scene,
+        World& world,
         bool editable,
-        ObjectID draggingId,
-        ObjectID droppedId)
+        Entity draggingId,
+        Entity droppedId)
 {
     const auto& fields = behaviour.inspectFields();
     setElementInFlow(card.rootId, true, cardHeight(fields.size()));
@@ -1126,16 +1150,16 @@ void BehaviourListView::syncCard(
             continue;
         }
         syncFieldRow(
-            card.fields[i], fields[i], scene, editable, draggingId, droppedId);
+            card.fields[i], fields[i], world, editable, draggingId, droppedId);
     }
 }
 
 void BehaviourListView::update(
-        Scene& scene,
+        World& world,
         const std::vector<IBehaviour*>& items,
         bool editable,
-        ObjectID draggingId,
-        ObjectID droppedId)
+        Entity draggingId,
+        Entity droppedId)
 {
     if (!ui_ || rootId_ == INVALID_UI_ELEMENT)
         return;
@@ -1151,6 +1175,6 @@ void BehaviourListView::update(
             setElementInFlow(cards_[i].rootId, false, 0.f);
             continue;
         }
-        syncCard(cards_[i], *items[i], scene, editable, draggingId, droppedId);
+        syncCard(cards_[i], *items[i], world, editable, draggingId, droppedId);
     }
 }

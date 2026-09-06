@@ -19,9 +19,9 @@ struct ComponentPool {
 
     const T& at(uint32_t idx) const { return values[idx]; }
 
-    void reset(uint32_t idx, const T& value = T{}) {
+    void reset(uint32_t idx) {
         ensure(idx);
-        values[idx] = value;
+        values[idx] = T{};
     }
 
     void track(uint32_t idx) {

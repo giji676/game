@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "engine/ibehaviour_system.h"
 #include "engine/render_system.h"
 #include "engine/transfrom_system.h"
 
@@ -118,12 +119,19 @@ void World::registerSystem(std::unique_ptr<ISystem> system) {
     systems_.push_back(std::move(system));
 }
 
-void World::update(float dt) {
+void World::update(float dt, bool runBehaviours) {
     for (auto& system : systems_)
         system->update(*this, dt);
 
+    IBehaviourSystem behaviours;
+    if (runBehaviours)
+        behaviours.update(*this);
+
     TransformSystem ts;
     ts.update(*this);
+
+    if (runBehaviours)
+        behaviours.lateUpdate(*this);
 }
 
 void World::collectRenderCommands(
@@ -203,11 +211,13 @@ void World::clearEntityComponents(uint32_t idx) {
     objects_.untrack(idx);
     hierarchies_.untrack(idx);
     tags_.untrack(idx);
+    behaviours_.untrack(idx);
 
     transforms_.reset(idx);
     objects_.reset(idx);
     hierarchies_.reset(idx);
     tags_.reset(idx);
+    behaviours_.reset(idx);
     dynamicComponents_.clearEntity(idx);
 }
 
@@ -252,4 +262,62 @@ bool World::isValid(const Entity& e) const {
         e.idx < slots.size() &&
         e.gen == slots[e.idx].gen &&
         slots[e.idx].alive;
+}
+
+bool World::isDescendant(Entity ancestor, Entity node) const {
+    if (!isValid(ancestor) || !isValid(node))
+        return false;
+
+    Entity cur = node;
+    const uint32_t hopLimit = static_cast<uint32_t>(slots.size());
+    for (uint32_t hops = 0; hops < hopLimit; ++hops) {
+        if (!has<Hierarchy_>(cur))
+            return false;
+        const Entity parent = get<Hierarchy_>(cur).parent;
+        if (!isValid(parent))
+            return false;
+        if (parent == ancestor)
+            return true;
+        cur = parent;
+    }
+    return false;
+}
+
+void World::reparent(Entity child, Entity newParent, int index) {
+    if (!isValid(child) || child == root)
+        return;
+    if (!isValid(newParent))
+        newParent = root;
+    if (child == newParent || isDescendant(child, newParent))
+        return;
+
+    Hierarchy_& childH = has<Hierarchy_>(child) ? get<Hierarchy_>(child) : add<Hierarchy_>(child);
+    Hierarchy_& newParentH =
+        has<Hierarchy_>(newParent) ? get<Hierarchy_>(newParent) : add<Hierarchy_>(newParent);
+
+    Entity oldParent = childH.parent;
+    int oldIndex = -1;
+    if (isValid(oldParent) && has<Hierarchy_>(oldParent)) {
+        Hierarchy_& oldParentH = get<Hierarchy_>(oldParent);
+        auto it = std::find_if(
+            oldParentH.children.begin(),
+            oldParentH.children.end(),
+            [&](const Entity& c) { return c.idx == child.idx; });
+        if (it != oldParentH.children.end()) {
+            oldIndex = static_cast<int>(it - oldParentH.children.begin());
+            oldParentH.children.erase(it);
+        }
+    }
+
+    if (oldParent == newParent && oldIndex >= 0 && oldIndex < index)
+        --index;
+
+    childH.parent = newParent;
+
+    if (index < 0 || index > static_cast<int>(newParentH.children.size()))
+        index = static_cast<int>(newParentH.children.size());
+
+    newParentH.children.insert(
+        newParentH.children.begin() + index,
+        child);
 }

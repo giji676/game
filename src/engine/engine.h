@@ -5,7 +5,6 @@
 #include "camera.h"
 #include "world.h"
 #include "raycasting.h"
-#include "scene.h"
 #include "ui.h"
 #include "input.h"
 #include "window.h"
@@ -34,7 +33,6 @@ public:
     Renderer renderer;
     UIRenderer uiRenderer;
     DebugRenderer debugRenderer;
-    Scene scene;
     World world;
     // Laid out in game space, drawn inside the game viewport.
     UI gameUi;
@@ -44,7 +42,7 @@ public:
     MeshRegistry meshRegistry;
     Editor editor;
 
-    ObjectID activeCameraObject = INVALID_OBJECT;
+    Entity activeCameraEntity = Entity::invalid();
 
     float G = 9.81;
     float fps = 0.0f;

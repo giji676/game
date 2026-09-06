@@ -3,25 +3,21 @@
 #include "engine/asset_manager/model.h"
 #include "engine/component_pool.h"
 #include "engine/component_registry.h"
+#include "engine/entity.h"
 #include "engine/frustrum.h"
+#include "engine/icomponent.h"
+#include "engine/iscript.h"
 #include "engine/isystem.h"
 #include "engine/renderer/renderer.h"
-#include "glm/common.hpp"
 
 #include <cassert>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
-
-struct Entity {
-    uint32_t idx = UINT32_MAX;
-    uint32_t gen = 0;
-
-    static Entity invalid() { return {UINT32_MAX, 0}; }
-};
 
 struct EntitySlot {
     bool alive = false;
@@ -45,7 +41,7 @@ struct Object_ {
 };
 
 struct Hierarchy_ {
-    Entity parent;
+    Entity parent = Entity::invalid();
     std::vector<Entity> children;
 };
 
@@ -70,6 +66,80 @@ struct Tag_ {
     std::vector<uint32_t> ids;
 };
 
+struct IBehaviour_ {
+    Entity entity = Entity::invalid();
+    std::vector<std::unique_ptr<IScript>> scripts;
+    std::vector<std::unique_ptr<IComponent>> components;
+
+    template <typename T, typename... Args>
+    T& addScript(Args&&... args) {
+        static_assert(std::is_base_of<IScript, T>::value,
+                      "T must inherit IScript");
+        auto script = std::make_unique<T>(std::forward<Args>(args)...);
+        script->entity = entity;
+        T& ref = *script;
+        scripts.push_back(std::move(script));
+        ref.init();
+        return ref;
+    }
+
+    template <typename T, typename... Args>
+    T& addComponent(Args&&... args) {
+        static_assert(std::is_base_of<IComponent, T>::value,
+                      "T must inherit IComponent");
+        auto component = std::make_unique<T>(std::forward<Args>(args)...);
+        component->entity = entity;
+        T& ref = *component;
+        components.push_back(std::move(component));
+        ref.init();
+        return ref;
+    }
+
+    template <typename T>
+    T* getComponent() {
+        static_assert(std::is_base_of<IComponent, T>::value,
+                      "T must inherit IComponent");
+        for (auto& component : components) {
+            if (T* typed = dynamic_cast<T*>(component.get()))
+                return typed;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    const T* getComponent() const {
+        static_assert(std::is_base_of<IComponent, T>::value,
+                      "T must inherit IComponent");
+        for (const auto& component : components) {
+            if (const T* typed = dynamic_cast<const T*>(component.get()))
+                return typed;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    T* getScript() {
+        static_assert(std::is_base_of<IScript, T>::value,
+                      "T must inherit IScript");
+        for (auto& script : scripts) {
+            if (T* typed = dynamic_cast<T*>(script.get()))
+                return typed;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    const T* getScript() const {
+        static_assert(std::is_base_of<IScript, T>::value,
+                      "T must inherit IScript");
+        for (const auto& script : scripts) {
+            if (const T* typed = dynamic_cast<const T*>(script.get()))
+                return typed;
+        }
+        return nullptr;
+    }
+};
+
 class World {
 public:
     std::vector<EntitySlot> slots;
@@ -80,6 +150,9 @@ public:
     Entity create();
     Entity create(Entity parent);
     void destroy(Entity& e);
+
+    void reparent(Entity child, Entity newParent, int index = -1);
+    bool isDescendant(Entity ancestor, Entity node) const;
 
     template <typename T>
     T& get(const Entity& e);
@@ -102,7 +175,7 @@ public:
     void addTag(const Entity& e, uint32_t tagId);
     void removeTag(const Entity& e, uint32_t tagId);
 
-    void update(float dt);
+    void update(float dt, bool runBehaviours = true);
     void init();
     void collectRenderCommands(const Frustum& frustum, std::vector<RenderCommand>& out);
 
@@ -121,6 +194,7 @@ private:
     ComponentPool<Object_> objects_;
     ComponentPool<Hierarchy_> hierarchies_;
     ComponentPool<Tag_> tags_;
+    ComponentPool<IBehaviour_> behaviours_;
 
     ComponentRegistry dynamicComponents_;
     std::vector<std::unique_ptr<ISystem>> systems_;
@@ -155,6 +229,7 @@ WORLD_REGISTER_COMPONENT(Transform_, transforms_, (1ull << 0))
 WORLD_REGISTER_COMPONENT(Object_, objects_, (1ull << 1))
 WORLD_REGISTER_COMPONENT(Hierarchy_, hierarchies_, (1ull << 2))
 WORLD_REGISTER_COMPONENT(Tag_, tags_, (1ull << 3))
+WORLD_REGISTER_COMPONENT(IBehaviour_, behaviours_, (1ull << 4))
 
 template <typename T>
 uint64_t World::maskFor() const {
@@ -232,6 +307,10 @@ T& World::add(const Entity& e) {
     pool.ensure(e.idx);
     if (!already)
         pool.track(e.idx);
+
+    if constexpr (std::is_same_v<T, IBehaviour_>)
+        pool.at(e.idx).entity = e;
+
     return pool.at(e.idx);
 }
 

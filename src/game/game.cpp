@@ -58,7 +58,6 @@ Game::Game(Engine& engine)
 {}
 
 void Game::init() {
-    Scene& scene = engine.scene;
     World& world = engine.world;
     UI& ui = engine.gameUi;
     setupTerrain();
@@ -88,27 +87,6 @@ void Game::init() {
     world.addTag(e, world.tagRegistry.intern("spin"));
     Gravity_& gravity = world.add<Gravity_>(e);
     gravity.acceleration = {0.f, -0.2f, 0.f};
-
-    int width = 10;
-    ObjectID lastObjId;
-
-    for (int i = 0; i < 10; i++) {
-        ObjectID objId = scene.createObject();
-        Object& obj = scene.get(objId);
-        obj.model = &engine.assets.getModel("car");
-        obj.transform.setPosition({i % width, 0.f, -i/10.f});
-        obj.transform.setScale({0.001f, 0.001f, 0.001f});
-        obj.addScript<Test>();
-        lastObjId = objId;
-    }
-
-    ObjectID objId = scene.createObject();
-    Object& obj = scene.get(objId);
-    obj.model = &engine.assets.getModel("backpack");
-    obj.transform.setPosition({0.0f, 1.5f, -1.5f});
-    obj.transform.setScale({100.1f, 100.1f, 100.1f});
-    obj.addScript<Test>();
-    scene.reparent(objId, lastObjId);
 
     Shader& texturedMatShader = engine.assets.getShader("textured_mat");
     texturedMatShader.use();
@@ -465,29 +443,15 @@ void Game::setupTerrain() {
 }
 
 void Game::setupPlayer() {
-    Scene& scene = engine.scene;
-    ObjectID id = scene.createObject();
-    Object& obj = scene.get(id);
-    obj.name = "Player";
-    PlayerController& controller = obj.addScript<PlayerController>(&world);
-
-    ObjectID childId = scene.createObject();
-    Object& childObj = scene.get(childId);
-    childObj.transform.setPosition({0.f, 0.2f, 0.f});
-    childObj.addComponent<Camera>();
-    engine.activeCameraObject = childId;
-    scene.reparent(childId, id);
-    controller.child.id = childId;
-
-    ObjectID arId = scene.createObject();
-    Object& arObj = scene.get(arId);
-    scene.reparent(arId, childId);
-    arObj.name = "AR";
-    arObj.model = &engine.assets.getModel("ar");
-    arObj.transform.setPosition({0.2f, -0.11f, -0.6f});
-    arObj.transform.setRotation({0.f, 0.f, 0.f});
-    arObj.transform.setScale({0.1f, 0.1f, 0.1f});
-    controller.gun.id = arId;
+    World& world = engine.world;
+    Entity e = world.create();
+    world.add<Object_>(e).name = "Player";
+    world.addTag(e, world.tagRegistry.intern("player"));
+    IBehaviour_& ib = world.add<IBehaviour_>(e);
+    ib.entity = e;
+    ib.addScript<PlayerController>(&this->world);
+    ib.addComponent<Camera>();
+    engine.activeCameraEntity = e;
 }
 
 Terrain generateTerrain(int width, int height, float scale, float heightScale) {

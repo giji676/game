@@ -35,9 +35,9 @@ struct DynamicComponentEntry {
 };
 
 struct ComponentRegistry {
-    // Bits 0-3 are reserved for static engine components.
-    // TODO: Make dynamic? or reserve more bits for engine components.
-    static constexpr uint32_t kFirstDynamicBit = 4;
+    // Bits 0-4 are reserved for static engine components.
+    // TODO: Make fully dynamic? or reserve more bits for engine components.
+    static constexpr uint32_t kFirstDynamicBit = 5;
 
     uint32_t nextBit = kFirstDynamicBit;
     std::unordered_map<std::type_index, DynamicComponentEntry> entries;
