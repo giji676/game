@@ -1,15 +1,15 @@
 #pragma once
 
-#include "engine/world.h"
+#include "engine/scene.h"
 
-struct IBehaviourSystem {
-    void update(World& w) {
-        for (uint32_t idx : w.entitiesWith<IBehaviour_>()) {
+struct BehavioursSystem {
+    void update(Scene& w) {
+        for (uint32_t idx : w.entitiesWith<Behaviours>()) {
             if (!w.slots[idx].alive)
                 continue;
 
             const Entity e = {idx, w.slots[idx].gen};
-            IBehaviour_& ib = w.get<IBehaviour_>(e);
+            Behaviours& ib = w.get<Behaviours>(e);
 
             for (auto& component : ib.components) {
                 if (component->enabled)
@@ -22,13 +22,13 @@ struct IBehaviourSystem {
         }
     }
 
-    void lateUpdate(World& w) {
-        for (uint32_t idx : w.entitiesWith<IBehaviour_>()) {
+    void lateUpdate(Scene& w) {
+        for (uint32_t idx : w.entitiesWith<Behaviours>()) {
             if (!w.slots[idx].alive)
                 continue;
 
             const Entity e = {idx, w.slots[idx].gen};
-            IBehaviour_& ib = w.get<IBehaviour_>(e);
+            Behaviours& ib = w.get<Behaviours>(e);
 
             for (auto& component : ib.components) {
                 if (component->enabled)

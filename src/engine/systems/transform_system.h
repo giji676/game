@@ -6,28 +6,28 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "engine/world.h"
+#include "engine/scene.h"
 
 struct TransformSystem {
     std::vector<uint32_t> order;
     std::vector<uint32_t> depth;
 
-    void update(World& w) {
+    void update(Scene& w) {
         rebuildOrder(w);
 
         for (uint32_t idx : order) {
             const Entity e = {idx, w.slots[idx].gen};
-            Transform_& transform = w.get<Transform_>(e);
+            Transform& transform = w.get<Transform>(e);
             const glm::mat4 local = transformToMatrix(
                 transform.position,
                 transform.rotation,
                 transform.scale);
 
             glm::mat4 world = local;
-            if (w.has<Hierarchy_>(e)) {
-                const Entity p = w.get<Hierarchy_>(e).parent;
-                if (w.isValid(p) && w.has<Transform_>(p))
-                    world = w.get<Transform_>(p).worldMatrix * local;
+            if (w.has<Hierarchy>(e)) {
+                const Entity p = w.get<Hierarchy>(e).parent;
+                if (w.isValid(p) && w.has<Transform>(p))
+                    world = w.get<Transform>(p).worldMatrix * local;
             }
 
             transform.worldMatrix = world;
@@ -35,11 +35,11 @@ struct TransformSystem {
         }
     }
 
-    void rebuildOrder(World& w) {
+    void rebuildOrder(Scene& w) {
         order.clear();
         depth.assign(w.slots.size(), 0);
 
-        for (uint32_t idx : w.entitiesWith<Transform_>()) {
+        for (uint32_t idx : w.entitiesWith<Transform>()) {
             if (!w.slots[idx].alive)
                 continue;
             const Entity e = {idx, w.slots[idx].gen};
@@ -54,17 +54,17 @@ struct TransformSystem {
         });
     }
 
-    uint32_t depthOf(World& w, Entity start) const {
+    uint32_t depthOf(Scene& w, Entity start) const {
         uint32_t d = 0;
         Entity cur = start;
         const uint32_t hopLimit = static_cast<uint32_t>(w.slots.size());
 
         for (uint32_t hops = 0; hops < hopLimit; ++hops) {
-            if (!w.has<Hierarchy_>(cur))
+            if (!w.has<Hierarchy>(cur))
                 return d;
 
-            const Entity p = w.get<Hierarchy_>(cur).parent;
-            if (!w.isValid(p) || !w.has<Transform_>(p))
+            const Entity p = w.get<Hierarchy>(cur).parent;
+            if (!w.isValid(p) || !w.has<Transform>(p))
                 return d;
             if (p.idx == start.idx)
                 return d;

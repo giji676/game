@@ -13,8 +13,8 @@
 class EditorPanel;
 class IBehaviour;
 class UI;
-class World;
-struct Transform_;
+class Scene;
+struct Transform;
 
 // Reusable inspector card list for IScript / IComponent (and future IBehaviour types).
 // Each card shows the type name plus INSPECT() fields (bool checkbox, numbers as inputs).
@@ -22,7 +22,7 @@ class BehaviourListView {
 public:
     void bind(UI& ui, UIElementID parentId, const char* title);
     void update(
-        World& world,
+        Scene& scene,
         const std::vector<IBehaviour*>& items,
         bool editable,
         Entity draggingId,
@@ -52,14 +52,14 @@ private:
     void syncCard(
         Card& card,
         IBehaviour& behaviour,
-        World& world,
+        Scene& scene,
         bool editable,
         Entity draggingId,
         Entity droppedId);
     void syncFieldRow(
         FieldRow& row,
         const InspectField& field,
-        World& world,
+        Scene& scene,
         bool editable,
         Entity draggingId,
         Entity droppedId);
@@ -84,9 +84,9 @@ public:
         UIElementID parentId,
         std::function<void(GizmoSpace)> onSpaceChange);
     void update(
-        Transform_& transform,
+        Transform& transform,
         Entity entity,
-        World& world,
+        Scene& scene,
         bool editable,
         GizmoSpace space);
     void setEditable(bool editable);
@@ -95,9 +95,9 @@ public:
 private:
     bool parseFloat(const std::string& text, float& out) const;
     void applyPendingEdits(
-        Transform_& transform,
+        Transform& transform,
         Entity entity,
-        World& world,
+        Scene& scene,
         GizmoSpace space);
 
     struct AxisFields {
@@ -137,7 +137,7 @@ public:
         draggingObjectId_ = draggingId;
         droppedObjectId_ = droppedId;
     }
-    void update(World& world);
+    void update(Scene& scene);
 
 private:
     void setLabelText(UIElementID id, const char* value) const;

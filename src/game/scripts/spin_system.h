@@ -1,10 +1,10 @@
 #pragma once
 
-#include "engine/isystem.h"
-#include "engine/world.h"
+#include "engine/systems/isystem.h"
+#include "engine/scene.h"
 
 struct SpinSystem : ISystem {
-    void update(World& w, float dt) override {
+    void update(Scene& w, float dt) override {
         if (!w.tagRegistry.hasName("spin"))
             return;
 
@@ -14,10 +14,10 @@ struct SpinSystem : ISystem {
                 continue;
 
             const Entity e = {idx, w.slots[idx].gen};
-            if (!w.has<Transform_>(e))
+            if (!w.has<Transform>(e))
                 continue;
 
-            Transform_& transform = w.get<Transform_>(e);
+            Transform& transform = w.get<Transform>(e);
             transform.rotation.y += dt * 45.f;
         }
     }

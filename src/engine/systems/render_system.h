@@ -8,28 +8,28 @@
 #include "engine/frustrum.h"
 #include "engine/renderer/debug_renderer.h"
 #include "engine/renderer/renderer.h"
-#include "engine/world.h"
+#include "engine/scene.h"
 
 struct RenderSystem {
     std::vector<RenderCommand> commands;
     size_t lastSize = 0;
 
-    void update(World& w, const Frustum& frustum) {
+    void update(Scene& w, const Frustum& frustum) {
         commands.clear();
         commands.reserve(lastSize);
 
         Engine& engine = ENGINE();
 
-        for (uint32_t idx : w.entitiesWith<Object_>()) {
+        for (uint32_t idx : w.entitiesWith<Object>()) {
             if (!w.slots[idx].alive)
                 continue;
 
             const Entity e = {idx, w.slots[idx].gen};
-            if (!w.has<Transform_>(e))
+            if (!w.has<Transform>(e))
                 continue;
 
-            const Object_& object = w.get<Object_>(e);
-            const glm::mat4& world = w.get<Transform_>(e).worldMatrix;
+            const Object& object = w.get<Object>(e);
+            const glm::mat4& world = w.get<Transform>(e).worldMatrix;
 
             if (object.model) {
                 glm::vec3 wMin, wMax;

@@ -7,7 +7,7 @@
 #include "engine/ui.h"
 #include "engine/ui/style.h"
 #include "engine/utils/geometry.h"
-#include "engine/world.h"
+#include "engine/scene.h"
 
 #include <algorithm>
 #include <cmath>
@@ -23,11 +23,11 @@ constexpr float kDragThresholdPx = 4.f;
 constexpr float kEdgeBandRatio = 0.25f;
 constexpr float kDropLineHeight = 2.f;
 
-std::string entityLabel(const World& world, Entity e) {
-    if (e == world.root)
+std::string entityLabel(const Scene& scene, Entity e) {
+    if (e == scene.root)
         return "Scene";
-    if (world.has<Object_>(e)) {
-        const Object_& obj = world.get<Object_>(e);
+    if (scene.has<Object>(e)) {
+        const Object& obj = scene.get<Object>(e);
         if (!obj.name.empty())
             return obj.name;
     }
@@ -60,7 +60,7 @@ void HierarchyPanel::bind(UI& ui, EditorPanel& panel) {
 }
 
 void HierarchyPanel::collectEntries(
-        World& world,
+        Scene& scene,
         Entity id,
         int depth,
         bool isLastSibling,
@@ -68,8 +68,8 @@ void HierarchyPanel::collectEntries(
         std::vector<Entry>& out) const
 {
     static const std::vector<Entity> kEmptyChildren;
-    const std::vector<Entity>& children = world.has<Hierarchy_>(id)
-        ? world.get<Hierarchy_>(id).children
+    const std::vector<Entity>& children = scene.has<Hierarchy>(id)
+        ? scene.get<Hierarchy>(id).children
         : kEmptyChildren;
     const bool hasChildren = !children.empty();
     const bool isExpanded = hasChildren && collapsedIds_.find(id) == collapsedIds_.end();
@@ -93,7 +93,7 @@ void HierarchyPanel::collectEntries(
     for (size_t i = 0; i < children.size(); ++i) {
         const bool childIsLast = (i + 1 == children.size());
         collectEntries(
-            world,
+            scene,
             children[i],
             depth + 1,
             childIsLast,
@@ -102,7 +102,7 @@ void HierarchyPanel::collectEntries(
     }
 }
 
-uint64_t HierarchyPanel::sceneSignature(World& world) const {
+uint64_t HierarchyPanel::sceneSignature(Scene& scene) const {
     uint64_t hash = 1469598103934665603ull;
     auto mix = [&](uint64_t value) {
         hash ^= value + 0x9e3779b97f4a7c15ull + (hash << 6) + (hash >> 2);
@@ -116,26 +116,26 @@ uint64_t HierarchyPanel::sceneSignature(World& world) const {
         mixEntity(id);
         Entity parent = Entity::invalid();
         size_t childCount = 0;
-        if (world.has<Hierarchy_>(id)) {
-            const Hierarchy_& h = world.get<Hierarchy_>(id);
+        if (scene.has<Hierarchy>(id)) {
+            const Hierarchy& h = scene.get<Hierarchy>(id);
             parent = h.parent;
             childCount = h.children.size();
         }
         mixEntity(parent);
         mix(static_cast<uint64_t>(childCount));
         std::string name;
-        if (world.has<Object_>(id))
-            name = world.get<Object_>(id).name;
+        if (scene.has<Object>(id))
+            name = scene.get<Object>(id).name;
         mix(static_cast<uint64_t>(name.size()));
         for (unsigned char c : name)
             mix(static_cast<uint64_t>(c));
         mix(collapsedIds_.count(id) ? 1ull : 0ull);
-        if (world.has<Hierarchy_>(id)) {
-            for (Entity child : world.get<Hierarchy_>(id).children)
+        if (scene.has<Hierarchy>(id)) {
+            for (Entity child : scene.get<Hierarchy>(id).children)
                 walk(child);
         }
     };
-    walk(world.root);
+    walk(scene.root);
     mixEntity(selectedId_);
     mixEntity(draggingId_);
     mixEntity(activeDrop_.targetId);
@@ -273,25 +273,25 @@ void HierarchyPanel::styleLabel(UIElementID id, bool selected, bool dropHover) c
     btn->pressedStyle.textColor = {0.95f, 0.95f, 0.97f, 1.f};
 }
 
-void HierarchyPanel::syncObjectDebug(World& world) const {
+void HierarchyPanel::syncObjectDebug(Scene& scene) const {
     std::function<void(Entity)> walk = [&](Entity id) {
-        if (world.has<Object_>(id))
-            world.get<Object_>(id).debug = (id == selectedId_);
-        if (world.has<Hierarchy_>(id)) {
-            for (Entity child : world.get<Hierarchy_>(id).children)
+        if (scene.has<Object>(id))
+            scene.get<Object>(id).debug = (id == selectedId_);
+        if (scene.has<Hierarchy>(id)) {
+            for (Entity child : scene.get<Hierarchy>(id).children)
                 walk(child);
         }
     };
-    walk(world.root);
+    walk(scene.root);
 }
 
-int HierarchyPanel::siblingIndex(World& world, Entity id) const {
-    if (!world.has<Hierarchy_>(id))
+int HierarchyPanel::siblingIndex(Scene& scene, Entity id) const {
+    if (!scene.has<Hierarchy>(id))
         return -1;
-    const Entity parent = world.get<Hierarchy_>(id).parent;
-    if (!world.isValid(parent) || !world.has<Hierarchy_>(parent))
+    const Entity parent = scene.get<Hierarchy>(id).parent;
+    if (!scene.isValid(parent) || !scene.has<Hierarchy>(parent))
         return -1;
-    const auto& siblings = world.get<Hierarchy_>(parent).children;
+    const auto& siblings = scene.get<Hierarchy>(parent).children;
     for (size_t i = 0; i < siblings.size(); ++i) {
         if (siblings[i] == id)
             return static_cast<int>(i);
@@ -300,41 +300,41 @@ int HierarchyPanel::siblingIndex(World& world, Entity id) const {
 }
 
 bool HierarchyPanel::canDropOn(
-        World& world,
+        Scene& scene,
         Entity draggedId,
         const DropTarget& drop) const
 {
     if (!drop.valid || drop.kind == DropKind::None || drop.targetId == Entity::invalid())
         return false;
-    if (draggedId == Entity::invalid() || draggedId == world.root)
+    if (draggedId == Entity::invalid() || draggedId == scene.root)
         return false;
     if (drop.targetId == draggedId)
         return false;
 
     if (drop.kind == DropKind::Reparent) {
-        if (world.isDescendant(draggedId, drop.targetId))
+        if (scene.isDescendant(draggedId, drop.targetId))
             return false;
         return true;
     }
 
     // Insert before/after is sibling placement under target's parent.
-    if (drop.targetId == world.root)
+    if (drop.targetId == scene.root)
         return false;
 
-    if (!world.has<Hierarchy_>(drop.targetId))
+    if (!scene.has<Hierarchy>(drop.targetId))
         return false;
-    const Entity newParent = world.get<Hierarchy_>(drop.targetId).parent;
-    if (newParent == draggedId || world.isDescendant(draggedId, newParent))
+    const Entity newParent = scene.get<Hierarchy>(drop.targetId).parent;
+    if (newParent == draggedId || scene.isDescendant(draggedId, newParent))
         return false;
     return true;
 }
 
 HierarchyPanel::DropTarget HierarchyPanel::hitTestDrop(
-        World& world,
+        Scene& scene,
         glm::vec2 mouse) const
 {
     DropTarget result;
-    const Entity rootId = world.root;
+    const Entity rootId = scene.root;
 
     for (const Row& row : rows_) {
         if (row.objectId == Entity::invalid())
@@ -372,29 +372,29 @@ HierarchyPanel::DropTarget HierarchyPanel::hitTestDrop(
     return result;
 }
 
-void HierarchyPanel::applyDrop(World& world, Entity draggedId, const DropTarget& drop) {
-    if (!canDropOn(world, draggedId, drop))
+void HierarchyPanel::applyDrop(Scene& scene, Entity draggedId, const DropTarget& drop) {
+    if (!canDropOn(scene, draggedId, drop))
         return;
 
     if (drop.kind == DropKind::Reparent) {
-        world.reparent(draggedId, drop.targetId);
+        scene.reparent(draggedId, drop.targetId);
         collapsedIds_.erase(drop.targetId);
         return;
     }
 
-    if (!world.has<Hierarchy_>(drop.targetId))
+    if (!scene.has<Hierarchy>(drop.targetId))
         return;
-    const Entity newParent = world.get<Hierarchy_>(drop.targetId).parent;
-    int index = siblingIndex(world, drop.targetId);
+    const Entity newParent = scene.get<Hierarchy>(drop.targetId).parent;
+    int index = siblingIndex(scene, drop.targetId);
     if (index < 0)
         return;
     if (drop.kind == DropKind::InsertAfter)
         ++index;
 
-    world.reparent(draggedId, newParent, index);
+    scene.reparent(draggedId, newParent, index);
 }
 
-void HierarchyPanel::syncDropPreview(World& world) {
+void HierarchyPanel::syncDropPreview(Scene& scene) {
     if (dropLineId_ == INVALID_UI_ELEMENT)
         return;
 
@@ -429,10 +429,10 @@ void HierarchyPanel::syncDropPreview(World& world) {
     }
 }
 
-void HierarchyPanel::updateDrag(World& world) {
+void HierarchyPanel::updateDrag(Scene& scene) {
     Input& input = ENGINE().input;
     const glm::vec2 mouse = input.mousePosition();
-    const Entity rootId = world.root;
+    const Entity rootId = scene.root;
     releasedDragId_ = Entity::invalid();
 
     if (input.pressed(MouseAction::Left)) {
@@ -461,8 +461,8 @@ void HierarchyPanel::updateDrag(World& world) {
     }
 
     if (draggingId_ != Entity::invalid() && input.down(MouseAction::Left)) {
-        DropTarget drop = hitTestDrop(world, mouse);
-        if (!canDropOn(world, draggingId_, drop))
+        DropTarget drop = hitTestDrop(scene, mouse);
+        if (!canDropOn(scene, draggingId_, drop))
             drop = {};
         activeDrop_ = drop;
     }
@@ -474,7 +474,7 @@ void HierarchyPanel::updateDrag(World& world) {
             const bool overHierarchy = pointInRect(
                 mouse, content.transform.position, content.transform.size);
             if (overHierarchy && activeDrop_.valid)
-                applyDrop(world, draggingId_, activeDrop_);
+                applyDrop(scene, draggingId_, activeDrop_);
         } else if (dragCandidateId_ != Entity::invalid() && !dragMoved_) {
             selectedId_ = dragCandidateId_;
         }
@@ -493,9 +493,9 @@ void HierarchyPanel::updateDrag(World& world) {
     }
 }
 
-void HierarchyPanel::rebuildRows(World& world) {
+void HierarchyPanel::rebuildRows(Scene& scene) {
     std::vector<Entry> entries;
-    collectEntries(world, world.root, 0, true, {}, entries);
+    collectEntries(scene, scene.root, 0, true, {}, entries);
     ensureRowCount(entries.size());
 
     for (size_t i = 0; i < rows_.size(); ++i) {
@@ -512,8 +512,8 @@ void HierarchyPanel::rebuildRows(World& world) {
 
         const Entity capturedId = entry.id;
         size_t childCount = 0;
-        if (world.has<Hierarchy_>(entry.id))
-            childCount = world.get<Hierarchy_>(entry.id).children.size();
+        if (scene.has<Hierarchy>(entry.id))
+            childCount = scene.get<Hierarchy>(entry.id).children.size();
 
         styleToggle(rows_[i].toggleId, entry.hasChildren, entry.isExpanded);
         auto* toggle = dynamic_cast<Button*>(ui_->get(rows_[i].toggleId).widget.get());
@@ -533,7 +533,7 @@ void HierarchyPanel::rebuildRows(World& world) {
 
         auto* label = dynamic_cast<Button*>(ui_->get(rows_[i].labelId).widget.get());
         if (label) {
-            label->text = treePrefix(entry) + entityLabel(world, entry.id);
+            label->text = treePrefix(entry) + entityLabel(scene, entry.id);
             if (entry.hasChildren)
                 label->text += " (" + std::to_string(childCount) + ")";
 
@@ -550,15 +550,15 @@ void HierarchyPanel::rebuildRows(World& world) {
         applyRowMetrics(rows_[i]);
     }
 
-    syncDropPreview(world);
+    syncDropPreview(scene);
 }
 
-void HierarchyPanel::update(World& world, bool interactive) {
+void HierarchyPanel::update(Scene& scene, bool interactive) {
     if (!built_ || !ui_ || contentId_ == INVALID_UI_ELEMENT)
         return;
 
     if (interactive) {
-        updateDrag(world);
+        updateDrag(scene);
     } else {
         releasedDragId_ = Entity::invalid();
         draggingId_ = Entity::invalid();
@@ -567,13 +567,13 @@ void HierarchyPanel::update(World& world, bool interactive) {
         activeDrop_ = {};
     }
 
-    const uint64_t signature = sceneSignature(world);
+    const uint64_t signature = sceneSignature(scene);
     if (signature == lastSignature_) {
-        syncDropPreview(world);
+        syncDropPreview(scene);
         return;
     }
 
     lastSignature_ = signature;
-    rebuildRows(world);
-    syncObjectDebug(world);
+    rebuildRows(scene);
+    syncObjectDebug(scene);
 }

@@ -11,13 +11,13 @@
 
 class EditorPanel;
 class UI;
-class World;
+class Scene;
 
-// Tree view of World entities, parented into an EditorPanel content region.
+// Tree view of Scene entities, parented into an EditorPanel content region.
 class HierarchyPanel {
 public:
     void bind(UI& ui, EditorPanel& panel);
-    void update(World& world, bool interactive = true);
+    void update(Scene& scene, bool interactive = true);
 
     Entity selectedId() const { return selectedId_; }
     void setSelectedId(Entity id) { selectedId_ = id; }
@@ -56,9 +56,9 @@ private:
         bool valid = false;
     };
 
-    void rebuildRows(World& world);
+    void rebuildRows(Scene& scene);
     void collectEntries(
-        World& world,
+        Scene& scene,
         Entity id,
         int depth,
         bool isLastSibling,
@@ -68,15 +68,15 @@ private:
     void applyRowMetrics(Row& row) const;
     void styleToggle(UIElementID id, bool hasChildren, bool expanded) const;
     void styleLabel(UIElementID id, bool selected, bool dropHover = false) const;
-    void syncObjectDebug(World& world) const;
-    void updateDrag(World& world);
-    DropTarget hitTestDrop(World& world, glm::vec2 mouse) const;
-    bool canDropOn(World& world, Entity draggedId, const DropTarget& drop) const;
-    void applyDrop(World& world, Entity draggedId, const DropTarget& drop);
-    void syncDropPreview(World& world);
-    int siblingIndex(World& world, Entity id) const;
+    void syncObjectDebug(Scene& scene) const;
+    void updateDrag(Scene& scene);
+    DropTarget hitTestDrop(Scene& scene, glm::vec2 mouse) const;
+    bool canDropOn(Scene& scene, Entity draggedId, const DropTarget& drop) const;
+    void applyDrop(Scene& scene, Entity draggedId, const DropTarget& drop);
+    void syncDropPreview(Scene& scene);
+    int siblingIndex(Scene& scene, Entity id) const;
     std::string treePrefix(const Entry& entry) const;
-    uint64_t sceneSignature(World& world) const;
+    uint64_t sceneSignature(Scene& scene) const;
 
     UI* ui_ = nullptr;
     UIElementID contentId_ = INVALID_UI_ELEMENT;

@@ -3,7 +3,7 @@
 #include <SDL2/SDL_events.h>
 
 #include "camera.h"
-#include "world.h"
+#include "scene.h"
 #include "raycasting.h"
 #include "ui.h"
 #include "input.h"
@@ -33,7 +33,7 @@ public:
     Renderer renderer;
     UIRenderer uiRenderer;
     DebugRenderer debugRenderer;
-    World world;
+    Scene scene;
     // Laid out in game space, drawn inside the game viewport.
     UI gameUi;
     // Laid out in window space, drawn over the whole window.

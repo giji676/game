@@ -7,7 +7,7 @@
 #include "engine/frustrum.h"
 #include "engine/icomponent.h"
 #include "engine/iscript.h"
-#include "engine/isystem.h"
+#include "engine/systems/isystem.h"
 #include "engine/renderer/renderer.h"
 
 #include <cassert>
@@ -25,7 +25,7 @@ struct EntitySlot {
     uint64_t comp_mask = 0;
 };
 
-struct Transform_ {
+struct Transform {
     glm::vec3 position{0.f};
     glm::vec3 rotation{0.f};
     glm::vec3 scale{1.f};
@@ -34,13 +34,13 @@ struct Transform_ {
     glm::mat4 worldInvMatrix{1.f};
 };
 
-struct Object_ {
+struct Object {
     std::string name;
     Model* model = nullptr;
     bool debug = false;
 };
 
-struct Hierarchy_ {
+struct Hierarchy {
     Entity parent = Entity::invalid();
     std::vector<Entity> children;
 };
@@ -62,11 +62,11 @@ struct TagRegistry {
     const std::vector<uint32_t>& entities(uint32_t tagId) const;
 };
 
-struct Tag_ {
+struct Tag {
     std::vector<uint32_t> ids;
 };
 
-struct IBehaviour_ {
+struct Behaviours {
     Entity entity = Entity::invalid();
     std::vector<std::unique_ptr<IScript>> scripts;
     std::vector<std::unique_ptr<IComponent>> components;
@@ -140,7 +140,7 @@ struct IBehaviour_ {
     }
 };
 
-class World {
+class Scene {
 public:
     std::vector<EntitySlot> slots;
     std::vector<uint32_t> freeIndices;
@@ -190,11 +190,11 @@ private:
     template <typename T>
     friend struct ComponentTraits;
 
-    ComponentPool<Transform_> transforms_;
-    ComponentPool<Object_> objects_;
-    ComponentPool<Hierarchy_> hierarchies_;
-    ComponentPool<Tag_> tags_;
-    ComponentPool<IBehaviour_> behaviours_;
+    ComponentPool<Transform> transforms_;
+    ComponentPool<Object> objects_;
+    ComponentPool<Hierarchy> hierarchies_;
+    ComponentPool<Tag> tags_;
+    ComponentPool<Behaviours> behaviours_;
 
     ComponentRegistry dynamicComponents_;
     std::vector<std::unique_ptr<ISystem>> systems_;
@@ -215,24 +215,24 @@ private:
 template <typename T>
 struct ComponentTraits {
     static constexpr uint64_t mask = 0;
-    static ComponentPool<T>& pool(World& w);
+    static ComponentPool<T>& pool(Scene& w);
 };
 
-#define WORLD_REGISTER_COMPONENT(Type, Member, Mask)                    \
+#define SCENE_REGISTER_COMPONENT(Type, Member, Mask)                    \
     template <>                                                         \
     struct ComponentTraits<Type> {                                      \
         static constexpr uint64_t mask = Mask;                          \
-        static ComponentPool<Type>& pool(World& w) { return w.Member; } \
+        static ComponentPool<Type>& pool(Scene& w) { return w.Member; } \
     };
 
-WORLD_REGISTER_COMPONENT(Transform_, transforms_, (1ull << 0))
-WORLD_REGISTER_COMPONENT(Object_, objects_, (1ull << 1))
-WORLD_REGISTER_COMPONENT(Hierarchy_, hierarchies_, (1ull << 2))
-WORLD_REGISTER_COMPONENT(Tag_, tags_, (1ull << 3))
-WORLD_REGISTER_COMPONENT(IBehaviour_, behaviours_, (1ull << 4))
+SCENE_REGISTER_COMPONENT(Transform, transforms_, (1ull << 0))
+SCENE_REGISTER_COMPONENT(Object, objects_, (1ull << 1))
+SCENE_REGISTER_COMPONENT(Hierarchy, hierarchies_, (1ull << 2))
+SCENE_REGISTER_COMPONENT(Tag, tags_, (1ull << 3))
+SCENE_REGISTER_COMPONENT(Behaviours, behaviours_, (1ull << 4))
 
 template <typename T>
-uint64_t World::maskFor() const {
+uint64_t Scene::maskFor() const {
     if constexpr (ComponentTraits<T>::mask != 0)
         return ComponentTraits<T>::mask;
     if (!dynamicComponents_.isRegistered<T>())
@@ -241,7 +241,7 @@ uint64_t World::maskFor() const {
 }
 
 template <typename T>
-ComponentPool<T>& World::poolFor() {
+ComponentPool<T>& Scene::poolFor() {
     if constexpr (ComponentTraits<T>::mask != 0)
         return ComponentTraits<T>::pool(*this);
     else
@@ -249,15 +249,15 @@ ComponentPool<T>& World::poolFor() {
 }
 
 template <typename T>
-const ComponentPool<T>& World::poolFor() const {
+const ComponentPool<T>& Scene::poolFor() const {
     if constexpr (ComponentTraits<T>::mask != 0)
-        return ComponentTraits<T>::pool(const_cast<World&>(*this));
+        return ComponentTraits<T>::pool(const_cast<Scene&>(*this));
     else
         return dynamicComponents_.pool<T>();
 }
 
 template <typename T>
-void World::registerComponent() {
+void Scene::registerComponent() {
     static_assert(
         ComponentTraits<T>::mask == 0,
         "Type is already a static engine component");
@@ -265,24 +265,24 @@ void World::registerComponent() {
 }
 
 template <typename T>
-const std::vector<uint32_t>& World::entitiesWith() const {
+const std::vector<uint32_t>& Scene::entitiesWith() const {
     return poolFor<T>().entities;
 }
 
 template <typename T>
-T& World::get(const Entity& e) {
+T& Scene::get(const Entity& e) {
     assert(isValid(e));
     return poolFor<T>().at(e.idx);
 }
 
 template <typename T>
-const T& World::get(const Entity& e) const {
+const T& Scene::get(const Entity& e) const {
     assert(isValid(e));
     return poolFor<T>().at(e.idx);
 }
 
 template <typename T>
-bool World::has(const Entity& e) const {
+bool Scene::has(const Entity& e) const {
     if (!isValid(e))
         return false;
     const uint64_t mask = maskFor<T>();
@@ -292,7 +292,7 @@ bool World::has(const Entity& e) const {
 }
 
 template <typename T>
-T& World::add(const Entity& e) {
+T& Scene::add(const Entity& e) {
     assert(isValid(e));
     if constexpr (ComponentTraits<T>::mask == 0)
         assert(dynamicComponents_.isRegistered<T>() && "Call registerComponent<T>() first");
@@ -308,12 +308,12 @@ T& World::add(const Entity& e) {
     if (!already)
         pool.track(e.idx);
 
-    if constexpr (std::is_same_v<T, IBehaviour_>)
+    if constexpr (std::is_same_v<T, Behaviours>)
         pool.at(e.idx).entity = e;
 
     return pool.at(e.idx);
 }
 
-bool hasTag(const Tag_& t, uint32_t id);
-void addTag(Tag_& t, uint32_t id);
-void removeTag(Tag_& t, uint32_t id);
+bool hasTag(const Tag& t, uint32_t id);
+void addTag(Tag& t, uint32_t id);
+void removeTag(Tag& t, uint32_t id);

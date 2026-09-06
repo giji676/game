@@ -11,9 +11,9 @@ RaycastHit Raycasting::castRay(const Ray& ray) {
     PROFILE_SCOPE("Raycasting::castRay");
     RaycastHit hit;
 
-    World& world = ENGINE().world;
-    if (world.isValid(world.root))
-        checkIntersect(world.root, ray, hit);
+    Scene& scene = ENGINE().scene;
+    if (scene.isValid(scene.root))
+        checkIntersect(scene.root, ray, hit);
 
     return hit;
 }
@@ -23,13 +23,13 @@ void Raycasting::checkIntersect(
     const Ray& ray,
     RaycastHit& bestHit)
 {
-    World& world = ENGINE().world;
-    if (!world.isValid(e))
+    Scene& scene = ENGINE().scene;
+    if (!scene.isValid(e))
         return;
 
-    if (world.has<Object_>(e) && world.has<Transform_>(e)) {
-        const Object_& object = world.get<Object_>(e);
-        const Transform_& transform = world.get<Transform_>(e);
+    if (scene.has<Object>(e) && scene.has<Transform>(e)) {
+        const Object& object = scene.get<Object>(e);
+        const Transform& transform = scene.get<Transform>(e);
         const glm::mat4& worldMat = transform.worldMatrix;
 
         if (object.model) {
@@ -76,10 +76,10 @@ void Raycasting::checkIntersect(
         }
     }
 
-    if (!world.has<Hierarchy_>(e))
+    if (!scene.has<Hierarchy>(e))
         return;
 
-    for (const Entity& child : world.get<Hierarchy_>(e).children)
+    for (const Entity& child : scene.get<Hierarchy>(e).children)
         checkIntersect(child, ray, bestHit);
 }
 

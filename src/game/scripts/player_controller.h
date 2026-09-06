@@ -4,7 +4,7 @@
 
 #include "engine/iscript.h"
 #include "engine/engine.h"
-#include "engine/world.h"
+#include "engine/scene.h"
 #include "game/world.h"
 
 class PlayerController : public IScript {
@@ -32,7 +32,7 @@ public:
 
     void update() override {
         Engine& engine = ENGINE();
-        if (!engine.world.isValid(entity) || !engine.world.has<Transform_>(entity))
+        if (!engine.scene.isValid(entity) || !engine.scene.has<Transform>(entity))
             return;
 
         Input& input = engine.input;
@@ -46,7 +46,7 @@ public:
         const glm::vec3 worldUp(0.f, 1.f, 0.f);
         const glm::vec3 right = glm::normalize(glm::cross(look, worldUp));
 
-        Transform_& transform = engine.world.get<Transform_>(entity);
+        Transform& transform = engine.scene.get<Transform>(entity);
         glm::vec3 pos = transform.position;
 
         const float moveSpeed = speed * dt;

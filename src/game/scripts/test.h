@@ -3,7 +3,7 @@
 #include "engine/iscript.h"
 #include "engine/engine.h"
 #include "engine/object_ref.h"
-#include "engine/world.h"
+#include "engine/scene.h"
 
 class Test : public IScript {
 public:
@@ -17,14 +17,14 @@ public:
     const char* typeName() const override { return "Test"; }
 
     void update() override {
-        World& world = ENGINE().world;
+        Scene& scene = ENGINE().scene;
         Entity e = target.id;
-        if (!world.isValid(e))
+        if (!scene.isValid(e))
             e = entity;
-        if (!world.isValid(e) || !world.has<Transform_>(e))
+        if (!scene.isValid(e) || !scene.has<Transform>(e))
             return;
 
-        Transform_& t = world.get<Transform_>(e);
+        Transform& t = scene.get<Transform>(e);
         t.rotation.y += 45.f * DT();
     }
 };

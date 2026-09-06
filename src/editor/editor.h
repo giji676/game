@@ -15,8 +15,8 @@
 #include "engine/raycasting.h"
 
 class Engine;
-struct Object_;
-struct Transform_;
+struct Object;
+struct Transform;
 
 enum class EditorPlayState {
     Edit,
@@ -163,7 +163,7 @@ private:
 
     bool makeViewportRay(glm::vec2 mouse, Ray& outRay) const;
     void frameSelection();
-    float frameExtentForEntity(const Object_& obj, const Transform_& transform) const;
+    float frameExtentForEntity(const Object& obj, const Transform& transform) const;
     float gizmoWorldSize(const glm::vec3& origin) const;
     GizmoHandle pickGizmoHandle(
         GizmoMode mode,

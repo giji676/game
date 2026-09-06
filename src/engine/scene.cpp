@@ -1,10 +1,10 @@
-#include "world.h"
+#include "scene.h"
 
 #include <algorithm>
 
-#include "engine/ibehaviour_system.h"
-#include "engine/render_system.h"
-#include "engine/transfrom_system.h"
+#include "engine/systems/behaviours_system.h"
+#include "engine/systems/render_system.h"
+#include "engine/systems/transform_system.h"
 
 uint32_t TagRegistry::byName(const std::string& name) const {
     const auto it = byName_.find(name);
@@ -70,26 +70,26 @@ const std::vector<uint32_t>& TagRegistry::entities(uint32_t tagId) const {
     return entitiesByTag_[tagId];
 }
 
-bool hasTag(const Tag_& t, uint32_t id) {
+bool hasTag(const Tag& t, uint32_t id) {
     return std::find(t.ids.begin(), t.ids.end(), id) != t.ids.end();
 }
 
-void addTag(Tag_& t, uint32_t id) {
+void addTag(Tag& t, uint32_t id) {
     if (!hasTag(t, id))
         t.ids.push_back(id);
 }
 
-void removeTag(Tag_& t, uint32_t id) {
+void removeTag(Tag& t, uint32_t id) {
     auto it = std::find(t.ids.begin(), t.ids.end(), id);
     if (it != t.ids.end())
         t.ids.erase(it);
 }
 
-void World::addTag(const Entity& e, uint32_t tagId) {
+void Scene::addTag(const Entity& e, uint32_t tagId) {
     assert(isValid(e));
     assert(tagRegistry.isValidId(tagId));
 
-    Tag_& tags = has<Tag_>(e) ? get<Tag_>(e) : add<Tag_>(e);
+    Tag& tags = has<Tag>(e) ? get<Tag>(e) : add<Tag>(e);
     if (hasTag(tags, tagId))
         return;
 
@@ -97,11 +97,11 @@ void World::addTag(const Entity& e, uint32_t tagId) {
     tagRegistry.trackEntity(tagId, e.idx);
 }
 
-void World::removeTag(const Entity& e, uint32_t tagId) {
-    if (!isValid(e) || !has<Tag_>(e))
+void Scene::removeTag(const Entity& e, uint32_t tagId) {
+    if (!isValid(e) || !has<Tag>(e))
         return;
 
-    Tag_& tags = get<Tag_>(e);
+    Tag& tags = get<Tag>(e);
     if (!hasTag(tags, tagId))
         return;
 
@@ -109,21 +109,21 @@ void World::removeTag(const Entity& e, uint32_t tagId) {
     tagRegistry.untrackEntity(tagId, e.idx);
 }
 
-void World::init() {
+void Scene::init() {
     root = create(Entity::invalid());
-    Object_& rootObj = add<Object_>(root);
+    Object& rootObj = add<Object>(root);
     rootObj.name = "Scene";
 }
 
-void World::registerSystem(std::unique_ptr<ISystem> system) {
+void Scene::registerSystem(std::unique_ptr<ISystem> system) {
     systems_.push_back(std::move(system));
 }
 
-void World::update(float dt, bool runBehaviours) {
+void Scene::update(float dt, bool runBehaviours) {
     for (auto& system : systems_)
         system->update(*this, dt);
 
-    IBehaviourSystem behaviours;
+    BehavioursSystem behaviours;
     if (runBehaviours)
         behaviours.update(*this);
 
@@ -134,7 +134,7 @@ void World::update(float dt, bool runBehaviours) {
         behaviours.lateUpdate(*this);
 }
 
-void World::collectRenderCommands(
+void Scene::collectRenderCommands(
     const Frustum& frustum,
     std::vector<RenderCommand>& out)
 {
@@ -145,7 +145,7 @@ void World::collectRenderCommands(
     out.insert(out.end(), rs.commands.begin(), rs.commands.end());
 }
 
-void World::ensureSlotCapacity(uint32_t idx) {
+void Scene::ensureSlotCapacity(uint32_t idx) {
     const size_t need = static_cast<size_t>(idx) + 1;
     if (slots.size() < need)
         slots.resize(need);
@@ -153,11 +153,11 @@ void World::ensureSlotCapacity(uint32_t idx) {
     transforms_.ensure(idx);
 }
 
-Entity World::create() {
+Entity Scene::create() {
     return create(Entity::invalid());
 }
 
-Entity World::create(Entity parent) {
+Entity Scene::create(Entity parent) {
     uint32_t idx;
 
     if (freeIndices.empty())
@@ -178,9 +178,9 @@ Entity World::create(Entity parent) {
 
     slots[idx].alive = true;
     slots[idx].comp_mask = 0;
-    add<Transform_>(e);
+    add<Transform>(e);
 
-    Hierarchy_& h = add<Hierarchy_>(e);
+    Hierarchy& h = add<Hierarchy>(e);
     h.children.clear();
 
     // Creating the scene root: no parent, do not touch any parent list.
@@ -195,14 +195,14 @@ Entity World::create(Entity parent) {
 
     h.parent = parent;
 
-    Hierarchy_& parentHierarchy = add<Hierarchy_>(parent);
+    Hierarchy& parentHierarchy = add<Hierarchy>(parent);
     parentHierarchy.children.push_back(e);
 
     return e;
 }
 
-void World::clearEntityComponents(uint32_t idx) {
-    if ((slots[idx].comp_mask & ComponentTraits<Tag_>::mask) != 0) {
+void Scene::clearEntityComponents(uint32_t idx) {
+    if ((slots[idx].comp_mask & ComponentTraits<Tag>::mask) != 0) {
         for (uint32_t tagId : tags_.at(idx).ids)
             tagRegistry.untrackEntity(tagId, idx);
     }
@@ -221,7 +221,7 @@ void World::clearEntityComponents(uint32_t idx) {
     dynamicComponents_.clearEntity(idx);
 }
 
-void World::destroy(Entity& e) {
+void Scene::destroy(Entity& e) {
     if (!isValid(e))
         return;
 
@@ -230,10 +230,10 @@ void World::destroy(Entity& e) {
 
     const uint32_t idx = e.idx;
 
-    if (has<Hierarchy_>(e)) {
-        Hierarchy_& h = get<Hierarchy_>(e);
-        if (isValid(h.parent) && has<Hierarchy_>(h.parent)) {
-            Hierarchy_& parentH = get<Hierarchy_>(h.parent);
+    if (has<Hierarchy>(e)) {
+        Hierarchy& h = get<Hierarchy>(e);
+        if (isValid(h.parent) && has<Hierarchy>(h.parent)) {
+            Hierarchy& parentH = get<Hierarchy>(h.parent);
             auto it = std::find_if(parentH.children.begin(), parentH.children.end(),
                 [&](const Entity& child) { return child.idx == idx; });
             if (it != parentH.children.end())
@@ -257,23 +257,23 @@ void World::destroy(Entity& e) {
     e = Entity::invalid();
 }
 
-bool World::isValid(const Entity& e) const {
+bool Scene::isValid(const Entity& e) const {
     return e.idx != UINT32_MAX &&
         e.idx < slots.size() &&
         e.gen == slots[e.idx].gen &&
         slots[e.idx].alive;
 }
 
-bool World::isDescendant(Entity ancestor, Entity node) const {
+bool Scene::isDescendant(Entity ancestor, Entity node) const {
     if (!isValid(ancestor) || !isValid(node))
         return false;
 
     Entity cur = node;
     const uint32_t hopLimit = static_cast<uint32_t>(slots.size());
     for (uint32_t hops = 0; hops < hopLimit; ++hops) {
-        if (!has<Hierarchy_>(cur))
+        if (!has<Hierarchy>(cur))
             return false;
-        const Entity parent = get<Hierarchy_>(cur).parent;
+        const Entity parent = get<Hierarchy>(cur).parent;
         if (!isValid(parent))
             return false;
         if (parent == ancestor)
@@ -283,7 +283,7 @@ bool World::isDescendant(Entity ancestor, Entity node) const {
     return false;
 }
 
-void World::reparent(Entity child, Entity newParent, int index) {
+void Scene::reparent(Entity child, Entity newParent, int index) {
     if (!isValid(child) || child == root)
         return;
     if (!isValid(newParent))
@@ -291,14 +291,14 @@ void World::reparent(Entity child, Entity newParent, int index) {
     if (child == newParent || isDescendant(child, newParent))
         return;
 
-    Hierarchy_& childH = has<Hierarchy_>(child) ? get<Hierarchy_>(child) : add<Hierarchy_>(child);
-    Hierarchy_& newParentH =
-        has<Hierarchy_>(newParent) ? get<Hierarchy_>(newParent) : add<Hierarchy_>(newParent);
+    Hierarchy& childH = has<Hierarchy>(child) ? get<Hierarchy>(child) : add<Hierarchy>(child);
+    Hierarchy& newParentH =
+        has<Hierarchy>(newParent) ? get<Hierarchy>(newParent) : add<Hierarchy>(newParent);
 
     Entity oldParent = childH.parent;
     int oldIndex = -1;
-    if (isValid(oldParent) && has<Hierarchy_>(oldParent)) {
-        Hierarchy_& oldParentH = get<Hierarchy_>(oldParent);
+    if (isValid(oldParent) && has<Hierarchy>(oldParent)) {
+        Hierarchy& oldParentH = get<Hierarchy>(oldParent);
         auto it = std::find_if(
             oldParentH.children.begin(),
             oldParentH.children.end(),

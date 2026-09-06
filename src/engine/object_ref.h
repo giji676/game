@@ -2,9 +2,9 @@
 
 #include "engine/entity.h"
 
-class World;
+class Scene;
 
-// Unity-style serialized references. Resolve through World when needed.
+// Unity-style serialized references. Resolve through Scene when needed.
 struct EntityRef {
     Entity id = Entity::invalid();
 };

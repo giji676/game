@@ -5,7 +5,7 @@
 #include "game/game.h"
 #include "engine/defines.h"
 #include "engine/profilers/profile_scope.h"
-#include "engine/world.h"
+#include "engine/scene.h"
 #include "game/perlin.h"
 #include "game/scripts/test.h"
 #include "game/scripts/player_controller.h"
@@ -58,7 +58,7 @@ Game::Game(Engine& engine)
 {}
 
 void Game::init() {
-    World& world = engine.world;
+    Scene& scene = engine.scene;
     UI& ui = engine.gameUi;
     setupTerrain();
     setupPlayer();
@@ -72,20 +72,20 @@ void Game::init() {
     sceneShader.setVec3("lightPos", light.pos);
     sceneShader.setVec3("lightColor", light.color);
 
-    world.registerComponent<Gravity_>();
-    world.registerSystem(std::make_unique<SpinSystem>());
-    world.registerSystem(std::make_unique<GravitySystem>());
+    scene.registerComponent<Gravity>();
+    scene.registerSystem(std::make_unique<SpinSystem>());
+    scene.registerSystem(std::make_unique<GravitySystem>());
 
-    Entity e = world.create();
-    Transform_& t = world.get<Transform_>(e);
+    Entity e = scene.create();
+    Transform& t = scene.get<Transform>(e);
     t.position.y = 2.f;
     t.scale = {0.001f, 0.001f, 0.001f};
-    Object_& o = world.add<Object_>(e);
+    Object& o = scene.add<Object>(e);
     o.model = &engine.assets.getModel("car");
     o.name = "ECS ENTITY";
     o.debug = true;
-    world.addTag(e, world.tagRegistry.intern("spin"));
-    Gravity_& gravity = world.add<Gravity_>(e);
+    scene.addTag(e, scene.tagRegistry.intern("spin"));
+    Gravity& gravity = scene.add<Gravity>(e);
     gravity.acceleration = {0.f, -0.2f, 0.f};
 
     Shader& texturedMatShader = engine.assets.getShader("textured_mat");
@@ -443,11 +443,11 @@ void Game::setupTerrain() {
 }
 
 void Game::setupPlayer() {
-    World& world = engine.world;
-    Entity e = world.create();
-    world.add<Object_>(e).name = "Player";
-    world.addTag(e, world.tagRegistry.intern("player"));
-    IBehaviour_& ib = world.add<IBehaviour_>(e);
+    Scene& scene = engine.scene;
+    Entity e = scene.create();
+    scene.add<Object>(e).name = "Player";
+    scene.addTag(e, scene.tagRegistry.intern("player"));
+    Behaviours& ib = scene.add<Behaviours>(e);
     ib.entity = e;
     ib.addScript<PlayerController>(&this->world);
     ib.addComponent<Camera>();

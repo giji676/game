@@ -1,8 +1,8 @@
 #pragma once
 
-class World;
+class Scene;
 
 struct ISystem {
     virtual ~ISystem() = default;
-    virtual void update(World& w, float dt) = 0;
+    virtual void update(Scene& w, float dt) = 0;
 };

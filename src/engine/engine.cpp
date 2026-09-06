@@ -32,7 +32,7 @@ void Engine::init(Game *g) {
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     
     game = g;
-    world.init();
+    scene.init();
     game->init();
     editor.init();
     renderer.init(&meshRegistry);
@@ -72,7 +72,7 @@ void Engine::run() {
             gameUi.setSurface({viewport.x, viewport.y}, vpSize, vpSize);
 
             game->update();
-            world.update(app.deltaTime, !paused);
+            scene.update(app.deltaTime, !paused);
 
             if (editor.isOpen() && editor.isEditing())
                 editor.updateEditorCamera();
@@ -138,7 +138,7 @@ void Engine::callRenderer(
     Frustum frustum = Frustum::fromMatrix(vp);
 
     renderCommands.clear();
-    world.collectRenderCommands(frustum, renderCommands);
+    scene.collectRenderCommands(frustum, renderCommands);
 
     game->render(view, projection);
     renderer.render(renderCommands, view, projection);
@@ -308,10 +308,10 @@ void Engine::loadAssets() {
 }
 
 Camera* Engine::getSceneCamera() {
-    if (!world.isValid(activeCameraEntity))
+    if (!scene.isValid(activeCameraEntity))
         return nullptr;
 
-    IBehaviour_& ib = world.get<IBehaviour_>(activeCameraEntity);
+    Behaviours& ib = scene.get<Behaviours>(activeCameraEntity);
     Camera* camera = ib.getComponent<Camera>();
 
     if (!camera || !camera->enabled)

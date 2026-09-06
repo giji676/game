@@ -4,10 +4,10 @@
 
 void Camera::lateUpdate() {
     Engine& engine = ENGINE();
-    if (!engine.world.isValid(entity) || !engine.world.has<Transform_>(entity))
+    if (!engine.scene.isValid(entity) || !engine.scene.has<Transform>(entity))
         return;
 
-    const glm::mat4& world = engine.world.get<Transform_>(entity).worldMatrix;
+    const glm::mat4& world = engine.scene.get<Transform>(entity).worldMatrix;
     pos = glm::vec3(world[3]);
 
     const glm::vec3 worldUp = glm::vec3(world[1]);
